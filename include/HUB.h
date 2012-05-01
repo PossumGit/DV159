@@ -28,7 +28,14 @@ void initAudio(void);
 void recordAudio(void);
 void playAudio(void);
 
-
+void eraseFlash(void);
+void writeByte(int);
+int	readByte(void);
+int	queryByte(void);
 void writeFlash(void);
 void readFlash(void);
+int	readStatus(void);
 void initFlash(void);
+void testFlash(void);			//not used.
+void clearRXFIFO(void);
+void clearTXFIFO(void);

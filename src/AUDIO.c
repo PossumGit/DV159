@@ -1,0 +1,221 @@
+/*
+ ===============================================================================
+ Name        : AUDIO.c
+ Author     : Duncan Irvine
+ Version     : test
+ Copyright   : Copyright (C)23 April 2012
+ Description : AUDIO routines.
+ ===============================================================================
+ */
+//
+/////////////////////////////////////////////////////////////////////////////////////////////////
+////PUBLIC FUNCTIONS
+//
+//
+//
+////PUBLIC VARIABLES
+//
+//
+//because of limited RAM, these will be a UNION with other uses.
+//
+//BUFFER[0x10-0x1FFF] NEAT, Bluetooth, Audio and IR buffer.
+//
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+
+//includes
+#include <cr_section_macros.h>
+
+#include "lpc17xx_clkpwr.h"
+#include "lpc17xx_pinsel.h"
+#include "lpc17xx_i2s.h"
+
+
+#include "lpc17xx_libcfg.h"
+#include "debug_frmwrk.h"
+#include "HUB.h"
+
+
+/************************** PRIVATE DEFINITIONS *************************/
+/** Max buffer length */
+#define BUFFER_SIZE				0x400
+/** I2S Buffer Source Address is AHBRAM1_BASE that used for USB RAM purpose, but
+ * it is not used in this example, so this memory section can be used for general purpose
+ * memory
+ */
+#define I2S_BUFFER_SRC			Buffer //LPC_AHBRAM1_BASE //0x20080000
+/** I2S Buffer Destination Address is (AHBRAM1_BASE + 0x100UL) that used for USB RAM purpose, but
+ * it is not used in this example, so this memory section can be used for general purpose
+ * memory
+ */
+#define I2S_BUFFER_DST			(I2S_BUFFER_SRC+0x1000UL) //0x20081000
+
+#define RXFIFO_EMPTY		0
+#define TXFIFO_FULL			8
+
+
+extern int Buffer[];
+
+
+volatile uint8_t  I2STXDone = 0;
+volatile uint8_t  I2SRXDone = 0;
+
+volatile uint32_t *I2STXBuffer = (uint32_t*)(I2S_BUFFER_SRC);
+volatile uint32_t *I2SRXBuffer = (uint32_t *)(I2S_BUFFER_DST);
+
+volatile uint32_t I2SReadLength = 0;
+volatile uint32_t I2SWriteLength = 0;
+
+uint8_t tx_depth_irq = 0;
+uint8_t rx_depth_irq = 0;
+uint8_t dummy=0;
+
+
+
+
+
+
+
+
+void I2S_IRQHandler(void);
+
+
+
+
+
+initAudio()
+{
+
+	LPC_GPIO1->FIODIR |= 1 << 7; 		//L/R on ADMP441 microphone = output.
+	LPC_GPIO4->FIODIR |= 1 << 20; 		//CHIPEN on mic =output.
+	LPC_GPIO1->FIOSET |= 1 << 7; 		//L/R =1
+	LPC_GPIO4->FIOSET |= 1 << 20; 		//CHIPEN=1=enabled.
+
+
+		int	i;
+	LPC_SC->PCONP |=1<<27;						// bit 27. enable I2S
+	LPC_SC->PCLKSEL1 |= 00<<22;					//PCLK_I2S(bit 22,23)=CCLK/4=100MHz/4. Not reliable if /1
+	LPC_PINCON->PINSEL0 |=(1<<14 |1<<16 |1<<18);	//TX P0.7,P0.8, P0.9 =I2S.
+	LPC_PINCON->PINMODE0 |=(2<<14 |2<<16 |2<<18);	//TX no pullup or pulldown.
+	LPC_PINCON->PINSEL0 |=(1<<8 |1<<10 |1<<12);		//RX P0.7,P0.8, P0.9 =I2S.
+	LPC_PINCON->PINMODE0 |=(2<<8 |2<<10 |2<<12);	//RX no pullup or pulldown.
+
+
+	LPC_I2S->I2SDAO=
+			1	//16 bits
+			|1<<2			//mono tx data twice
+			|0<<3			//stop
+			|0<<4			//reset
+			|0<<5			//master
+			|0x1F<<6		//half period = 32
+			|1<<15;			//mute			clear to 0 to transmit data.
+
+	LPC_I2S->I2SDAI=
+			1				//16 bits
+			|1<<2			//mono
+			|0<<3			//stop
+			|0<<4			//reset
+			|0<<5			//master
+			|0x1F<<6;		//half period=32
+
+	LPC_I2S->I2SIRQ=
+			1				//enable RX interrupt
+			|6<<8			//interrupt when buffer has 6 words of 32 bit data.
+			|6<<16;			//interrupt when buffer has 6 words of 32 bits.
+
+	i=LPC_I2S->I2SSTATE;		//status feedback.
+
+			//clock.
+			//PCLK_I2S=CCLK=100MHz.
+			//32KHz sampling requires 2.048MHz
+			//MCLK=PCLK_I2S*X/(2Y)
+			//X=1, Y=24 gives: 2.0833MHz, a little high, but minimises jitter.
+	//ADMP441 gives 32 bit +32 bit at up to 48KHz.
+	//TFA9882 can use 8+8 to 32+32bit at 32KHz to 48KHz
+	//32KHz= 2.048MHz MCLK
+	//44.1KHz=2.8824MHz MCLK
+	//48KHz=3.072MHz MCLK.
+
+	LPC_I2S->I2SRXRATE=3|1<<8;		//RXCLK=100MH/48=2.0833MHz
+	LPC_I2S->I2STXRATE=3|1<<8;		//TXCLK=100MH/48=2.0833MHz
+	LPC_I2S->I2SRXBITRATE=1;		//final /2
+	LPC_I2S->I2STXBITRATE=1;		//final/2
+	LPC_I2S->I2SRXMODE=0|0<<2|1<<3;	//do not output RX_MCLK
+	LPC_I2S->I2STXMODE=0|0<<2|1<<3;	//do not output TX_MCLK
+
+
+	LPC_I2S->I2STXFIFO=0xAAAAAAAA;
+	LPC_I2S->I2STXFIFO=0xAAAAAAAA;
+	LPC_I2S->I2STXFIFO=0xAAAAAAAA;
+	LPC_I2S->I2STXFIFO=0xAAAAAAAA;
+	LPC_I2S->I2STXFIFO=0xAAAAAAAA;
+	LPC_I2S->I2STXFIFO=0xAAAAAAAA;
+	LPC_I2S->I2STXFIFO=0xAAAAAAAA;
+	LPC_I2S->I2STXFIFO=0xAAAAAAAA;
+
+
+
+
+		NVIC_EnableIRQ(I2S_IRQn);
+
+
+
+}
+
+recordAudio()
+
+{
+	for(;;);					//wait here.
+//	NVIC_EnableIRQ(I2S_IRQn);				//enable interrupt
+}
+
+playAudio()
+{
+
+}
+
+
+
+/*----------------- INTERRUPT SERVICE ROUTINES --------------------------*/
+/*********************************************************************//**
+ * @brief		I2S IRQ Handler
+ * @param[in]	None
+ * @return 		None
+ **********************************************************************/
+void I2S_IRQHandler()
+{
+	uint32_t RXLevel = 0;
+
+
+
+/*	//Check RX interrupt
+	if(I2S_GetIRQStatus(LPC_I2S, I2S_RX_MODE))
+	{
+		RXLevel = I2S_GetLevel(LPC_I2S, I2S_RX_MODE);
+		if ( (RXLevel != RXFIFO_EMPTY) && !I2SRXDone )
+		{
+			while ( RXLevel > 0 )
+			{
+				if ( I2SReadLength == BUFFER_SIZE )
+				{
+					//Stop RX
+					I2S_Stop(LPC_I2S, I2S_RX_MODE);
+					// Disable RX
+					I2S_IRQCmd(LPC_I2S, I2S_RX_MODE, DISABLE);
+					I2SRXDone = 1;
+					break;
+				}
+				else
+				{
+					I2SRXBuffer[I2SReadLength++] = LPC_I2S->I2SRXFIFO;
+				}
+				RXLevel--;
+			}
+		}
+	}
+*/
+	return;
+}

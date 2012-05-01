@@ -58,7 +58,11 @@ int main(void) {
 
 
 	initFlash();
-	writeFlash();
+	eraseFlash();
+//	writeFlash();
+	readFlash();
+
+
 	initAudio();
 	recordAudio();
 	playAudio();
