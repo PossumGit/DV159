@@ -1,51 +1,33 @@
-/*
- ===============================================================================
- Name        : IR.c
- Author     : Duncan Irvine
- Version     : test
- Copyright   : Copyright (C)
- Description : IR routines.
- ===============================================================================
- */
-//
-/////////////////////////////////////////////////////////////////////////////////////////////////
-////PUBLIC FUNCTIONS
-//captureIR()
-//playIR()
-//initIT()
-//
-////PUBLIC VARIABLES
-//because of limited RAM, these will be a UNION with other uses.
-//Buffer[0] IRPulseWidth
-//Buffer[1] IRPulses
-//buffer[2] IRtime_ms
-//BUFFER[0x10-0x1FFF] NEAT, Bluetooth, Audio and IR buffer.
-//
-/////////////////////////////////////////////////////////////////////////////////////////////////
+///@name        	IR Capture and Replay
+///@author     		Duncan Irvine
+///@version     	test
+///@copyright  		Possum UK 23 April 2012
 
+//defines
+#define CaptureStart  1000000			///< Delay before replay IR 10ms delay
+#define CaptureFirst	0x10			///< First IR data in this position, allow 16 control words before IR data
+#define Second	100000000				///< 1 seconds worth of cycles at 100MHz.
+#define WaitForIR	10*Second			///< Nominal 10s
+#define WaitEndIR	3*Second			///< Nominal 3s
+#define IRPulseWidth Buffer[0]		///< Width of IR pulse, stored in Buffer[] control area
+#define IRPulses Buffer[1]			///<Number of IR pulses, stored in Buffer[] control area
+#define IRtime_ms Buffer[2]			///<Total length of IR signal in ms, stored in Buffer[] control area
 
 //includes
-#include <cr_section_macros.h>
-#include "lpc17xx_timer.h"
-#include "lpc17xx_clkpwr.h"
-#include "lpc17xx_pinsel.h"
 #include "HUB.h"
+#include "lpc17xx_clkpwr.h"
+#include "lpc17xx_timer.h"
+#include "lpc17xx_pinsel.h"
 
-//constants
+//public variables
 
+//local variables.
+PRIVATE int Pulses;				///< Count IR pulses during capture/replay
+PRIVATE int PulseWidth = 100; 	///< 100 system clocks=1uS.
+PRIVATE int EndPlay = 1;		///< Used to communicate end from interrupt routines.
 
-#define CaptureTot	CaptureMax+CaptureExt
-#define CaptureStart  1000000			//delay before replay IR 10ms delay
-#define CaptureFirst	0x10			//first IR data in this position
-//allows room for 16 words of data.
-#define Second	100000000				//1 seconds worth of cycles at 100MHz.
-#define WaitForIR	10*Second			//nominal 10s
-#define WaitEndIR	3*Second			//nominal 3s
-
-//name variables within Buffer. (Was union with struct but gave errors when big.
-#define IRPulseWidth Buffer[0]
-#define IRPulses Buffer[1]
-#define IRtime_ms Buffer[2]
+//external variables
+EXTERNAL int Buffer[];		///< Whole of RAM2 is Buffer, reused for NEAT, Bluetooth, audio and IR replay and capture
 
 //Local functions
 PRIVATE void startCaptureIR(void);
@@ -54,44 +36,21 @@ PRIVATE void startPlayIR(void);
 PRIVATE void endPlayIR(void);
 PRIVATE void correctIR(void);
 
-//Public functions
-//defined in HUB.h
-
-
-//local variables.
-PRIVATE int Pulses;
-PRIVATE int PulseWidth = 100; //300 system clocks=3uS.
-PRIVATE int EndPlay = 1;
-
-//problem debugging big unions. Errors from target unless size is smaller.
-//structure is preferable if debugging can be solved.
-/*struct Capt{
- int IRPulses;			//count of pulses, includes block of data about IR (16 words.)
- int IRPulseWidth;		//in clock cycles
- int IRtime_ms;			// in ms
- };		// note sizeOf (Capt) must be < CaptureFirst.
-
- __DATA(RAM1)static int CaptureBuffer2[CaptureExt];
-
- __DATA(RAM2)
-
- static union{
- struct Capt CaptureData;
- int Buffer[CaptureMax];
- }store;
-
- */
-//RAM region specific definitions.
-__DATA(RAM1)int Buffer2[CaptureExt];
-
-__DATA(RAM2)int Buffer[CaptureMax];
+//External functions
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
-//captureIR
-//returns time of capture.
-//
-////////////////////////////////////////////////////////////////////////////////////////////////
-void captureIR() {
+/////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief Captures an IR signal and stores in Buffer[].
+///@param void
+///@return void
+///@par Modifies
+/// Buffer[]: Save IR data to Buffer[]
+///@par Time
+/// WaitEndIR(3s) wait for repeat IR. WaitForIr(10s) wait for first IR
+/////////////////////////////////////////////////////////////////////////////////////////////////
+PUBLIC void captureIR(void) {
 
 	Pulses = CaptureFirst;
 	LED3GREEN();
@@ -106,12 +65,18 @@ void captureIR() {
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
-//Replay IR
-//returns number of IR Pulses captured.
-//CaptureBuffer[x]>=CaptureStart(100000=1ms) is replay IR data
-//CaptureBuffer[x]==0 is end of IR data.
-////////////////////////////////////////////////////////////////////////////////////////////////
-void playIR() {
+///@brief Replay IR signal stored in Buffer[]
+///@param void
+///@return void
+///@par Modifies
+/// Buffer[]: Save IR data to Buffer[]
+///@par Notes
+/// CaptureBuffer[x]>=CaptureStart(100000=1ms) is replay IR data.
+/// CaptureBuffer[x]==0 is end of IR data.
+///@par Time
+/// WaitEndIR(3s) wait for repeat IR. WaitForIr(10s) wait for first IR
+/////////////////////////////////////////////////////////////////////////////////////////////////
+PUBLIC void playIR(void) {
 	if (Pulses > 17) {
 		startPlayIR();
 
@@ -124,11 +89,11 @@ void playIR() {
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
-//TIMER1 interrupt. Only TIMER1.MR0 can generate interrupt
-//Used to play IR.
-//
-////////////////////////////////////////////////////////////////////////////////////////////////
-void TIMER1_IRQHandler(void) {
+///@brief TIMER1 interrupt. Only TIMER1.MR0 can generate this interrupt
+///@param void
+///@return void
+/////////////////////////////////////////////////////////////////////////////////////////////////
+PRIVATE void TIMER1_IRQHandler(void) {
 	//generate positive pulse on p1.28, length PulseWidth.
 	//pulse width is held in timer0, pulse width is held in timer1.
 	LPC_TIM0->EMR = 1 | 1 << 4; //Set P1.28, clear P1.28 MR0 on match
@@ -147,11 +112,11 @@ void TIMER1_IRQHandler(void) {
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
-//TIMER0 interrupt. Only TIMER0.CR0 can generate interrupt
-//Used to capture IR.
-//
-////////////////////////////////////////////////////////////////////////////////////////////////
-void TIMER0_IRQHandler(void) {
+///@brief TIMER0 interrupt. Only TIMER0.CR0 can generate this interrupt
+///@param void
+///@return void
+/////////////////////////////////////////////////////////////////////////////////////////////////
+PRIVATE void TIMER0_IRQHandler(void) {
 
 	if (Pulses < CaptureMax) {
 		Buffer[Pulses++] = LPC_TIM0->CR0;
@@ -162,11 +127,11 @@ void TIMER0_IRQHandler(void) {
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
-//Initialise IR CAPTURE.
-//
-//
-////////////////////////////////////////////////////////////////////////////////////////////////
-void startCaptureIR() {
+///@brief Initialise for IR capture.
+///@param void
+///@return void
+/////////////////////////////////////////////////////////////////////////////////////////////////
+PRIVATE void startCaptureIR(void) {
 	Pulses = CaptureFirst;
 	LPC_SC->PCLKSEL0 &= ~(3 << 2); //CLEAR PREDIVIDE bits.
 	LPC_SC->PCLKSEL0 |= 1 << 2; //TIMER0 PREDIVIDE =1 (system clock)
@@ -180,21 +145,11 @@ void startCaptureIR() {
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
-//finalise IR CAPTURE.
-//
-//
-////////////////////////////////////////////////////////////////////////////////////////////////
-void endCaptureIR() {
-	LPC_TIM0->CCR &= ~0x07; //disable any capture interrupt
-}
-
+///@brief Initialise for IR replay.
+///@param void
+///@return void
 /////////////////////////////////////////////////////////////////////////////////////////////////
-//initialise IR replay.
-//IR replay uses timer1 to define length of IR periods,
-//Timer0 is used to define pulse widths.
-//
-////////////////////////////////////////////////////////////////////////////////////////////////
-void startPlayIR() {
+PRIVATE void startPlayIR(void) {
 
 	EndPlay = CaptureStart; //set to 0 when end of buffer or no more captured data.
 	LPC_TIM0->EMR = 1 | 1 << 4; //force output to 0.		//also sets P1.28
@@ -216,11 +171,11 @@ void startPlayIR() {
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
-//Finalise IR replay.
-//
-//
-////////////////////////////////////////////////////////////////////////////////////////////////
-void endPlayIR() {
+///@brief Finalise for IR replay.
+///@param void
+///@return void
+/////////////////////////////////////////////////////////////////////////////////////////////////
+PRIVATE void endPlayIR(void) {
 	LPC_PINCON->PINSEL3 &= ~(3 << 24); //set P1.28 as GPIO, so force to 0 as output set to 0.
 	LPC_TIM0->MCR &= ~0x07; //disable match interrupt
 	LPC_TIM1->MCR &= ~0x07; //disable match interrupt
@@ -230,11 +185,14 @@ void endPlayIR() {
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
-//Estimate pulse width from minimum distance between captures.
-//
-//
-////////////////////////////////////////////////////////////////////////////////////////////////
-void correctIR() {
+///@brief Post process IR capture.
+///@param void
+///@return void
+///@par Modifies
+/// Buffer[]: Process data within buffer.
+/// Save data within Buffer[].
+/////////////////////////////////////////////////////////////////////////////////////////////////
+PRIVATE void correctIR(void) {
 	int minwidth = 2000; //100us is max pulse width to consider
 	int b, a, i, width;
 
@@ -261,7 +219,23 @@ void correctIR() {
 	IRtime_ms = b / 100000; //ms time for IR
 }
 
-void initIR() {
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief Turn InfraRed LED off.
+///@param void
+///@return void
+/////////////////////////////////////////////////////////////////////////////////////////////////
+PUBLIC void initIR(void) {
 	LPC_GPIO1->FIODIR |= 1 << 28; //IR defined as an output.
 	LPC_GPIO1->FIOCLR |= 1 << 28; //clear IR output (IR off).
 }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief Finalise for IR capture.
+///@param void
+///@return void
+/////////////////////////////////////////////////////////////////////////////////////////////////
+PRIVATE void endCaptureIR(void) {
+	LPC_TIM0->CCR &= ~0x07; //disable any capture interrupt
+}
+
+

@@ -77,7 +77,7 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
-					<fileInfo id="com.crt.advproject.config.exe.debug.985122389.src/cr_startup_lpc176x.c" name="cr_startup_lpc176x.c" rcbsApplicability="disable" resourcePath="src/cr_startup_lpc176x.c" toolsToInvoke="com.crt.advproject.gcc.exe.debug.2055263784.277445035">
+					<fileInfo id="com.crt.advproject.config.exe.debug.985122389.src/cr_startup_lpc176x.c" name="cr_startup_lpc176x.c" rcbsApplicability="disable" resourcePath="source/STATRUP cr_startup_lpc176x.c" toolsToInvoke="com.crt.advproject.gcc.exe.debug.2055263784.277445035">
 						<tool id="com.crt.advproject.gcc.exe.debug.2055263784.277445035" name="MCU C Compiler" superClass="com.crt.advproject.gcc.exe.debug.2055263784">
 							<option id="gnu.c.compiler.option.optimization.flags.374821804" name="Other optimization flags" superClass="gnu.c.compiler.option.optimization.flags" value="-Os" valueType="string"/>
 							<inputType id="com.crt.advproject.compiler.input.1991839957" superClass="com.crt.advproject.compiler.input"/>

@@ -1,53 +1,45 @@
-/*
- ===============================================================================
- Name        : AUDIO.c
- Author     : Duncan Irvine
- Version     : test
- Copyright   : Copyright (C)23 April 2012
- Description : AUDIO routines.
- ===============================================================================
- */
-//
-/////////////////////////////////////////////////////////////////////////////////////////////////
-////PUBLIC FUNCTIONS
-//
-//
-//
-////PUBLIC VARIABLES
-//
-//
-//because of limited RAM, these will be a UNION with other uses.
-//
-//BUFFER[0x10-0x1FFF] NEAT, Bluetooth, Audio and IR buffer.
-//
-/////////////////////////////////////////////////////////////////////////////////////////////////
+///@name        	Audio read/write routines.
+///@author     		Duncan Irvine
+///@version     	test
+///@copyright  		Possum UK 23 April 2012
 
+//Defines
 
-
-
-
-//includes
-#include <cr_section_macros.h>
-
+//Includes
+#include "HUB.h"
 #include "lpc17xx_clkpwr.h"
 #include "lpc17xx_pinsel.h"
 #include "lpc17xx_i2s.h"
 
+//Public variables
 
-#include "lpc17xx_libcfg.h"
-#include "debug_frmwrk.h"
-#include "HUB.h"
+//Private variables
+
+//External variables
+
+//Private functions
+
+//External functions
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
 
 
 /************************** PRIVATE DEFINITIONS *************************/
-/** Max buffer length */
+/* Max buffer length */
 #define BUFFER_SIZE				0x400
-/** I2S Buffer Source Address is AHBRAM1_BASE that used for USB RAM purpose, but
+/* I2S Buffer Source Address is AHBRAM1_BASE that used for USB RAM purpose, but
  * it is not used in this example, so this memory section can be used for general purpose
  * memory
  */
 #define I2S_BUFFER_SRC			Buffer //LPC_AHBRAM1_BASE //0x20080000
-/** I2S Buffer Destination Address is (AHBRAM1_BASE + 0x100UL) that used for USB RAM purpose, but
+/* I2S Buffer Destination Address is (AHBRAM1_BASE + 0x100UL) that used for USB RAM purpose, but
  * it is not used in this example, so this memory section can be used for general purpose
  * memory
  */
@@ -57,7 +49,7 @@
 #define TXFIFO_FULL			8
 
 
-extern int Buffer[];
+EXTERNAL int Buffer[];
 
 
 volatile uint8_t  I2STXDone = 0;
@@ -76,17 +68,12 @@ uint8_t dummy=0;
 
 
 
-
-
-
-
-void I2S_IRQHandler(void);
-
-
-
-
-
-initAudio()
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief Set up I2S comms for audio
+///@param void
+///@return void
+/////////////////////////////////////////////////////////////////////////////////////////////////
+PUBLIC void initAudio(void)
 {
 
 	LPC_GPIO1->FIODIR |= 1 << 7; 		//L/R on ADMP441 microphone = output.
@@ -164,28 +151,40 @@ initAudio()
 
 
 }
-
-recordAudio()
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief Record audio, save in flash memory
+///@param void
+///@return void
+/////////////////////////////////////////////////////////////////////////////////////////////////
+PUBLIC void recordAudio(void)
 
 {
 	for(;;);					//wait here.
 //	NVIC_EnableIRQ(I2S_IRQn);				//enable interrupt
 }
 
-playAudio()
+///play audio from flash memory.
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief Play audio from flash memory.
+///@param void
+///@return void
+/////////////////////////////////////////////////////////////////////////////////////////////////
+PUBLIC void playAudio(void)
 {
 
 }
 
 
 
-/*----------------- INTERRUPT SERVICE ROUTINES --------------------------*/
-/*********************************************************************//**
- * @brief		I2S IRQ Handler
- * @param[in]	None
- * @return 		None
- **********************************************************************/
-void I2S_IRQHandler()
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief I2S audio comms interrupt routine
+///@param void
+///@return void
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+ PRIVATE void I2S_IRQHandler()
 {
 	uint32_t RXLevel = 0;
 

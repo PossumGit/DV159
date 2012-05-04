@@ -1,246 +1,259 @@
-/*
- ===============================================================================
- Name        : Flash.c
- Author     : Duncan Irvine
- Version     : test
- Copyright   : Copyright (C)23 April 2012
- Description : Flash read/write routines.
- ===============================================================================
- */
-//
-/////////////////////////////////////////////////////////////////////////////////////////////////
-////PUBLIC FUNCTIONS
-//
-//
-//
-////PUBLIC VARIABLES
-//
-//
-/////////////////////////////////////////////////////////////////////////////////////////////////
-#include <cr_section_macros.h>
-#include "lpc17xx_timer.h"
-#include "lpc17xx_clkpwr.h"
-#include "lpc17xx_pinsel.h"
+///@name        	Flash read/write routines.
+///@author     		Duncan Irvine
+///@version     	test
+///@copyright  		Possum UK 23 April 2012
+
+//Defines
+
+//Includes
 #include "HUB.h"
+#include "lpc17xx_pinsel.h"
 
-initFlash() {
+
+//Public variables
+PUBLIC int FlashAddress; ///< The address used for flash read and flash write.
+
+//Local variables
+EXTERNAL int Buffer[]; ///< Used for Audio and IR store and replay.
+
+//External variables
+
+//Local functions
+PRIVATE int readStatus(void);
+PRIVATE void writeBlock(int);
+
+//External functions
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief Erases the whole of the flash memory chip.
+///@param void
+///@return void
+///@par Time
+/// Chip Erase takes typically 3s, maximum 10s.
+/////////////////////////////////////////////////////////////////////////////////////////////////
+PUBLIC void eraseFlash(void)
+{
 	int a;
-	LPC_GPIO0->FIOSET = 1 << 23; //Flash disable
-	LPC_GPIO0->FIODIR |= 1 << 23; //CHIPEN on flash.
-	LPC_GPIO1->FIOSET = 1 << 21; //NEAT disable
-
-
-	//set up SSP bits
-	LPC_SC->PCONP |= 1 << 21; // bit 8. enable SSP0. (RESET enables.)
-	LPC_SC->PCLKSEL1 |= 2 << 10; //100MHz/2= 50MHz. SSP0 clock (CCLK/4 by RESET)
-
-
-	LPC_PINCON->PINSEL3 |= (3 << 8 | 3 << 14 | 3 << 16); //SPI = P1.20,  P1.23, P1.24.
-
-
-	LPC_PINCON->PINMODE3 |= (0 << 8 | 0 << 14 | 0 << 16); // pullup on P1.20,  P1.23, P1.24.
-	LPC_PINCON->PINMODE_OD1 |= (0 << 20 | 0 << 21 | 0 << 23 | 0 << 24); //normal mode output (open drain disabled.)
-
-
-	//	a=LPC_GPIO1->FIODIR;
-	//	a=a|1 << 21;
-	//	LPC_GPIO1->FIODIR =a; 		//CHIPEN on NEAT.
-
-
-	//1 page is 256 bytes,  2048 bits = approx 0.33ms, +write time approx 1ms.
-	//Audio is 32KHz* 16 bits =64KB/s =64B/ms
-	//IR is 38KHz continuous ( worst case) =38*4 bytes = 152 B/ms
-
-	//SPANSION S25FL016 supports mode 0 (CPOL=0, CPHA=0) and mode 3 (CPOL=1, CPHA=1).
-	//so use mode 0.
-	LPC_SSP0->CR0 = 7 << 0 | 0 << 4 | 0 << 6 | 0 << 7 | 3 << 8;
-	LPC_SSP0->CR1 = 0 << 0 | 1 << 1 | 0 << 2;
-	LPC_SSP0->CPSR = 2; //divide clock for SSP0
-
-
-}
-
-int readByte() {
-	while (0 == ((LPC_SSP0->SR) & (1 << 2)))			//wait for byte.
-		;
-	return (LPC_SSP0->DR) ;
-}
-
-int queryByte() {
-	if (0 != ((LPC_SSP0->SR) & (1 << 2)))
-		return (LPC_SSP0->DR) & 0xFF;
-	else
-		return 256;
-}
-
-writeByte(int b) {
-	while (0 == ((LPC_SSP0->SR) & (1 << 1)))
-		; //wait for TX FIFO not full. (ready)
-	LPC_SSP0->DR = b;
-}
-
-eraseFlash() {
-	int a;
-
+	while (1 & readStatus()); //wait for not busy.
 	//first command is write enable
 	LPC_GPIO0->FIOCLR = 1 << 23; //Flash enable
-	writeByte(0x06);			//write enable for erase command.
-	a = readByte();
+	writeSSP0Byte(0x06); //write enable for erase command.
+	a = readSSP0Byte();
 	LPC_GPIO0->FIOSET |= 1 << 23; //Flash disable
-//	a = readStatus();
+	//	a = readStatus();
 	LPC_GPIO0->FIOCLR = 1 << 23; //Flash enable
-	writeByte(0x20); //page erase
-	a = readByte();
-	writeByte(0x00); //address
-	a = readByte();
-	writeByte(0x00); //address
-	a = readByte();
-	writeByte(0x00); //address
-	a = readByte();
+	writeSSP0Byte(0x60); //chip erase
+	a = readSSP0Byte();
+
 	LPC_GPIO0->FIOSET |= 1 << 23; //Flash disable
 
-	while(1& readStatus());
-
-
+	while (1 & readStatus());//wait for not busy.
 }
-readStatus() {
-	int a, b;
-		LPC_GPIO0->FIOCLR = 1 << 23; //Flash enable
-		writeByte(0x05); //read
-		writeByte(0x00); //read address
-		a = readByte();
-		b = readByte();
-		LPC_GPIO0->FIOSET |= 1 << 23; //Flash disable
-		return b;
 
-
-}
-clearRXFIFO()
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief Write first half (4096 words) of Buffer[] to flash memory little endian 16384 bytes.
+///@param void
+///@return void
+///
+///@par Modifies
+/// FlashAddress=FlashAddress+4096
+/// Buffer[]: writes data to flash using FlashAddress from first half of Buffer[].
+///@par Time
+/// 55ms for this. Worst case is around 210ms (64ms*3(write)+16ms(data comms))
+////////////////////////////////////////////////////////////////////////////////////////////////
+PUBLIC void writeFlashLow(void)
 {
-	int a;
-	while (0==(0x1 & LPC_SSP0->SR)); //wait for TX FIFO empty.
-	while ((LPC_SSP0->SR) & (1 << 2))
-		a=LPC_SSP0->DR;	//read data until FIFO empty.
-	while ((LPC_SSP0->SR)&(0x10));
-}
-waitTXempty()
-{
-	while (0==(0x1 & LPC_SSP0->SR)); //wait for TX FIFO empty.
+	int i = 0;
+	for (i = 0; i < 64; i++) //64 blocks of 64 words from 0 to 4095 words.
+		writeBlock(i); //write 64 words
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief Write last half (4096 words) of Buffer[] to flash memory little endian 16384 bytes.
+///@param void
+///@return void
+///
+///@par Modifies
+/// FlashAddress=FlashAddress+4096.
+/// Buffer[]: writes data to flash using FlashAddress from last half of Buffer[].
+///@par Time
+/// 55ms for this. Worst case is around 210ms (64ms*3(write)+16ms(data comms))
+////////////////////////////////////////////////////////////////////////////////////////////////
+PUBLIC void writeFlashHigh(void) {
+	int i = 0;
+	for (i = 64; i < 128; i++) //64 blocks of 64 words from 4096 to 8191 words.
+		writeBlock(i); //write 64 words
 
-writeFlash() {
-	int a, b, c, d, e, f, g, h, i;
-	//write from Buffer to address 00.
+}
 
-	waitTXempty();
-	clearRXFIFO();
-	a = readStatus();
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief Read 16384 bytes from Flash from address FlashAddress, little endian, to last 4096 words of Buffer[].
+///@param void
+///@return void
+///
+///@par Modifies
+/// FlashAddress=FlashAddress+4096.
+/// Buffer[] top half is written from flash memory pointed to by FlashAddress
+///@par Time
+/// 16ms(data comms) to read 16KB or 4096 words.
+////////////////////////////////////////////////////////////////////////////////////////////////
+PUBLIC void readFlashHigh(void) {
+	while (1 & readStatus())
+		; //wait for not busy
+	//set up SPI for flash.
+	char a, b, c, d;
+	int i;
+	char address0, address8, address16;
+	address0 = 0xFF & FlashAddress;
+	address8 = 0xFF & (FlashAddress >> 8);
+	address16 = 0xFF & (FlashAddress >> 16);
 	LPC_GPIO0->FIOCLR = 1 << 23; //Flash enable
-	writeByte(0x06);
-	b = readByte();
-	LPC_GPIO0->FIOSET |= 1 << 23; //Flash disable
-
-	c = readStatus();
-
-
-	d = readStatus();
-
-
-	e = readStatus();
-
-
-
-	LPC_GPIO0->FIOCLR = 1 << 23; //Flash enable
-
-	writeByte(0x02); //page write
-	a=readByte();
-	writeByte(0x00); //address
-	b = readByte();
-	writeByte(0x00); //address
-	b = readByte();
-	writeByte(0x00); //address
-	b = readByte();
-	for (i = 0; i < 256; i++) {
-		writeByte(0xAA); //data
-		b = readByte();
+	writeSSP0Byte(0x03); //read command
+	a = readSSP0Byte();
+	writeSSP0Byte(address16); //address 16-23
+	a = readSSP0Byte();
+	writeSSP0Byte(address8); //address 8-15
+	a = readSSP0Byte();
+	writeSSP0Byte(address0); //address 0-7
+	a = readSSP0Byte();
+	for (i = 4096; i < 8192; i++) {
+		writeSSP0Byte(0); //data   little-endian
+		a = readSSP0Byte();
+		writeSSP0Byte(0); //data
+		b = readSSP0Byte();
+		writeSSP0Byte(0); //data
+		c = readSSP0Byte();
+		writeSSP0Byte(0); //data
+		d = readSSP0Byte();
+		Buffer[i] = a + (b << 8) + (c << 16) + (d << 24); //merge 4 bytes into word.
 	}
 	LPC_GPIO0->FIOSET |= 1 << 23; //Flash disable
-
-
+	FlashAddress = FlashAddress + 4096;
 }
 
-readFlash() {
-
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief Read 16384 bytes from Flash at address FlashAddress, little endian, to first 4096 words of Buffer[].
+///@param void
+///@return void
+///
+///@par Modifies
+/// FlashAddress=FlashAddress+4096.
+/// Buffer[] first half is written from flash memory pointed to by FlashAddress
+///@par Time
+/// 16ms(data comms) to read 16KB or 4096 words.
+////////////////////////////////////////////////////////////////////////////////////////////////
+PUBLIC void readFlashLow(void) {
+	while (1 & readStatus())
+		; //wait for not busy
 	//set up SPI for flash.
-	int a, b, c;
-
+	char a, b, c, d;
+	int i;
+	char address0, address8, address16;
+	address0 = 0xFF & FlashAddress;
+	address8 = 0xFF & (FlashAddress >> 8);
+	address16 = 0xFF & (FlashAddress >> 16);
 	LPC_GPIO0->FIOCLR = 1 << 23; //Flash enable
-	writeByte(0x03); //read command
-	a = readByte();
-	writeByte(0x00); //read address
-	a = readByte();
-	writeByte(0x00); //read address
-	a = readByte();
-	writeByte(0x00); //read address
-	a = readByte();
-	writeByte(0x00); //dummy read address
-	a = readByte();		//byte 1
-	writeByte(0x00); //dummy read address
-	b = readByte();		//byte 2
-	writeByte(0x00); //dummy read address
-	c = readByte();		//byte 3
+	writeSSP0Byte(0x03); //read command
+	a = readSSP0Byte();
+	writeSSP0Byte(address16); //address 16-23
+	a = readSSP0Byte();
+	writeSSP0Byte(address8); //address 8-15
+	a = readSSP0Byte();
+	writeSSP0Byte(address0); //address 0-7
+	a = readSSP0Byte();
+	for (i = 0; i < 4096; i++) {
+		writeSSP0Byte(0); //data   little-endian
+		a = readSSP0Byte();
+		writeSSP0Byte(0); //data
+		b = readSSP0Byte();
+		writeSSP0Byte(0); //data
+		c = readSSP0Byte();
+		writeSSP0Byte(0); //data
+		d = readSSP0Byte();
+		Buffer[i] = a + (b << 8) + (c << 16) + (d << 24); //merge 4 bytes into word.
+	}
 	LPC_GPIO0->FIOSET |= 1 << 23; //Flash disable
+	FlashAddress = FlashAddress + 4096;
 }
 
 
-testFlash()
-		{
-	//	LPC_GPIO0->FIOCLR = 1 << 23; 		//Flash enable
-	int a, b, c, d, e, f, g,h,i,j,k,l,m,n,o,p,q,r,s,t,u;
-	//clear the FIFO.
-	clearFIFO();
+///////////////////////////////////////////////////////////////////////////////////////////////////
+//
+//PRIVATE functions:
+//
+//
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief Write 64 words of Buffer[] little endian to 256 bytes to flash memory at address FlashAddress.
+///@param int i (0-63) addresses a 64 word block within Buffer[] to write to flash using page mode (256 bytes)
+///@return void
+///
+///@par Modifies
+/// FlashAddress=FlashAddress+256.
+/// Buffer[] first half is written from flash memory pointed to by FlashAddress
+///@par Time
+/// 0.25ms(data comms) to read 256B or 64 words, 0.7ms typical to program page, maximum 3ms.
+/////////////////////////////////////////////////////////////////////////////////////////////////
+PRIVATE void writeBlock(int i) {
+	char a;
+	char b, c, d, e;
+	int j, k, p;
+	k = i * 64;
+	char address0, address8, address16;
+	while (1 & readStatus())
+		; //wait for not busy (ready).
+	LPC_GPIO0->FIOCLR = 1 << 23; //Flash CS enable
+	writeSSP0Byte(0x06); //write enable.
+	a = readSSP0Byte();
+	LPC_GPIO0->FIOSET |= 1 << 23; //Flash CS disable
+	address0 = 0xFF & FlashAddress;
+	address8 = 0xFF & (FlashAddress >> 8);
+	address16 = 0xFF & (FlashAddress >> 16);
+	LPC_GPIO0->FIOCLR = 1 << 23; //Flash  CS enable
+	writeSSP0Byte(0x02); //page write
+	a = readSSP0Byte();
+	writeSSP0Byte(address16); //address 16-23
+	a = readSSP0Byte();
+	writeSSP0Byte(address8); //address 8-15
+	a = readSSP0Byte();
+	writeSSP0Byte(address0); //address 0-7
+	a = readSSP0Byte();
 
+	for (j = 0; j < 64; j++) {
+		p = Buffer[j + k]; //64i+j
+		b = 0xFF & p;
+		c = 0xFF & (p >> 8);
+		d = 0xFF & (p >> 16);
+		e = 0xFF & (p >> 24);
+		writeSSP0Byte(b); //data little-endian
+		a = readSSP0Byte();
+		writeSSP0Byte(c); //data
+		a = readSSP0Byte();
+		writeSSP0Byte(d); //data
+		a = readSSP0Byte();
+		writeSSP0Byte(e); //data
+		a = readSSP0Byte();
+	}
+	LPC_GPIO0->FIOSET |= 1 << 23; //Flash disable
+	FlashAddress = FlashAddress + 256; //4*64
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief Read Flash memory status.
+///@param void
+///@return int. If bit 1=1 flash memory is busy, else ready
+/////////////////////////////////////////////////////////////////////////////////////////////////
+PRIVATE int readStatus(void) {
+	int a, b;
 	LPC_GPIO0->FIOCLR = 1 << 23; //Flash enable
-	writeByte(0x4B); //read
-	writeByte(0x00); //read address
-	writeByte(0x00);
-	writeByte(0x00);
-
-	writeByte(0x00);
-	writeByte(0x00);
-	writeByte(0x00);
-	writeByte(0x00);
-
-	writeByte(0x00);
-	writeByte(0x00);
-	writeByte(0x00);
-	writeByte(0x00);
-
-	writeByte(0x00);
-	writeByte(0x00);
-	writeByte(0x00);
-	writeByte(0x00);
-
-	a = readByte();
-	b = readByte();
-	c = readByte();
-	d = readByte();
-
-	e = readByte();
-	f = readByte();
-	g = readByte();
-	h = readByte();
-
-	i = readByte();
-	j = readByte();
-	k = readByte();
-	l = readByte();
-
-	m = readByte();
-
-
+	writeSSP0Byte(0x05); //read
+	writeSSP0Byte(0x00); //read address
+	a = readSSP0Byte();
+	b = readSSP0Byte();
 	LPC_GPIO0->FIOSET |= 1 << 23; //Flash disable
 	return b;
 
 }
+
