@@ -28,7 +28,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 
-
+	int 	TPtr;
 
 
 /************************** PRIVATE DEFINITIONS *************************/
@@ -50,7 +50,7 @@
 
 
 EXTERNAL int Buffer[];
-
+PRIVATE int BufferPtr;
 
 volatile uint8_t  I2STXDone = 0;
 volatile uint8_t  I2SRXDone = 0;
@@ -76,19 +76,19 @@ uint8_t dummy=0;
 PUBLIC void initAudio(void)
 {
 
-	LPC_GPIO1->FIODIR |= 1 << 7; 		//L/R on ADMP441 microphone = output.
-	LPC_GPIO4->FIODIR |= 1 << 20; 		//CHIPEN on mic =output.
-	LPC_GPIO1->FIOSET |= 1 << 7; 		//L/R =1
-	LPC_GPIO4->FIOSET |= 1 << 20; 		//CHIPEN=1=enabled.
+	LPC_GPIO1->FIODIR |= 1 << 17; 		//L/R on ADMP441 microphone = output.
+	LPC_GPIO4->FIODIR |= 1 << 28; 		//CHIPEN on mic =output.
+	LPC_GPIO1->FIOCLR = 1 << 17; 		//L/R =1
+	LPC_GPIO4->FIOSET = 1 << 28; 		//CHIPEN=1=enabled.
 
 
 		int	i;
-	LPC_SC->PCONP |=1<<27;						// bit 27. enable I2S
-	LPC_SC->PCLKSEL1 |= 00<<22;					//PCLK_I2S(bit 22,23)=CCLK/4=100MHz/4. Not reliable if /1
-	LPC_PINCON->PINSEL0 |=(1<<14 |1<<16 |1<<18);	//TX P0.7,P0.8, P0.9 =I2S.
-	LPC_PINCON->PINMODE0 |=(2<<14 |2<<16 |2<<18);	//TX no pullup or pulldown.
-	LPC_PINCON->PINSEL0 |=(1<<8 |1<<10 |1<<12);		//RX P0.7,P0.8, P0.9 =I2S.
-	LPC_PINCON->PINMODE0 |=(2<<8 |2<<10 |2<<12);	//RX no pullup or pulldown.
+	LPC_SC->PCONP |=1<<27;						// bit 27. enable I2S		//OK
+	LPC_SC->PCLKSEL1 |= 0<<22;					//PCLK_I2S(bit 22,23)=CCLK/4=100MHz/4. Not reliable if /1, OK/4
+	LPC_PINCON->PINSEL0 |=(1<<14 |1<<16 |1<<18);	//TX P0.7(CLK), P0.8(WS), P0.9(SDA) =I2S.	//OK
+//	LPC_PINCON->PINMODE0 |=(2<<14 |2<<16 |2<<18);	//TX no pullup or pulldown.
+	LPC_PINCON->PINSEL0 |=(1<<8 |1<<10 |1<<12);		//RX P0.4(CLK), P0.5(WS), P0.6(SDA) =I2S.	//OK
+//	LPC_PINCON->PINMODE0 |=(2<<8 |2<<10 |2<<12);	//RX no pullup or pulldown.
 
 
 	LPC_I2S->I2SDAO=
@@ -98,11 +98,11 @@ PUBLIC void initAudio(void)
 			|0<<4			//reset
 			|0<<5			//master
 			|0x1F<<6		//half period = 32
-			|1<<15;			//mute			clear to 0 to transmit data.
+			|0<<15;			//mute			clear to 0 to transmit data.
 
 	LPC_I2S->I2SDAI=
-			1				//16 bits
-			|1<<2			//mono
+			1				// 16 bits
+			|1<<2			// mono
 			|0<<3			//stop
 			|0<<4			//reset
 			|0<<5			//master
@@ -110,8 +110,8 @@ PUBLIC void initAudio(void)
 
 	LPC_I2S->I2SIRQ=
 			1				//enable RX interrupt
-			|6<<8			//interrupt when buffer has 6 words of 32 bit data.
-			|6<<16;			//interrupt when buffer has 6 words of 32 bits.
+			|2<<8			//interrupt when buffer has 1 words of 32 bit data.
+			|2<<16;			//interrupt when buffer has 1 words of 32 bits.
 
 	i=LPC_I2S->I2SSTATE;		//status feedback.
 
@@ -134,19 +134,9 @@ PUBLIC void initAudio(void)
 	LPC_I2S->I2STXMODE=0|0<<2|1<<3;	//do not output TX_MCLK
 
 
-	LPC_I2S->I2STXFIFO=0xAAAAAAAA;
-	LPC_I2S->I2STXFIFO=0xAAAAAAAA;
-	LPC_I2S->I2STXFIFO=0xAAAAAAAA;
-	LPC_I2S->I2STXFIFO=0xAAAAAAAA;
-	LPC_I2S->I2STXFIFO=0xAAAAAAAA;
-	LPC_I2S->I2STXFIFO=0xAAAAAAAA;
-	LPC_I2S->I2STXFIFO=0xAAAAAAAA;
-	LPC_I2S->I2STXFIFO=0xAAAAAAAA;
+		BufferPtr=0;
+		TPtr=0;
 
-
-
-
-		NVIC_EnableIRQ(I2S_IRQn);
 
 
 
@@ -159,8 +149,11 @@ PUBLIC void initAudio(void)
 PUBLIC void recordAudio(void)
 
 {
+
+
+
+	NVIC->ISER[0]=1<<27;		//I2S interrupt enable
 	for(;;);					//wait here.
-//	NVIC_EnableIRQ(I2S_IRQn);				//enable interrupt
 }
 
 ///play audio from flash memory.
@@ -184,9 +177,64 @@ PUBLIC void playAudio(void)
 ///@return void
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
- PRIVATE void I2S_IRQHandler()
+ void I2S_IRQHandler()
 {
-	uint32_t RXLevel = 0;
+//	uint32_t RXLevel = 0;
+
+
+
+
+
+	int	a,x;
+		a++;
+		a=LPC_I2S->I2SSTATE;
+
+		x=LPC_I2S->I2SRXFIFO;
+
+
+
+
+
+
+		if (BufferPtr<BufferMax)
+		{
+
+		Buffer[BufferPtr++] = x;
+
+		}
+		else
+		{
+
+
+			a=LPC_I2S->I2SSTATE;
+			a=LPC_I2S->I2SSTATE;
+			a=LPC_I2S->I2SSTATE;
+			a=LPC_I2S->I2SSTATE;
+			LPC_I2S->I2SIRQ=
+					2				//enable tX interrupt, disable rx interrupt.
+					|0<<8			//interrupt when buffer has 0 words of 32 bit data.
+					|0<<16;			//interrupt when buffer has 0 words of 32 bits.
+
+			x=Buffer[TPtr++];
+
+			//I2S is twos complement signed. 0=mute, 0x7FFF is max positive, 0x8000 is max negative.
+			//At 32KHz, maximum amplitude square wave of 2KHz.
+			//FIFO has 8 words of 32 bits or 16 words of 16 bits as shown.
+			//could manage 32 words of 8 bits giving 1KHz simply.
+			LPC_I2S->I2STXFIFO=0x7FFF7FFF;
+			LPC_I2S->I2STXFIFO=0x7FFF7FFF;
+			LPC_I2S->I2STXFIFO=0x7FFF7FFF;
+			LPC_I2S->I2STXFIFO=0x7FFF7FFF;
+			LPC_I2S->I2STXFIFO=0x80008000;
+			LPC_I2S->I2STXFIFO=0x80008000;
+			LPC_I2S->I2STXFIFO=0x80008000;
+			LPC_I2S->I2STXFIFO=0x80008000;
+			if (TPtr>=BufferMax)
+			{
+			TPtr=1000;
+		}
+		}
+
 
 
 
@@ -218,3 +266,4 @@ PUBLIC void playAudio(void)
 */
 	return;
 }
+

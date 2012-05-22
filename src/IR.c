@@ -1,7 +1,9 @@
 ///@name        	IR Capture and Replay
 ///@author     		Duncan Irvine
 ///@version     	test
-///@copyright  		Possum UK 23 April 2012
+///@copyright  		Possum UK
+///@date			23 April 2012
+
 
 //defines
 #define CaptureStart  1000000			///< Delay before replay IR 10ms delay
@@ -9,9 +11,9 @@
 #define Second	100000000				///< 1 seconds worth of cycles at 100MHz.
 #define WaitForIR	10*Second			///< Nominal 10s
 #define WaitEndIR	3*Second			///< Nominal 3s
-#define IRPulseWidth Buffer[0]		///< Width of IR pulse, stored in Buffer[] control area
-#define IRPulses Buffer[1]			///<Number of IR pulses, stored in Buffer[] control area
-#define IRtime_ms Buffer[2]			///<Total length of IR signal in ms, stored in Buffer[] control area
+#define IRPulseWidth Buffer[1]		///< Width of IR pulse, stored in Buffer[] control area
+#define IRPulses Buffer[2]			///<Number of IR pulses, stored in Buffer[] control area
+#define IRtime_ms Buffer[3]			///<Total length of IR signal in ms, stored in Buffer[] control area
 
 //includes
 #include "HUB.h"
@@ -93,7 +95,7 @@ PUBLIC void playIR(void) {
 ///@param void
 ///@return void
 /////////////////////////////////////////////////////////////////////////////////////////////////
-PRIVATE void TIMER1_IRQHandler(void) {
+ void TIMER1_IRQHandler(void) {
 	//generate positive pulse on p1.28, length PulseWidth.
 	//pulse width is held in timer0, pulse width is held in timer1.
 	LPC_TIM0->EMR = 1 | 1 << 4; //Set P1.28, clear P1.28 MR0 on match
@@ -116,7 +118,7 @@ PRIVATE void TIMER1_IRQHandler(void) {
 ///@param void
 ///@return void
 /////////////////////////////////////////////////////////////////////////////////////////////////
-PRIVATE void TIMER0_IRQHandler(void) {
+ void TIMER0_IRQHandler(void) {
 
 	if (Pulses < CaptureMax) {
 		Buffer[Pulses++] = LPC_TIM0->CR0;
@@ -141,7 +143,10 @@ PRIVATE void startCaptureIR(void) {
 	LPC_TIM0->CCR |= (1 << 1) | (1 << 2); //capture  falling with interrupt
 	LPC_TIM0->TCR = 0 | 1 << 1; //disable timer0, reset timer0
 	LPC_TIM0->TCR = 1 | 0 << 1; //enable timer0 (start timer0)
-	NVIC_EnableIRQ(TIMER0_IRQn); // enable interrupt
+
+	NVIC->ISER[0]=1<<1;			//enable TIMER0 interrupt.
+
+	//_EnableIRQ(TIMER0_IRQn); // enable interrupt
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -161,7 +166,9 @@ PRIVATE void startPlayIR(void) {
 	LPC_SC->PCLKSEL0 &= ~(3 << 4); //CLEAR PREDIVIDE bits.
 	LPC_SC->PCLKSEL0 |= (1 << 4); //TIMER1 PREDIVIDE =1 (system clock)
 	LPC_TIM1->PR = 0; //set IR sample clock
-	NVIC_EnableIRQ(TIMER1_IRQn);
+
+	NVIC->ISER[0]=1<<2;
+//	NVIC_EnableIRQ(TIMER1_IRQn);
 	LPC_TIM0->MR0 = PulseWidth; //generate match on MR0 after PulseWidth system clocks.(3uS)
 	LPC_TIM0->MCR = 1 << 1 | 1 << 2; //stop and reset timer on match.
 	LPC_TIM1->MR0 = Buffer[Pulses++];
@@ -179,6 +186,7 @@ PRIVATE void endPlayIR(void) {
 	LPC_PINCON->PINSEL3 &= ~(3 << 24); //set P1.28 as GPIO, so force to 0 as output set to 0.
 	LPC_TIM0->MCR &= ~0x07; //disable match interrupt
 	LPC_TIM1->MCR &= ~0x07; //disable match interrupt
+	NVIC->ICER[0]=1<<1|1<<2;			//disable TIMER0 and TIMER1 interrupts.
 	while ((LPC_TIM0->MR0 > LPC_TIM0->TC)) // wait until last pulse has finished.
 	{
 	}
@@ -214,9 +222,23 @@ PRIVATE void correctIR(void) {
 	for (i = Pulses; i < CaptureMax; i++) {
 		Buffer[i] = 0;
 	}
+	Buffer[0]='I'|'R'<<8|' '<<16|' '<<24;
+
 	IRPulses = Pulses; //number of Pulses for IR.
 	IRPulseWidth = PulseWidth; //Half minimum period for IR
 	IRtime_ms = b / 100000; //ms time for IR
+	Buffer[4]=1;
+	Buffer[5]=1;
+	Buffer[6]=1;
+	Buffer[7]=1;
+	Buffer[8]=1;
+	Buffer[9]=1;
+	Buffer[10]=1;
+	Buffer[11]=1;
+	Buffer[12]=1;
+	Buffer[13]=1;
+	Buffer[14]=1;
+	Buffer[15]=1;
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -236,6 +258,7 @@ PUBLIC void initIR(void) {
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PRIVATE void endCaptureIR(void) {
 	LPC_TIM0->CCR &= ~0x07; //disable any capture interrupt
+	NVIC->ICER[0]=1<<1|1<<2;			//disable TIMER0 and TIMER1 interrupts.
 }
 
 
