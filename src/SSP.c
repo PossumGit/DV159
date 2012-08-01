@@ -56,6 +56,7 @@ PUBLIC void initSSP0Flash(void) {
 	LPC_GPIO0->FIOSET = 1 << 23; //Flash disable
 	LPC_GPIO0->FIODIR |= 1 << 23; //CHIPEN on flash.
 	LPC_GPIO1->FIOSET = 1 << 21; //NEAT disable
+	LPC_GPIO0->FIODIR |= 1 << 21; //CHIPEN on NEAT.
 	//set up SSP bits
 	LPC_SC->PCONP |= 1 << 21; // bit 8. enable SSP0. (RESET enables.)
 	LPC_SC->PCLKSEL1 |= 1 << 10; //100MHz/2= 50MHz. SSP0 clock (CCLK/4 by RESET)
@@ -75,5 +76,7 @@ PUBLIC void initSSP0Flash(void) {
 	//so use mode 0.
 	LPC_SSP0->CR0 = 7 << 0 | 0 << 4 | 0 << 6 | 0 << 7 | 3 << 8;
 	LPC_SSP0->CR1 = 0 << 0 | 1 << 1 | 0 << 2;
-	LPC_SSP0->CPSR = 2; //divide clock for SSP0
+//	LPC_SSP0->CPSR = 2; //divide clock for SSP0 //gives 25MHz clock for FLASH
+	LPC_SSP0->CPSR = 50; //divide by 50(must be even) gives 1MHz clock for NEAT (max 1.8MHz.)
+
 }

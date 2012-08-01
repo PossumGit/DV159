@@ -270,6 +270,7 @@ __attribute__ ((section(".after_vectors")))
 void
 ResetISR(void) {
 
+
 #ifndef USE_OLD_STYLE_DATA_BSS_INIT
     //
     // Copy the data sections from flash to SRAM.
@@ -313,7 +314,7 @@ ResetISR(void) {
 #endif
 
 #ifdef __USE_CMSIS
-	SystemInit();
+//	SystemInit();
 #endif
 
 #if defined (__cplusplus)

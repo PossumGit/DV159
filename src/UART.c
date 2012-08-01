@@ -69,7 +69,8 @@ PUBLIC void initUART(void)
 void	baud921(void)
 {
 	LPC_UART1->LCR =3<<0|1<<7;						//8 bit word, divisor latch enable. OK
-	LPC_SC->PCLKSEL1 |=  0<< 8; 					//100MHz/4= 25MHz. UART clock (CCLK/4 by RESET)OK
+	LPC_SC->PCLKSEL0 |=  0<< 8; 					//100MHz/4= 25MHz. UART clock (CCLK/4 by RESET)OK
+													//0<<8=/4,  1<<8=/1,  2<<8=/2,  3<<8=/8
 	LPC_UART1->DLL =1;								//UART CLOCK.
 	LPC_UART1->DLM =0;								//UART CLOCK.
 	LPC_UART1->FDR =9<<0|13<<4;					//Fractional divide. 921kbaud
@@ -83,6 +84,9 @@ void	baud921(void)
 ///@param void
 ///@return void
 /////////////////////////////////////////////////////////////////////////////////////////////////
+
+//100MHz CCLK version.
+
 void	baud115()
 {
 	///set DLAB to set up Baud rate.
@@ -91,10 +95,31 @@ void	baud115()
 	///PCLK = 25MHz= 100MHz/4	(PCLSEL1)
 	///baud rate = PCLK/(16*(256*DLM+DLL)*(1+DIV/MUL))
 	///
-	LPC_SC->PCLKSEL1 |=  0<< 8; 					//100MHz/4= 25MHz. UART clock (CCLK/4 by RESET)OK
-	LPC_UART1->DLL =7;								//UART CLOCK.
-	LPC_UART1->DLM =0;								//UART CLOCK.
-	LPC_UART1->FDR =14<<0|15<<4;					//Fractional divide.
+	LPC_SC->PCLKSEL0 |=  0<< 8; 					//0=100MHz/4= 25MHz. UART clock (CCLK/4 by RESET)OK
+	LPC_UART1->DLL =7;								//UART CLOCK. 7
+	LPC_UART1->DLM =0;								//UART CLOCK. 0
+	LPC_UART1->FDR =14<<0|15<<4;					//Fractional divide. 0.93333
 	///clear DLAB for comms
 	LPC_UART1->LCR =3<<0|0<<7;						//8 bit word, divisor latch enable. OK
 }
+/*
+//6MHz version.
+void	baud115()
+{
+	///set DLAB to set up Baud rate.
+	LPC_UART1->LCR =3<<0|1<<7;						//8 bit word, divisor latch enable. OK
+	///
+	///PCLK = 25MHz= 100MHz/4	(PCLSEL1)
+	///baud rate = PCLK/(16*(256*DLM+DLL)*(1+DIV/MUL))
+	///
+	LPC_SC->PCLKSEL0 |=  1<< 8; 					//6MHz/1=6MHz
+	LPC_UART1->DLL =3;								//UART CLOCK.
+	LPC_UART1->DLM =0;								//UART CLOCK.
+	LPC_UART1->FDR =1<<0|12<<4;					//Fractional divide.
+	///clear DLAB for comms
+	LPC_UART1->LCR =3<<0|0<<7;						//8 bit word, divisor latch enable. OK
+}
+*/
+
+
+

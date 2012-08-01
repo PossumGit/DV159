@@ -49,8 +49,8 @@
 #define TXFIFO_FULL			8
 
 
-EXTERNAL int Buffer[];
-PRIVATE int BufferPtr;
+EXTERNAL int  Buffer[];
+PRIVATE uint32_t  BufferPtr;
 
 volatile uint8_t  I2STXDone = 0;
 volatile uint8_t  I2SRXDone = 0;
