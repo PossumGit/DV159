@@ -74,7 +74,7 @@ PUBLIC void initSSP0Flash(void) {
 
 	//SPANSION S25FL016 supports mode 0 (CPOL=0, CPHA=0) and mode 3 (CPOL=1, CPHA=1).
 	//so use mode 0.
-	LPC_SSP0->CR0 = 7 << 0 | 0 << 4 | 0 << 6 | 0 << 7 | 3 << 8;
+	LPC_SSP0->CR0 = 7 << 0 | 0 << 4 | 1 << 6 | 1 << 7 | 3 << 8;
 	LPC_SSP0->CR1 = 0 << 0 | 1 << 1 | 0 << 2;
 //	LPC_SSP0->CPSR = 2; //divide clock for SSP0 //gives 25MHz clock for FLASH
 	LPC_SSP0->CPSR = 50; //divide by 50(must be even) gives 1MHz clock for NEAT (max 1.8MHz.)

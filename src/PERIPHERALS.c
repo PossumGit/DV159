@@ -182,3 +182,23 @@ SysTick->LOAD=100000;
 while (SysTick->VAL>50000);
 while(SysTick->VAL<50000);
 }
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief 200us delay
+///@param void
+///@return void
+///
+///assumes 100MHz main clock.
+///uses SysTick clock, but no interrupts.
+/////////////////////////////////////////////////////////////////////////////////////////////////
+PUBLIC void	us200(void)
+{
+SysTick->CTRL=1<<0|1<<2;	//enabled| use processor clock
+SysTick->LOAD=20000;
+while (SysTick->VAL>10000);
+while(SysTick->VAL<10000);
+}
+
+
+

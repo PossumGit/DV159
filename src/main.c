@@ -38,7 +38,7 @@ PRIVATE int repeatInput(void);
 //External functions
 //EXTERNAL void fullSpeed(void);
 EXTERNAL void powerDown(void);
-EXTERNAL void readNEAT(void);
+EXTERNAL int readNEAT(void);
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -52,6 +52,7 @@ EXTERNAL void readNEAT(void);
 ////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC int main(void) {
 	while (1) {
+		int a;
 		LPC_GPIO0->FIOCLR = 1 << 21; //OFF button set low to keep on, set high to turn off.
 		LPC_GPIO0->FIODIR |= 1 << 21; //OFF. //1K pull-down prevents turning on during power up. (3.3mA is OK)
 									//set GPIO0_21 to turn off device.
@@ -74,9 +75,10 @@ PUBLIC int main(void) {
 
 
 
+		NEATRESET();
 
-		readNEAT();
-		int a;
+
+
 		timer2Start(); //initiate timer2 to 1MHz.
 
 		initUART();
@@ -188,6 +190,14 @@ PRIVATE void powerupHEX(void) {
 	case 0x0D:		//test turn off after 1 second.
 
 		LED3GREEN();
+				while(1)
+				{
+				a=readNEAT();
+
+				}
+
+
+				NEATTX(0xFF,0x00,0xABCD);		//battery state, LARM type, ID(16 bits)
 		for(i=0;i<1000;i++)
 		{
 			ms();

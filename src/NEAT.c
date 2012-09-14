@@ -21,6 +21,8 @@
 
 
 //Private functions
+PRIVATE void NEATWR(char r, char d);
+PRIVATE char NEATRD(char r);
 
 //External functions
 
@@ -32,37 +34,144 @@ EXTERNAL char readSSP0Byte(void);
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
-PUBLIC char readNEAT(void) {
+PUBLIC int readNEAT(void) {
 	initSSP0Flash();
 
 		; //wait for not busy
 	//set up SPI for flash.
 	char a, b, c,d;
+	char rx[30];
+	int i;
 
 	LPC_GPIO1->FIODIR |= 1 << 21; //CHIPEN on NEAT.
 	LPC_GPIO1->FIOCLR = 1 << 21; //NEAT enable
-	ms();
-	writeSSP0Byte(0x47); //0x80 = read command, 0x01 is register
-	a = readSSP0Byte();
-	ms();
-	writeSSP0Byte(0x00); //address 16-23
-	b = readSSP0Byte();
-	ms();
-
-	writeSSP0Byte(0xC7); //0x80 = read command, 0x01 is register
-	c = readSSP0Byte();
-	ms();
-	writeSSP0Byte(0xFF); //address 16-23
-	d = readSSP0Byte();
-	ms();
+	us200();
 
 
+	writeSSP0Byte(0x81); //0x81 = read reset
+	rx[0] = readSSP0Byte();
+	us200();
+	writeSSP0Byte(0xFF); //enable rx.
+	rx[1] = readSSP0Byte();
 
-//	writeSSP0Byte(0xFF); //address 8-15
-//	c = readSSP0Byte();
-//	ms();
 
+	us200();
 	LPC_GPIO1->FIOSET = 1 << 21; //NEAT disable
+	us200();
+
+
+
+
+
+
+	LPC_GPIO1->FIOCLR = 1 << 21; //NEAT enable
+	us200();
+	writeSSP0Byte(0x02); //0x80 = read command, 0x01 is register
+	rx[2] = readSSP0Byte();
+	us200();
+	writeSSP0Byte(0xA0); //address 16-23
+	rx[3] = readSSP0Byte();
+
+
+	us200();
+	LPC_GPIO1->FIOSET = 1 << 21; //NEAT disable
+	us200();
+
+	LPC_GPIO2->FIODIR &= ~1 << 0; //NEAT INt is input.
+	//while(LPC_GPIO2->FIOPIN &1<<00);		//wait for INT from RX
+	enableInputInterrupt();
+	powerDown();
+	b=NEATRD(0x60);
+	a=NEATRD(0x61);
+	i=a|b<<8;
+
+	if(i==0x9c0f)
+	{
+	LED3GREEN();
+	for (i=1;i<1000;i++)
+	{ms();}
+	LED3OFF();
+	}
+	return a|b<<8;
+
+
+
 
 	return c;
 }
+
+void NEATRESET()
+{
+	int i;
+	initSSP0Flash();
+	LPC_GPIO1->FIODIR |= 1 << 21; //CHIPEN on NEAT.
+
+
+	NEATWR(1,0);				//reset NEAT/as power up reset.
+
+	for(i=0;i<200;i++)			//120ms wait for reset.
+	{
+		ms();
+	}
+	NEATRD(1);				//reset NEAT INT.
+}
+
+
+void NEATTX(char battery, char alarm, int ID)
+{	int a,b,c,d;
+	a=NEATRD(3);
+	while (0x80&NEATRD(3));
+	b=NEATRD(3);
+	NEATWR(0x08,04);
+	NEATWR(0x09,04);
+	NEATWR(0x42,0x00);		//select 40,41 as address
+	NEATWR(0x40,ID>>8);		//MSB of transmit ID
+	NEATWR(0x41,ID);		//LSB of transmit ID
+	NEATWR(0x45,alarm);		//alarm type
+	NEATWR(0x46,battery);	//battery state
+
+
+
+	c=NEATRD(3);
+	NEATWR(0x03,0x80);		//transmit code.
+	d=NEATRD(3);
+}
+
+
+
+PRIVATE void NEATWR(char r, char d)
+{
+	//r is register
+	//d is data to write
+	char a,b;
+			us200();
+			LPC_GPIO1->FIOCLR = 1 << 21; //NEAT enable
+			us200();
+			writeSSP0Byte(r&0x7F); //transmit control
+			a=readSSP0Byte();
+			us200();
+			writeSSP0Byte(d); //transmit
+			b=readSSP0Byte();
+			us200();
+			LPC_GPIO1->FIOSET = 1 << 21; //NEAT disable
+}
+
+PRIVATE char NEATRD(char r)
+{
+	//r is register
+		//d is data read
+	char d;
+
+			us200();
+			LPC_GPIO1->FIOCLR = 1 << 21; //NEAT enable
+			us200();
+			writeSSP0Byte(r|0x80); //transmit control
+			readSSP0Byte();
+			us200();
+			writeSSP0Byte(0xFF); //transmit
+			d = readSSP0Byte();
+			us200();
+			LPC_GPIO1->FIOSET = 1 << 21; //NEAT disable
+	return d;
+}
+

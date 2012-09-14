@@ -23,7 +23,10 @@ PUBLIC int txoverflow = 0;
 
 //Private variables
 int maxtime;
-
+int NEAT=0;
+int ID=0;
+char alarm=0;
+char battery=0xFF;
 //External variables
 EXTERNAL int Buffer[]; ///< Whole of RAM2 is Buffer, reused for NEAT, Bluetooth, audio and IR replay and capture
 EXTERNAL uint8_t I2CSlaveBuffer[256];
@@ -52,6 +55,9 @@ PUBLIC int processBT(void)
     {
     char a;
     int i = 0;
+
+
+
     char ACK[] =
 	{
 	'A'
@@ -71,6 +77,40 @@ PUBLIC int processBT(void)
     if (rxstart != rxend)
 	{
 	a = rx[rxstart++];
+	switch (NEAT)//a sequence of N,alarm, battery, IDMSB, IDLSB.
+	{
+	case 1:
+	{
+		battery=a;
+		NEAT=2;
+		break;
+	}
+	case 2:
+	{
+		alarm=a;
+		NEAT=3;
+		break;
+	}
+	case 3:
+	{
+		ID=a<<8;
+		NEAT=4;
+		break;
+	}
+	case 4:
+	{
+		ID=ID|a;
+
+
+
+		NEATTX(0xEE,0x08,0x2345);		//battery state, LARM type, ID(16 bits)
+	//	NEATTX(battery,alarm,ID);
+		NEAT=0;
+		break;
+	}
+
+	case 0:
+	{
 	switch (a)
 	    {
 
@@ -118,6 +158,14 @@ PUBLIC int processBT(void)
 	    sendBT(I, sizeof(I));
 	    break;
 	    }
+
+	case 'N':
+	case 'n':
+	{
+
+		 NEAT=1;
+		break;
+	}
 
 	case 'p':
 	case 'P': //play IR
@@ -234,6 +282,8 @@ PUBLIC int processBT(void)
 	    }
 
 	    }
+	}
+	}
 	return 1;
 	}
     return 0;

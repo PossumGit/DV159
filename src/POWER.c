@@ -33,6 +33,7 @@ PUBLIC uint32_t SWF1;		//falling interrupt state.
 PUBLIC uint32_t SWF2;
 PUBLIC uint32_t SWF3;
 PUBLIC uint32_t SWBT;
+PUBLIC uint32_t SWNEAT;
 //Private variables
 
 //External variables
@@ -201,13 +202,13 @@ void EINT3_IRQHandler(void)				//GPIO interrupt.
 	SWF1=(LPC_GPIOINT->IO2IntStatF&0x1<<11)>>11;	//SW1 bit 0 INT
 	SWF3=(LPC_GPIOINT->IO2IntStatF&0x1<<13)>>11;	//SW3 bit 2 MID
 	SWBT=(LPC_GPIOINT->IO0IntStatF&0x1<<16)>>16;	//BT
-
+	SWNEAT=(LPC_GPIOINT->IO2IntStatF&0x1<<0)>>0;	//NEAT
 
 
 	//clear interrupts.
 	LPC_GPIOINT->IO0IntClr=0x1<<1|0x1<<16;
 	//LPC_GPIOINT->IO0IntClr=0x1<<16;
-	LPC_GPIOINT->IO2IntClr=0x1<<11|0x1<<13;
+	LPC_GPIOINT->IO2IntClr=0x1<<0|0x1<<11|0x1<<13;		//NEAT|INT|MID
 	//LPC_GPIOINT->IO2IntClr=0x1<<13;	//clear interrupt.
 
 
@@ -226,6 +227,7 @@ PUBLIC void enableInputInterrupt(void)
 
 	LPC_GPIOINT->IO0IntEnF|=0x1<<1;				//EXT input	falling
 	LPC_GPIOINT->IO0IntEnF|=0x1<<16;			//Bluetooth falling
+	LPC_GPIOINT->IO2IntEnF|=0x1<<0;				//NEAT falling
 	LPC_GPIOINT->IO2IntEnF|=0x1<<11;			//INT input falling
 	LPC_GPIOINT->IO2IntEnF|=0x1<<13;			//MID input falling
 }
