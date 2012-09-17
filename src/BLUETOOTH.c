@@ -543,20 +543,30 @@ PUBLIC int BTState(int a)
 ////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC void initBT(void)
     {
-    LPC_GPIO1->FIOCLR = 1 << 1; //MASTER PIO6. OUT LOW = SLAVE
-    LPC_GPIO1->FIOSET = 1 << 4; //NRESET OUT High, Low to reset.
-    LPC_GPIO1->FIOSET = 1 << 0; //FACTORY RESET PIO4. OUT Set this switch ON, power up unit, and toggle the switch from
+    LPC_GPIO_BTMASTER FIOCLR = BTMASTER; //MASTER PIO6. OUT LOW = SLAVE
+    LPC_GPIO_BTMASTER FIODIR |= BTMASTER; //MASTER PIO6. OUT LOW = SLAVE
+
+    LPC_GPIO_BTRESET FIOSET = BTRESET; //NRESET OUT High, Low to reset.
+    LPC_GPIO_BTRESET FIODIR |= BTRESET; //NRESET OUT High, Low to reset.
+
+    LPC_GPIO_BTFACTORY FIOSET = BTFACTORY; //FACTORY RESET PIO4. OUT Set this switch ON, power up unit, and toggle the switch from
     //ON to OFF 3 times to return the unit to factory settings.
-    LPC_GPIO1->FIOCLR = 1 << 9; //DISCOVERY PIO3. OUT HIGH=auto-discovery.
+    LPC_GPIO_BTFACTORY FIODIR |= BTFACTORY; //FACTORY RESET PIO4. OUT Set this switch ON, power up unit, and toggle the switch from
+    //ON to OFF 3 times to return the unit to factory settings.
+
+
+
+    LPC_GPIO_BTDISCOVERY FIOCLR = BTDISCOVERY; //DISCOVERY PIO3. OUT HIGH=auto-discovery.
     //PIO7 Vcc (=low) BAUD rate 115K
-    LPC_GPIO1->FIODIR |= 1 << 1; //MASTER PIO6. OUT LOW = SLAVE
-    LPC_GPIO1->FIODIR |= 1 << 4; //NRESET OUT High, Low to reset.
-    LPC_GPIO1->FIODIR &= ~(1 << 14); //DATASTATUS PIO8. IN RF DATA
-    LPC_GPIO1->FIODIR |= 1 << 0; //FACTORY RESET PIO4. OUT Set this switch ON, power up unit, and toggle the switch from
-    //ON to OFF 3 times to return the unit to factory settings.
-    LPC_GPIO1->FIODIR &= ~(1 << 8); //CSTATUS. IN PIO5 toggles depending on status, LED drive.
-    LPC_GPIO1->FIODIR |= 1 << 9; //DISCOVERY PIO3. OUT HIGH=auto-discovery.
-    LPC_GPIO1->FIODIR &= ~(1 << 10); //CONNECTED PIO2. INPUT HIGH if CONNECTED.
+    LPC_GPIO_BTDISCOVERY FIODIR |= (BTDISCOVERY); //DISCOVERY PIO3. OUT HIGH=auto-discovery.
+
+    LPC_GPIO_BTDATASTATUS FIODIR &= ~(BTDATASTATUS); //DATASTATUS PIO8. IN RF DATA
+
+    LPC_GPIO_BTCSTATUS FIODIR &= ~(BTCSTATUS); //CSTATUS. IN PIO5 toggles depending on status, LED drive.
+
+    LPC_GPIO_BTCONNECTED FIODIR &= ~(BTCONNECTED); //CONNECTED PIO2. INPUT HIGH if CONNECTED.
+
+
     SysTick->CTRL = 1 << 0 | 1 << 2; //enabled| use processor clock
     //	clearBT();
     }
@@ -571,9 +581,9 @@ PUBLIC void initBT(void)
 PUBLIC void resetBT()
     {
     int i;
-    LPC_GPIO1->FIOCLR = 1 << 4; //NRESET OUT High, Low to reset.
+    LPC_GPIO_BTRESET FIOCLR = BTRESET; //NRESET OUT High, Low to reset.
     ms();
-    LPC_GPIO1->FIOSET = 1 << 4; //NRESET OUT High, Low to reset.
+    LPC_GPIO_BTRESET FIOSET = BTRESET; //NRESET OUT High, Low to reset.
     for (i = 0; i < 10; i++)
 	ms(); //10ms delay
     }
@@ -587,34 +597,34 @@ PUBLIC void resetBT()
 PUBLIC void factoryBT(void)
     {
     int i;
-    LED3GREEN();
+    LED1GREEN();
     for (i = 0; i < 500; i++)
 	ms(); //1s delay
-    LPC_GPIO1->FIOCLR = 1 << 0;
-    LED3YELLOW();
+    LPC_GPIO_BTFACTORY FIOCLR = BTFACTORY;
+    LED1YELLOW();
     for (i = 0; i < 500; i++)
 	ms(); //1s delay
-    LPC_GPIO1->FIOSET = 1 << 0;
-    LED3GREEN();
+    LPC_GPIO_BTFACTORY FIOSET = BTFACTORY;
+    LED1GREEN();
     for (i = 0; i < 500; i++)
 	ms(); //1s delay
-    LPC_GPIO1->FIOCLR = 1 << 0;
-    LED3YELLOW();
+    LPC_GPIO_BTFACTORY FIOCLR = BTFACTORY;
+    LED1YELLOW();
     for (i = 0; i < 500; i++)
 	ms(); //1s delay
-    LPC_GPIO1->FIOSET = 1 << 0;
-    LED3GREEN();
+    LPC_GPIO_BTFACTORY FIOSET = BTFACTORY;
+    LED1GREEN();
     for (i = 0; i < 500; i++)
 	ms(); //1s delay
-    LPC_GPIO1->FIOCLR = 1 << 0;
-    LED3YELLOW();
+    LPC_GPIO_BTFACTORY FIOCLR = BTFACTORY;
+    LED1YELLOW();
     for (i = 0; i < 500; i++)
 	ms(); //1s delay
-    LPC_GPIO1->FIOSET = 1 << 0;
-    LED3GREEN();
+    LPC_GPIO_BTFACTORY FIOSET = BTFACTORY;
+    LED1GREEN();
     for (i = 0; i < 500; i++)
 	ms(); //1s delay
-    LED3OFF();
+    LED1OFF();
     }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -627,12 +637,12 @@ PUBLIC void factoryBT(void)
 PUBLIC void discoverBT(void)
     {
     initBT();
-    LPC_GPIO1->FIOSET = 1 << 9; //DISCOVERY PIO3. OUT HIGH=auto-discovery.
+    LPC_GPIO_BTDISCOVERY FIOSET = BTDISCOVERY; //DISCOVERY PIO3. OUT HIGH=auto-discovery.
     while (HEX() == 0x0F)
 	{
 
 	}
-    LPC_GPIO1->FIOCLR = 1 << 9; //DISCOVERY PIO3. OUT LOW=disable auto-discovery.
+    LPC_GPIO_BTDISCOVERY FIOCLR = BTDISCOVERY; //DISCOVERY PIO3. OUT LOW=disable auto-discovery.
     }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -660,7 +670,7 @@ PUBLIC void setupBT(void)
 	}; //		Disable config timeout = 255.
 
 
-    LED3GREEN();
+    LED1GREEN();
     for (i = 0; i < 2000; i++, ms())
 	; //1s delay
 
@@ -677,7 +687,7 @@ PUBLIC void setupBT(void)
 	    if ((rx[rxstart] == 'C') && (rx[(rxstart + 1) % rxlen] == 'M')
 		    && (rx[(rxstart + 2) % rxlen] == 'D'))
 		{
-		LED3YELLOW();
+		LED1YELLOW();
 		i = 1000;
 		}
 	    }
@@ -696,7 +706,7 @@ PUBLIC void setupBT(void)
 	    if ((rx[rxstart] == 'A') && (rx[(rxstart + 1) % rxlen] == 'O')
 		    && (rx[(rxstart + 2) % rxlen] == 'K'))
 		{
-		LED3GREEN();
+		LED1GREEN();
 		i = 1000;
 		}
 	    }
@@ -715,7 +725,7 @@ PUBLIC void setupBT(void)
 	    if ((rx[rxstart] == 'E') && (rx[(rxstart + 1) % rxlen] == 'N')
 		    && (rx[(rxstart + 2) % rxlen] == 'D'))
 		{
-		LED3YELLOW();
+		LED1YELLOW();
 		i = 1000;
 		}
 	    }

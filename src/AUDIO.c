@@ -76,10 +76,10 @@ uint8_t dummy=0;
 PUBLIC void initAudio(void)
 {
 
-	LPC_GPIO1->FIODIR |= 1 << 17; 		//L/R on ADMP441 microphone = output.
-	LPC_GPIO4->FIODIR |= 1 << 28; 		//CHIPEN on mic =output.
-	LPC_GPIO1->FIOCLR = 1 << 17; 		//L/R =1
-	LPC_GPIO4->FIOSET = 1 << 28; 		//CHIPEN=1=enabled.
+	LPC_GPIO_LNR FIODIR |= LNR; 		//L/R on ADMP441 microphone = output.
+	LPC_GPIO_LNR FIOCLR = LNR; 		//L/R =1
+	LPC_GPIO_MICCE FIODIR |=MICCE; 		//CHIPEN on mic =output.
+	LPC_GPIO_MICCE FIOSET = MICCE; 		//CHIPEN=1=enabled.
 
 
 		int	i;

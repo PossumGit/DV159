@@ -29,12 +29,12 @@ PRIVATE char InputState=0;
 ///@param void
 ///@return void
 /////////////////////////////////////////////////////////////////////////////////////////////////
-PUBLIC void	LED3GREEN(void)
+PUBLIC void	LED1GREEN(void)
 	{
-	LPC_GPIO1->FIODIR |= 1 << 19; 		//IR defined as an output.
-	LPC_GPIO1->FIODIR |= 1 << 22; 		//IR defined as an output.
-	LPC_GPIO1->FIOCLR = 1 << 22; 		//
-	LPC_GPIO1->FIOSET = 1 << 19; 		//LED3	GREEN
+	LPC_GPIO1->FIODIR |= LED1G; 		//IR defined as an output.
+	LPC_GPIO1->FIODIR |= LED1Y; 		//IR defined as an output.
+	LPC_GPIO1->FIOCLR = LED1Y; 		//
+	LPC_GPIO1->FIOSET = LED1G; 		//LED3	GREEN
 	}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -42,12 +42,12 @@ PUBLIC void	LED3GREEN(void)
 ///@param void
 ///@return void
 /////////////////////////////////////////////////////////////////////////////////////////////////
-PUBLIC void	LED3YELLOW(void)
+PUBLIC void	LED1YELLOW(void)
 	{
-	LPC_GPIO1->FIODIR |= 1 << 19; 		//IR defined as an output.
-	LPC_GPIO1->FIODIR |= 1 << 22; 		//IR defined as an output.
-	LPC_GPIO1->FIOSET = 1 << 22; 		//
-	LPC_GPIO1->FIOCLR = 1 << 19; 		//LED3 YELLOW
+	LPC_GPIO1->FIODIR |= LED1G; 		//IR defined as an output.
+	LPC_GPIO1->FIODIR |= LED1Y; 		//IR defined as an output.
+	LPC_GPIO1->FIOSET = LED1Y; 		//
+	LPC_GPIO1->FIOCLR = LED1G; 		//LED3 YELLOW
 	}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -55,10 +55,10 @@ PUBLIC void	LED3YELLOW(void)
 ///@param void
 ///@return void
 /////////////////////////////////////////////////////////////////////////////////////////////////
-PUBLIC void	LED3OFF(void)
+PUBLIC void	LED1OFF(void)
 	{
-	LPC_GPIO1->FIOCLR = 1 << 22; 		//
-	LPC_GPIO1->FIOCLR = 1 << 19; 		//LED3 OFF
+	LPC_GPIO1->FIOCLR = LED1Y; 		//
+	LPC_GPIO1->FIOCLR = LED1G; 		//LED3 OFF
 	}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -75,39 +75,34 @@ PUBLIC void	LED3OFF(void)
 PUBLIC char HEX(void)
 {
 	char a,b,c,d,r,s;
-	a=(LPC_GPIO0->FIOPIN &1<<18)>>18;
-	b=(LPC_GPIO4->FIOPIN &1<<29)>>28;
-	c=(LPC_GPIO1->FIOPIN &1<<25)>>23;
-	d=(LPC_GPIO1->FIOPIN &1<<27)>>24;
+
+#if PCBissue==3
+	a=(LPC_GPIO0->FIOPIN &(1<<1))>>1;
+	b=(LPC_GPIO0->FIOPIN &(1<<18))>>17;
+	c=(LPC_GPIO2->FIOPIN &(1<<13))>>11;
+	d=(LPC_GPIO1->FIOPIN &(1<<19))>>16;
 	r= 15-(a+b+c+d);
-	a=(LPC_GPIO0->FIOPIN &1<<28)>>28;
-	b=(LPC_GPIO0->FIOPIN &1<<25)>>24;
-	c=(LPC_GPIO0->FIOPIN &1<<27)>>25;
-	d=(LPC_GPIO0->FIOPIN &1<<26)>>23;
+	a=(LPC_GPIO0->FIOPIN &(1<<0))>>0;
+	b=(LPC_GPIO3->FIOPIN &(1<<25))>>24;
+	c=(LPC_GPIO1->FIOPIN &(1<<18))>>16;
+	d=(LPC_GPIO3->FIOPIN &(1<<26))>>23;
+	s= 15-(a+b+c+d);			//
+#elif PCBissue==2
+	a=(LPC_GPIO0->FIOPIN &(1<<18))>>18;
+	b=(LPC_GPIO4->FIOPIN &(1<<29))>>28;
+	c=(LPC_GPIO1->FIOPIN &(1<<25))>>23;
+	d=(LPC_GPIO1->FIOPIN &(1<<27))>>24;
+	r= 15-(a+b+c+d);
+	a=(LPC_GPIO0->FIOPIN &(1<<28))>>28;
+	b=(LPC_GPIO0->FIOPIN &(1<<25))>>24;
+	c=(LPC_GPIO0->FIOPIN &(1<<27))>>25;
+	d=(LPC_GPIO0->FIOPIN &(1<<26))>>23;
 	s= 15-(1+b+4+d);			//a,b fixed as high.
-
-
-
-///todo mdify when pullups fitted
+#endif
 	return r|s<<4;
 }
-/*
- *
- *
-/////////////////////////////////////////////////////////////////////////////////////////////////
-///@brief read input
-///@param void
-///@return 30-37 depending on input state.
-PUBLIC char	INPUT(void)
-{
-	char	a,b,c,d;
-		a=1^(LPC_GPIO2->FIOPIN &1<<11)>>11;
-		b=(LPC_GPIO0->FIOPIN &1<<1)>>0;
-		c=(LPC_GPIO2->FIOPIN &1<<13)>>11;
-		d=a|b|c;
-		return d;	//return current state
-}
-*/
+
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 ///@brief read input change.
@@ -117,9 +112,16 @@ PUBLIC char	INPUT(void)
 PUBLIC char	inputChange(void)
 {
 	char	a,b,c,d;
-	a=(LPC_GPIO2->FIOPIN &1<<11)>>6;	//bit 5	//bit 0=>>11;		//INTERNAL
-	b=(~LPC_GPIO0->FIOPIN &1<<1)<<3; 	//bit 4	//bit 1=>>0;		//EXTERNAL
-	c=(~LPC_GPIO2->FIOPIN &1<<13)>>13;	//bit 0	//bit 2=>>11;		//EXTERNAL MID/connected
+
+#if PSBissue==3
+	a=(LPC_GPIO2->FIOPIN &(1<<11))>>6;	//bit 5	//bit 0=>>11;		//INTERNAL
+	b=(~LPC_GPIO0->FIOPIN &(1<<21))>>17; 	//bit 4	//bit 1=>>0;		//EXTERNAL
+	c=(~LPC_GPIO2->FIOPIN &(1<<12))>>12;	//bit 0	//bit 2=>>11;		//EXTERNAL MID/connected
+#elif PCBissue==2
+	a=(LPC_GPIO2->FIOPIN &(1<<11))>>6;	//bit 5	//bit 0=>>11;		//INTERNAL
+	b=(~LPC_GPIO0->FIOPIN &(1<<1))<<3; 	//bit 4	//bit 1=>>0;		//EXTERNAL
+	c=(~LPC_GPIO2->FIOPIN &(1<<13))>>13;	//bit 0	//bit 2=>>11;		//EXTERNAL MID/connected
+#endif
 	d=a|b|c|0xe;						//0xe sets bits 1,2,3 for TECLA spec.
 	if (d!=InputState){
 		InputState=d;

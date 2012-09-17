@@ -80,46 +80,6 @@ void fullSpeed (void)
 }
 
 
-/*
-PUBLIC void	fullSpeed(void)
-{
-
-											// Clock Setup
-	  LPC_SC->SCS       = SCS_Val;			//20
-	  if (SCS_Val & (1 << 5)) {             // If Main Oscillator is enabled
-	    while ((LPC_SC->SCS & (1<<6)) == 0);// Wait for Oscillator to be ready
-	  }
-
-	  LPC_SC->CCLKCFG   = CCLKCFG_Val;      //3  Setup Clock Divider
-
-	  LPC_SC->PCLKSEL0  = PCLKSEL0_Val;     //0 Peripheral Clock Selection
-	  LPC_SC->PCLKSEL1  = PCLKSEL1_Val;		//0
-
-	  LPC_SC->CLKSRCSEL = CLKSRCSEL_Val;    //1 Select Clock Source for PLL0
-
-
-	  LPC_SC->PLL0CFG   = PLL0CFG_Val;      // configure PLL0
-	  LPC_SC->PLL0FEED  = 0xAA;
-	  LPC_SC->PLL0FEED  = 0x55;
-
-	  LPC_SC->PLL0CON   = 0x01;             // PLL0 Enable
-	  LPC_SC->PLL0FEED  = 0xAA;
-	  LPC_SC->PLL0FEED  = 0x55;
-	  while (!(LPC_SC->PLL0STAT & (1<<26)));//Wait for PLOCK0
-	  LPC_SC->PLL0CON   = 0x03;             // PLL0 Enable & Connect
-	  LPC_SC->PLL0FEED  = 0xAA;
-	  LPC_SC->PLL0FEED  = 0x55;
-	  while (!(LPC_SC->PLL0STAT & ((1<<25) | (1<<24))));// Wait for PLLC0_STAT & PLLE0_STAT
-
-	  LPC_SC->CLKOUTCFG = CLKOUTCFG_Val;    //0 Clock Output Configuration
-
-
-                 // Flash Accelerator Setup
-
-
-
-}
-*/
 
 PUBLIC void lowPower(void)
 {
@@ -161,26 +121,9 @@ PUBLIC void lowPower(void)
 //	LPC_SC->PCONP=0;	//saves 39uA
 	a=a;
 	enableInputInterrupt();
-
-
-
-
-
-//	LPC_SC->CCLKCFG = 0x0;   		//IRC as clock.
-
-
-
 }
 
 
-/*
-			LED3OFF();
-		//	LPC_SC->PCON=1;		//		power down.
-	//		SCB->SCR|=0x4;			//deepsleep bit.
-			__WFI();
-			a=SW1|SW2|SW3;
-			b=SWF1|SWF2|SWF3;
-*/
 
 
 
@@ -188,13 +131,27 @@ PUBLIC void lowPower(void)
 
 void EINT3_IRQHandler(void)				//GPIO interrupt.
 {
-
 //interrupts on input change state and bluetooth character.
 	char a;
 	a=a;
 
-	//get interrupt status.
 
+#if PCBissue==3
+	//get interrupt status.
+	SW2=(LPC_GPIOINT->IO2IntStatR&(0x1<<12))>>11;			//SW2 bit 1		EXT
+	SW1=(LPC_GPIOINT->IO2IntStatR&(0x1<<11))>>11;			//SW1 bit 0 INT
+	SW3=(LPC_GPIOINT->IO0IntStatR&(0x1<<21))>>19;			//SW3 bit 2 MID
+	SWF2=(LPC_GPIOINT->IO0IntStatF&(0x1<<12))>>11;			//SW2 bit 1		EXT
+	SWF1=(LPC_GPIOINT->IO2IntStatF&(0x1<<11))>>11;			//SW1 bit 0 INT
+	SWF3=(LPC_GPIOINT->IO0IntStatF&(0x1<<21))>>19;			//SW3 bit 2 MID
+	SWBT=(LPC_GPIOINT->IO0IntStatF&(0x1<<16))>>16;			//BT Interrupt
+	SWNEAT=(LPC_GPIOINT->IO2IntStatF&(0x1<<10))>>10;		//NEAT Interrupt MOD, wire NEAT INTERRUPt to BOOT pin B.
+	//clear interrupts.
+	LPC_GPIOINT->IO0IntClr=0x1<<21|0x1<<16|0x1<<12;
+	LPC_GPIOINT->IO2IntClr=0x1<<10;
+	LPC_GPIOINT->IO2IntClr=0x1<<11|0x1<<12;			//NEAT|INT|MID
+#elif PCBissue==2
+	//get interrupt status.
 	SW2=LPC_GPIOINT->IO0IntStatR&0x1<<1;			//SW2 bit 1		EXT
 	SW1=(LPC_GPIOINT->IO2IntStatR&0x1<<11)>>11;		//SW1 bit 0 INT
 	SW3=(LPC_GPIOINT->IO2IntStatR&0x1<<13)>>11;		//SW3 bit 2 MID
@@ -203,13 +160,14 @@ void EINT3_IRQHandler(void)				//GPIO interrupt.
 	SWF3=(LPC_GPIOINT->IO2IntStatF&0x1<<13)>>11;	//SW3 bit 2 MID
 	SWBT=(LPC_GPIOINT->IO0IntStatF&0x1<<16)>>16;	//BT
 	SWNEAT=(LPC_GPIOINT->IO2IntStatF&0x1<<0)>>0;	//NEAT
-
-
 	//clear interrupts.
 	LPC_GPIOINT->IO0IntClr=0x1<<1|0x1<<16;
-	//LPC_GPIOINT->IO0IntClr=0x1<<16;
 	LPC_GPIOINT->IO2IntClr=0x1<<0|0x1<<11|0x1<<13;		//NEAT|INT|MID
-	//LPC_GPIOINT->IO2IntClr=0x1<<13;	//clear interrupt.
+
+
+
+#endif
+
 
 
 }
@@ -220,6 +178,18 @@ void EINT3_IRQHandler(void)				//GPIO interrupt.
 
 PUBLIC void enableInputInterrupt(void)
 {
+#if PCBissue==3
+	NVIC->ISER[0]|=0x1<<21;					//enable eint3/GPIO  interrupt.(SHARED on bit 21.)
+	LPC_GPIOINT->IO0IntEnR|=0x1<<21;			//EXT TIP input rising
+	LPC_GPIOINT->IO2IntEnR|=0x1<<11;			//INT input	rising
+	LPC_GPIOINT->IO2IntEnR|=0x1<<12;			//MID input rising
+
+	LPC_GPIOINT->IO0IntEnF|=0x1<<21;				//EXT TIP input	falling
+	LPC_GPIOINT->IO0IntEnF|=0x1<<16;			//Bluetooth falling
+	LPC_GPIOINT->IO2IntEnF|=0x1<<10;				//NEAT falling
+	LPC_GPIOINT->IO2IntEnF|=0x1<<11;			//INT input falling
+	LPC_GPIOINT->IO2IntEnF|=0x1<<12;			//MID input falling
+#elif PCBissue==2
 	NVIC->ISER[0]|=0x1<<21;		//enable eint3/GPIO 0/GPIO2 interrupt.
 	LPC_GPIOINT->IO0IntEnR|=0x1<<1;				//EXT input rising
 	LPC_GPIOINT->IO2IntEnR|=0x1<<11;			//INT input	rising
@@ -230,6 +200,11 @@ PUBLIC void enableInputInterrupt(void)
 	LPC_GPIOINT->IO2IntEnF|=0x1<<0;				//NEAT falling
 	LPC_GPIOINT->IO2IntEnF|=0x1<<11;			//INT input falling
 	LPC_GPIOINT->IO2IntEnF|=0x1<<13;			//MID input falling
+
+
+
+
+#endif
 }
 
 PUBLIC void powerDown(void)
@@ -249,7 +224,7 @@ PUBLIC void powerDown(void)
 //	LPC_SC->SCS = 0x00;		    				// not using XTAL anymore
 
 
-	LED3OFF();
+	LED1OFF();
 	LPC_SC->PCONP=1<<15;		//only GPIO needed during power down.
 
 
@@ -269,11 +244,11 @@ PUBLIC void powerDown(void)
 	 if(I2CBATTERY() >=95)//92=92*8*4.88mV =3.591V, 93=3.63V, 95=3.708V
 	 {
 
-		LED3GREEN();//battery good active
+		LED1GREEN();//battery good active
 	 }
 	 else
 	 {
-		 LED3YELLOW();//battery low active.
+		 LED1YELLOW();//battery low active.
 	 }
 
 

@@ -43,8 +43,8 @@ PUBLIC int readNEAT(void) {
 	char rx[30];
 	int i;
 
-	LPC_GPIO1->FIODIR |= 1 << 21; //CHIPEN on NEAT.
-	LPC_GPIO1->FIOCLR = 1 << 21; //NEAT enable
+	LPC_GPIO_NEATCS FIODIR |= NEATCS; //CHIPEN on NEAT.
+	LPC_GPIO_NEATCS FIOCLR = NEATCS; //NEAT enable
 	us200();
 
 
@@ -56,7 +56,7 @@ PUBLIC int readNEAT(void) {
 
 
 	us200();
-	LPC_GPIO1->FIOSET = 1 << 21; //NEAT disable
+	LPC_GPIO_NEATCS FIOSET = NEATCS; //NEAT disable
 	us200();
 
 
@@ -64,7 +64,7 @@ PUBLIC int readNEAT(void) {
 
 
 
-	LPC_GPIO1->FIOCLR = 1 << 21; //NEAT enable
+	LPC_GPIO_NEATCS FIOCLR = NEATCS; //NEAT enable
 	us200();
 	writeSSP0Byte(0x02); //0x80 = read command, 0x01 is register
 	rx[2] = readSSP0Byte();
@@ -74,10 +74,10 @@ PUBLIC int readNEAT(void) {
 
 
 	us200();
-	LPC_GPIO1->FIOSET = 1 << 21; //NEAT disable
+	LPC_GPIO_NEATCS FIOSET = NEATCS; //NEAT disable
 	us200();
 
-	LPC_GPIO2->FIODIR &= ~1 << 0; //NEAT INt is input.
+	LPC_GPIO_NEATCS FIODIR &= ~(NEATINT); //NEAT INt is input.
 	//while(LPC_GPIO2->FIOPIN &1<<00);		//wait for INT from RX
 	enableInputInterrupt();
 	powerDown();
@@ -87,10 +87,10 @@ PUBLIC int readNEAT(void) {
 
 	if(i==0x9c0f)
 	{
-	LED3GREEN();
+	LED1GREEN();
 	for (i=1;i<1000;i++)
 	{ms();}
-	LED3OFF();
+	LED1OFF();
 	}
 	return a|b<<8;
 
@@ -104,7 +104,7 @@ void NEATRESET()
 {
 	int i;
 	initSSP0Flash();
-	LPC_GPIO1->FIODIR |= 1 << 21; //CHIPEN on NEAT.
+	LPC_GPIO_NEATCS FIODIR |=NEATCS; //CHIPEN on NEAT.
 
 
 	NEATWR(1,0);				//reset NEAT/as power up reset.
@@ -145,7 +145,7 @@ PRIVATE void NEATWR(char r, char d)
 	//d is data to write
 	char a,b;
 			us200();
-			LPC_GPIO1->FIOCLR = 1 << 21; //NEAT enable
+			LPC_GPIO_NEATCS FIOCLR = NEATCS; //NEAT enable
 			us200();
 			writeSSP0Byte(r&0x7F); //transmit control
 			a=readSSP0Byte();
@@ -153,7 +153,7 @@ PRIVATE void NEATWR(char r, char d)
 			writeSSP0Byte(d); //transmit
 			b=readSSP0Byte();
 			us200();
-			LPC_GPIO1->FIOSET = 1 << 21; //NEAT disable
+			LPC_GPIO_NEATCS FIOSET = NEATCS; //NEAT disable
 }
 
 PRIVATE char NEATRD(char r)
@@ -163,7 +163,7 @@ PRIVATE char NEATRD(char r)
 	char d;
 
 			us200();
-			LPC_GPIO1->FIOCLR = 1 << 21; //NEAT enable
+			LPC_GPIO_NEATCS FIOCLR = NEATCS; //NEAT enable
 			us200();
 			writeSSP0Byte(r|0x80); //transmit control
 			readSSP0Byte();
@@ -171,7 +171,7 @@ PRIVATE char NEATRD(char r)
 			writeSSP0Byte(0xFF); //transmit
 			d = readSSP0Byte();
 			us200();
-			LPC_GPIO1->FIOSET = 1 << 21; //NEAT disable
+			LPC_GPIO_NEATCS FIOSET = NEATCS; //NEAT disable
 	return d;
 }
 

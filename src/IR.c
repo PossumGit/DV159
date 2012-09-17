@@ -60,7 +60,7 @@ PUBLIC int captureIR(void) {
 
 	char d;
 	IRAddress = CaptureFirst;
-	LED3GREEN();
+	LED1GREEN();
 	startCaptureIR(); //initiate IR capture
 	while ((IRAddress != CaptureFirst) ? (LPC_TIM0->TC < WaitEndIR
 			+ LPC_TIM0->CR0) : (LPC_TIM0->TC < WaitForIR)) // IR timeouts, WaitEndIR(3s), WaitForIR(10s).Wait here during capture IR.
@@ -74,7 +74,7 @@ PUBLIC int captureIR(void) {
 	}
 	endCaptureIR();
 	correctIR();
-	LED3OFF();
+	LED1OFF();
 	if (IRAddress > CaptureFirst)
 		return 1;
 	return 0;
@@ -97,12 +97,12 @@ PUBLIC void playIR(void) {
 	if (Buffer[2] != 0) {
 
 		startPlayIR();
-		LED3YELLOW();
+		LED1YELLOW();
 		while (IRData > 0)//wait here during play IR
 		{
 	//		__WFI(); //sleep, wait for interrupt.
 		}
-		LED3OFF();
+		LED1OFF();
 		endPlayIR();
 
 	}
@@ -556,8 +556,8 @@ PRIVATE void correctIR(void) {
 ///@return void
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC void initIR(void) {
-	LPC_GPIO1->FIODIR |= 1 << 28; //IR defined as an output.
-	LPC_GPIO1->FIOCLR |= 1 << 28; //clear IR output (IR off).
+	LPC_GPIO_IROUT FIODIR |= IROUT; //IR defined as an output.
+	LPC_GPIO_IROUT FIOCLR = IROUT; //clear IR output (IR off).
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////

@@ -44,9 +44,9 @@ PUBLIC void initUART(void)
 {
 
 
-	LPC_GPIO0->FIOCLR	=1 << 22;					//RTS(CPU). OUT  HIGH to stop BT sending data, LOW to enable BT sending.
-	LPC_GPIO0->FIODIR	|= 1 << 22;					//RTS(CPU) UARTCTS. HIGH to stop BT sending data
-	LPC_GPIO0->FIODIR	|= 1 << 17;					//CTS(CPU) UARTRTS. IN HIGH means stop transmitting.
+	LPC_GPIO_BTCTS FIOCLR	=BTCTS;					//RTS(CPU) BTCTS. OUT  HIGH to stop BT sending data, LOW to enable BT sending.
+	LPC_GPIO_BTCTS FIODIR	|= BTCTS;				//RTS(CPU) BTRTS UARTCTS. HIGH to stop BT sending data
+	LPC_GPIO_BTCTS FIODIR	|= ~(BTRTS);			//INPUT CTS(CPU) UARTRTS. IN HIGH means stop transmitting.
 
 	LPC_SC->PCONP |= 1 << 4;						//enable UART1 (RESET enables.) OK
 

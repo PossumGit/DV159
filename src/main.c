@@ -3,6 +3,7 @@
 ///@version     	test
 ///@copyright  		Possum UK 23 April 2012
 
+
 //Includes
 #include "HUB.h"
 //#include <NXP/crp.h>
@@ -53,25 +54,26 @@ EXTERNAL int readNEAT(void);
 PUBLIC int main(void) {
 	while (1) {
 		int a;
-		LPC_GPIO0->FIOCLR = 1 << 21; //OFF button set low to keep on, set high to turn off.
-		LPC_GPIO0->FIODIR |= 1 << 21; //OFF. //1K pull-down prevents turning on during power up. (3.3mA is OK)
-									//set GPIO0_21 to turn off device.
+		LPC_GPIO_OFF FIOCLR = OFF; //SD(shutdown) =OFF button set low to keep on, set high to turn off.
+		LPC_GPIO_OFF FIODIR |= OFF; //SD(shutdown) =OFF. //1K pull-down prevents turning on during power up. (3.3mA is OK)
+									//set GPIO0_11 to turn off device.
+
 
 		fullSpeed();		//set clock to 100MHz.
 
 		//
 		//set various inputs/outputs to default state.
-		LPC_GPIO1->FIOCLR |= 1 << 28; //clear IR output (IR off).
-		LPC_GPIO1->FIODIR |= 1 << 28; //IR defined as an output. Small reduction Iq -190uA
+		LPC_GPIO_IROUT FIOCLR = IROUT; //clear IR output (IR off).
+		LPC_GPIO_IROUT FIODIR |= IROUT; //IR defined as an output. Small reduction Iq -190uA
 
-		LPC_GPIO4->FIOCLR = 1 << 28; //CHIPEN=0=disabled.
-		LPC_GPIO4->FIODIR |= 1 << 28; //CHIPEN on mic =output. Small increase Iq +50uA
+		LPC_GPIO_MICCE FIOCLR = MICCE; //MIC CHIPEN=0=disabled. PORTCHANGE
+		LPC_GPIO_MICCE FIODIR |= MICCE; //CHIPEN on mic =output. Small increase Iq +50uA PORTCHANGE
 
-		LPC_GPIO0->FIOSET = 1 << 23; //CHIPEN=1=disabled.
-		LPC_GPIO0->FIODIR |= 1 << 23; //CHIPEN 1 disabled on FLASH.	Small reduction Iq -30uA
+		LPC_GPIO_FLASHCS FIOSET = FLASHCS; //CHIPEN=1=disabled.
+		LPC_GPIO_FLASHCS FIODIR |= FLASHCS; //CHIPEN 1 disabled on FLASH.	Small reduction Iq -30uA
 
-		LPC_GPIO2->FIOSET = 1 << 9; //T2g=1=disabled.			No effect Iq
-		LPC_GPIO2->FIODIR |= 1 << 9; //T2Vgs=0, 3v3 on pin.
+		LPC_GPIO_T2G FIOSET = T2G; //T2g=1=disabled.			No effect Iq
+		LPC_GPIO_T2G FIODIR |= T2G; //T2Vgs=0, 3v3 on pin.
 
 
 
@@ -117,7 +119,7 @@ PRIVATE void LOOP(void) {
 	char WAKE[] = { 'W' };
 
 	enableInputInterrupt();
-	LED3YELLOW();
+	LED1YELLOW();
 	timer2Start();
 	while (1) {
 		//check if BT empty
@@ -189,7 +191,7 @@ PRIVATE void powerupHEX(void) {
 		break;
 	case 0x0D:		//test turn off after 1 second.
 
-		LED3GREEN();
+		LED1GREEN();
 				while(1)
 				{
 				a=readNEAT();
@@ -202,8 +204,8 @@ PRIVATE void powerupHEX(void) {
 		{
 			ms();
 		}
-		LPC_GPIO0->FIOSET |= 1 << 21; //OFF button set high to turn off.
-		LPC_GPIO0->FIODIR |= 1 << 21; //
+		LPC_GPIO_OFF FIOSET =OFF; //OFF button set high to turn off.
+		LPC_GPIO_OFF FIODIR |= OFF; //
 		while(1);
 		break;
 	case 0x0C: //recover clock

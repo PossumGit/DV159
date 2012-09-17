@@ -40,16 +40,16 @@ PUBLIC void eraseFlash(void)
 	int a;
 	while (1 & readStatus()); //wait for not busy.
 	//first command is write enable
-	LPC_GPIO0->FIOCLR = 1 << 23; //Flash enable
+	LPC_GPIO_FLASHCS FIOCLR = FLASHCS; //Flash enable
 	writeSSP0Byte(0x06); //write enable for erase command.
 	a = readSSP0Byte();
-	LPC_GPIO0->FIOSET = 1 << 23; //Flash disable
+	LPC_GPIO_FLASHCS FIOSET = FLASHCS; //Flash disable
 	//	a = readStatus();
-	LPC_GPIO0->FIOCLR = 1 << 23; //Flash enable
+	LPC_GPIO_FLASHCS FIOCLR = FLASHCS; //Flash enable
 	writeSSP0Byte(0x60); //chip erase
 	a = readSSP0Byte();
 
-	LPC_GPIO0->FIOSET = 1 << 23; //Flash disable
+	LPC_GPIO_FLASHCS FIOSET = FLASHCS; //Flash disable
 
 	while (1 & readStatus());//wait for not busy.
 }
@@ -111,7 +111,7 @@ PUBLIC void readFlashHigh(void) {
 	address0 = 0xFF & FlashAddress;
 	address8 = 0xFF & (FlashAddress >> 8);
 	address16 = 0xFF & (FlashAddress >> 16);
-	LPC_GPIO0->FIOCLR = 1 << 23; //Flash enable
+	LPC_GPIO_FLASHCS FIOCLR = FLASHCS; //Flash enable
 	writeSSP0Byte(0x03); //read command
 	a = readSSP0Byte();
 	writeSSP0Byte(address16); //address 16-23
@@ -131,7 +131,7 @@ PUBLIC void readFlashHigh(void) {
 		d = readSSP0Byte();
 		Buffer[i] = a + (b << 8) + (c << 16) + (d << 24); //merge 4 bytes into word.
 	}
-	LPC_GPIO0->FIOSET = 1 << 23; //Flash disable
+	LPC_GPIO_FLASHCS FIOSET = FLASHCS; //Flash disable
 	FlashAddress = FlashAddress + 4096;
 }
 
@@ -156,7 +156,7 @@ PUBLIC void readFlashLow(void) {
 	address0 = 0xFF & FlashAddress;
 	address8 = 0xFF & (FlashAddress >> 8);
 	address16 = 0xFF & (FlashAddress >> 16);
-	LPC_GPIO0->FIOCLR = 1 << 23; //Flash enable
+	LPC_GPIO1->FIOCLR = FLASHCS; //Flash enable
 	writeSSP0Byte(0x03); //read command
 	a = readSSP0Byte();
 	writeSSP0Byte(address16); //address 16-23
@@ -176,7 +176,7 @@ PUBLIC void readFlashLow(void) {
 		d = readSSP0Byte();
 		Buffer[i] = a + (b << 8) + (c << 16) + (d << 24); //merge 4 bytes into word.
 	}
-	LPC_GPIO0->FIOSET = 1 << 23; //Flash disable
+	LPC_GPIO_FLASHCS FIOSET = FLASHCS; //Flash disable
 	FlashAddress = FlashAddress + 4096;
 }
 
@@ -205,14 +205,14 @@ PRIVATE void writeBlock(int i) {
 	char address0, address8, address16;
 	while (1 & readStatus())
 		; //wait for not busy (ready).
-	LPC_GPIO0->FIOCLR = 1 << 23; //Flash CS enable
+	LPC_GPIO_FLASHCS FIOCLR = FLASHCS; //Flash CS enable
 	writeSSP0Byte(0x06); //write enable.
 	a = readSSP0Byte();
-	LPC_GPIO0->FIOSET = 1 << 23; //Flash CS disable
+	LPC_GPIO_FLASHCS FIOSET = FLASHCS; //Flash CS disable
 	address0 = 0xFF & FlashAddress;
 	address8 = 0xFF & (FlashAddress >> 8);
 	address16 = 0xFF & (FlashAddress >> 16);
-	LPC_GPIO0->FIOCLR = 1 << 23; //Flash  CS enable
+	LPC_GPIO_FLASHCS FIOCLR = FLASHCS; //Flash  CS enable
 	writeSSP0Byte(0x02); //page write
 	a = readSSP0Byte();
 	writeSSP0Byte(address16); //address 16-23
@@ -237,7 +237,7 @@ PRIVATE void writeBlock(int i) {
 		writeSSP0Byte(e); //data
 		a = readSSP0Byte();
 	}
-	LPC_GPIO0->FIOSET = 1 << 23; //Flash disable
+	LPC_GPIO_FLASHCS FIOSET = FLASHCS; //Flash disable
 	FlashAddress = FlashAddress + 256; //4*64
 }
 
@@ -248,12 +248,12 @@ PRIVATE void writeBlock(int i) {
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PRIVATE int readStatus(void) {
 	int a, b;
-	LPC_GPIO0->FIOCLR = 1 << 23; //Flash enable
+	LPC_GPIO_FLASHCS FIOCLR = FLASHCS; //Flash enable
 	writeSSP0Byte(0x05); //read
 	writeSSP0Byte(0x00); //read address
 	a = readSSP0Byte();
 	b = readSSP0Byte();
-	LPC_GPIO0->FIOSET = 1 << 23; //Flash disable
+	LPC_GPIO_FLASHCS FIOSET = FLASHCS; //Flash disable
 	return b;
 
 }
