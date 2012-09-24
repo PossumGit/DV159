@@ -217,9 +217,11 @@ void initUART(void);
 void timer2Start(void);
 
  void	fullSpeed(void);
- void 	lowPower(void);
+ void 	LowPower(void);
 
 void enableExtInterrupt(void);
 
 void goToSleepQ(void);
- void powerDown(void);
+int powerDown(void);
+ void txshortBT(char istat[], int ilength);
+ void BTWAKE(void);

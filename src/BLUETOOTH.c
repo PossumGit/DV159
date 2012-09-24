@@ -30,6 +30,7 @@ char battery=0xFF;
 //External variables
 EXTERNAL int Buffer[]; ///< Whole of RAM2 is Buffer, reused for NEAT, Bluetooth, audio and IR replay and capture
 EXTERNAL uint8_t I2CSlaveBuffer[256];
+EXTERNAL uint32_t SWBT;
 //Private functions
 PRIVATE void
 sendBTbuffer(void);
@@ -66,10 +67,22 @@ PUBLIC int processBT(void)
 	{
 	'N'
 	};
+
+
+#if PCBissue==3
     char I[] =
-	{
-	"Hub version 0.0, PCB version 2.t"
-	};
+ 	{
+	"Hub version 0.1, PCB version 3."
+ 	};
+#elif PCBissue==2						//issue 2 PCB
+    char I[] =
+ 	{
+	"Hub version 0.1, PCB version 2."
+ 	};
+#endif
+
+
+
     char W[] =
 	{
 	'W'
@@ -102,10 +115,11 @@ PUBLIC int processBT(void)
 		ID=ID|a;
 
 
-
-		NEATTX(0xEE,0x08,0x2345);		//battery state, LARM type, ID(16 bits)
+		NEATTX(0xFF,0x01,0x1234);		//battery state, LARM type, ID(16 bits)
+//		NEATTX(0xEE,0x08,0x2345);		//battery state, ALARM type, ID(16 bits)
 	//	NEATTX(battery,alarm,ID);
 		NEAT=0;
+		sendBT(ACK, sizeof(ACK));
 		break;
 	}
 
@@ -116,7 +130,7 @@ PUBLIC int processBT(void)
 
 	case '?':
 	    {
-	    sendBT(W, sizeof(W));
+	    sendBT(W, 1);
 	    break;
 	    }
 	case 'b':
@@ -155,7 +169,7 @@ PUBLIC int processBT(void)
 	case 'i':
 	case 'I':
 	    {
-	    sendBT(I, sizeof(I));
+	    sendBT(I, sizeof(I)-1);
 	    break;
 	    }
 
@@ -499,7 +513,7 @@ PUBLIC void sendBT(char istat[], int ilength)
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC int rxtxBT(void)
     {
-    int s, r;
+    int s, r,a;
     r = 0;
     s = LPC_UART1->LSR;
     while (1 & LPC_UART1->LSR)
@@ -512,7 +526,8 @@ PUBLIC int rxtxBT(void)
 	    }
 	r = 1;
 	}
-    while ((txstart != txend) && (0 != (1 << 6 & LPC_UART1->LSR)))//data available and buffer available
+    a=LPC_UART1->LSR;
+    while ((txstart != txend) && (0 != (1 << 5 & LPC_UART1->LSR)))//data available and buffer available
 	{
 	LPC_UART1->THR = tx[(txstart++) % txlen];
 	r = 1;
@@ -520,6 +535,49 @@ PUBLIC int rxtxBT(void)
     return r;
 
     }
+
+
+
+PUBLIC void BTWAKE(void)
+{
+	char WAKE[] = { 'W' };
+
+	if (SWBT) {
+	SWBT=0;
+	sendBT(WAKE, sizeof(WAKE));
+//	txshortBT(WAKE, 1);
+}
+}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief BT transmit short(<16) to BT module RN42/RN41 Receiver data.
+///@param void
+///@return void
+/////////////////////////////////////////////////////////////////////////////////////////////////
+PUBLIC void txshortBT(char istat[], int ilength)
+    {
+
+
+	    int i;
+
+
+
+
+
+    while (0 == (1 << 6 & LPC_UART1->LSR))//wait until FIFO buffer is empty.
+    {
+    }
+    for (i = 0; i < ilength; i++)		//now send short message.
+	{
+	LPC_UART1->THR = istat[i];
+	}
+
+
+
+
+    }
+
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 ///@brief BTState returns 0 if busy, else returns 1
@@ -668,6 +726,12 @@ PUBLIC void setupBT(void)
 	{
 	'S', 'T', ',', '2', '5', '5', '\r', '\n'
 	}; //		Disable config timeout = 255.
+
+
+    char LowPowerConnect[] =
+    {
+    	'S','l',',','0','1','1','0','\r','\n'
+    };
 
 
     LED1GREEN();

@@ -98,6 +98,7 @@ PUBLIC char HEX(void)
 	c=(LPC_GPIO0->FIOPIN &(1<<27))>>25;
 	d=(LPC_GPIO0->FIOPIN &(1<<26))>>23;
 	s= 15-(1+b+4+d);			//a,b fixed as high.
+	s=0;
 #endif
 	return r|s<<4;
 }

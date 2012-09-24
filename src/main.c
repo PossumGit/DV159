@@ -20,6 +20,7 @@ PRIVATE char Copyright[] = "Copyright Possum 2012, HC8500"; ///< machine readabl
 PRIVATE char b = 0; //used for input state memory.
 
 PRIVATE char in[] = { 'I', ' ' };
+
 PRIVATE int ilength = sizeof(in);
 //External variables
 EXTERNAL int Buffer[]; ///< Whole of RAM2 is Buffer, reused for NEAT, Bluetooth, audio and IR replay and capture
@@ -31,6 +32,7 @@ EXTERNAL uint32_t SWF1;
 EXTERNAL uint32_t SWF2;
 EXTERNAL uint32_t SWF3;
 EXTERNAL uint32_t SWBT;
+EXTERNAL uint32_t SWNEAT;
 //Local functions
 PRIVATE void powerupHEX(void);
 PRIVATE void LOOP(void);
@@ -38,7 +40,7 @@ PRIVATE int repeatInput(void);
 
 //External functions
 //EXTERNAL void fullSpeed(void);
-EXTERNAL void powerDown(void);
+EXTERNAL int powerDown(void);
 EXTERNAL int readNEAT(void);
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -78,7 +80,7 @@ PUBLIC int main(void) {
 
 
 		NEATRESET();
-
+		readNEATINIT();
 
 
 		timer2Start(); //initiate timer2 to 1MHz.
@@ -116,21 +118,19 @@ PRIVATE void LOOP(void) {
 
 	int a, b,c,r;
 	c=0;
-	char WAKE[] = { 'W' };
 
+	inputChange();
 	enableInputInterrupt();
 	LED1YELLOW();
 	timer2Start();
 	while (1) {
-		//check if BT empty
-		// if  rx is empty and tx is empty then sleep.
-		if ((c=BTState(c))>=2) {
-			powerDown();
+			if (powerDown());
+			{
+
 			}
 
-		if (SWBT) {
-			sendBT(WAKE, sizeof(WAKE));
-		}
+		rxtxBT(); //receive/transmit Bluetooth.
+		readNEAT();
 		rxtxBT(); //receive/transmit Bluetooth.
 
 		LPC_TIM2->TC = 0; // timer2 used for going back to sleep. Reset gives another 3 seconds.
@@ -138,6 +138,7 @@ PRIVATE void LOOP(void) {
 
 		while (3000000 > LPC_TIM2->TC)
 		{
+			readNEAT();
 			r=repeatInput(); //check if change of input, send via BT to android if change.
 			r=r+processBT(); //process received information.
 			r=r+rxtxBT(); //receive/transmit any BT data//may be possible to DMA here.
@@ -192,11 +193,11 @@ PRIVATE void powerupHEX(void) {
 	case 0x0D:		//test turn off after 1 second.
 
 		LED1GREEN();
-				while(1)
-				{
-				a=readNEAT();
-
-				}
+	//			while(1)
+	//			{
+	//			a=readNEAT();
+//
+	//			}
 
 
 				NEATTX(0xFF,0x00,0xABCD);		//battery state, LARM type, ID(16 bits)

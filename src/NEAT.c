@@ -29,12 +29,13 @@ PRIVATE char NEATRD(char r);
 EXTERNAL void initSSP0Flash(void);
 EXTERNAL void writeSSP0Byte(char b);
 EXTERNAL char readSSP0Byte(void);
+EXTERNAL uint32_t SWNEAT;
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
-PUBLIC int readNEAT(void) {
+PUBLIC readNEATINIT(void) {
 	initSSP0Flash();
 
 		; //wait for not busy
@@ -77,28 +78,46 @@ PUBLIC int readNEAT(void) {
 	LPC_GPIO_NEATCS FIOSET = NEATCS; //NEAT disable
 	us200();
 
-	LPC_GPIO_NEATCS FIODIR &= ~(NEATINT); //NEAT INt is input.
+	LPC_GPIO_NEATINT FIODIR &= ~(NEATINT); //NEAT INt is input.
 	//while(LPC_GPIO2->FIOPIN &1<<00);		//wait for INT from RX
 	enableInputInterrupt();
-	powerDown();
-	b=NEATRD(0x60);
-	a=NEATRD(0x61);
-	i=a|b<<8;
 
-	if(i==0x9c0f)
-	{
-	LED1GREEN();
-	for (i=1;i<1000;i++)
-	{ms();}
-	LED1OFF();
-	}
-	return a|b<<8;
-
-
-
-
-	return c;
 }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief readNEAT checks if NEAT available and reads if available and sends to BT TX buffer.
+///@param void
+///@return 0 if no read, 1 if read.
+/////////////////////////////////////////////////////////////////////////////////////////////////
+PUBLIC int readNEAT(void)
+{	char a,b,c,d,e,f;
+	int r=0;
+	char NEAT[10];
+	int NEATlength;
+	if ((SWNEAT==1)||((LPC_GPIO_NEATINT FIOPIN) &(NEATINT))==0)
+				{
+				SWNEAT=0;
+				b=NEATRD(0x60);
+				a=NEATRD(0x61);
+				c=NEATRD(0x63);
+				d=NEATRD(0x64);
+				e=NEATRD(0x65);
+				f=NEATRD(0x66);
+				NEATWR(2,0xA0);
+
+				NEAT[0]='N';
+				NEAT[1]=b;
+				NEAT[2]=a;
+				NEATlength=3;
+				sendBT(NEAT, NEATlength);
+				r=1;
+				}
+	return r;
+}
+
+
+
+
 
 void NEATRESET()
 {

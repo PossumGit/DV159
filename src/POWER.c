@@ -34,6 +34,12 @@ PUBLIC uint32_t SWF2;
 PUBLIC uint32_t SWF3;
 PUBLIC uint32_t SWBT;
 PUBLIC uint32_t SWNEAT;
+
+EXTERNAL int txstart;
+EXTERNAL int txend;
+EXTERNAL int rxstart;
+EXTERNAL int rxend;
+
 //Private variables
 
 //External variables
@@ -51,10 +57,10 @@ EXTERNAL char I2CSlaveBuffer[];
 void fullSpeed (void)
 {
                      // Clock Setup
-  LPC_SC->SCS       = SCS_Val;
-  if (SCS_Val & (1 << 5)) {             // If Main Oscillator is enabled
+  LPC_SC->SCS       = 1<<5;	//enable main oscillator
+             // If Main Oscillator is enabled
     while ((LPC_SC->SCS & (1<<6)) == 0);// Wait for Oscillator to be ready
-  }
+
   LPC_SC->CCLKCFG   = CCLKCFG_Val;      //3 Setup Clock Divider
   LPC_SC->PCLKSEL0  = PCLKSEL0_Val;     //0 Peripheral Clock Selection
   LPC_SC->PCLKSEL1  = PCLKSEL1_Val;		//0
@@ -81,7 +87,7 @@ void fullSpeed (void)
 
 
 
-PUBLIC void lowPower(void)
+PUBLIC void LowPower(void)
 {
 	char a;
 	/* Clock Setup                        */
@@ -152,6 +158,8 @@ void EINT3_IRQHandler(void)				//GPIO interrupt.
 	LPC_GPIOINT->IO2IntClr=0x1<<11|0x1<<12;			//NEAT|INT|MID
 #elif PCBissue==2
 	//get interrupt status.
+
+	a=LPC_GPIOINT->IO2IntStatF;
 	SW2=LPC_GPIOINT->IO0IntStatR&0x1<<1;			//SW2 bit 1		EXT
 	SW1=(LPC_GPIOINT->IO2IntStatR&0x1<<11)>>11;		//SW1 bit 0 INT
 	SW3=(LPC_GPIOINT->IO2IntStatR&0x1<<13)>>11;		//SW3 bit 2 MID
@@ -207,10 +215,32 @@ PUBLIC void enableInputInterrupt(void)
 #endif
 }
 
-PUBLIC void powerDown(void)
-{
-	int a;
 
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief Checks status, powers down if inactive SPI and UART and empty BT buffer.
+///@param void
+///@return 1 if has powered down, 0 if not powered down.
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+PUBLIC int powerDown(void)
+{
+
+	int r=1;		//return value
+
+
+
+
+
+	int a,b;
+
+//first check if any serial process is active:
+	b=LPC_SSP0->SR;			//bit 7=1 is SPI transfers complete
+	if(0x40==((LPC_UART1->LSR)&(0x41)))	//bit 1=0 RX FIFO empty, bit 6=1 TX FIFO empty.
+	if(rxstart==rxend)					//nothing waiting in bluetooth rx buffer
+	if(txstart==txend)					//nothing waiting in bluetooth tx buffer
+	{
 	LPC_SC->PLL0CON = 0x1; 						// disconnect PLL0//clear bit 1 to 0
 	LPC_SC->PLL0FEED = 0xAA;
 	LPC_SC->PLL0FEED = 0x55;
@@ -220,26 +250,36 @@ PUBLIC void powerDown(void)
 	LPC_SC->PLL0FEED = 0x55;
 	while (LPC_SC->PLL0STAT&(1<<24));
 
-//	LPC_SC->CCLKCFG = 0x0;    					//  Select the IRC as clk
-//	LPC_SC->SCS = 0x00;		    				// not using XTAL anymore
+	LPC_SC->CCLKCFG = 0x0;    					//STAGE 2  Select the IRC as clk
+//	LPC_SC->SCS = 0x00;		    				//STAGE 2 not using XTAL anymore Disable XTAL (Cannot get to work.)
 
 
 	LED1OFF();
+
 	LPC_SC->PCONP=1<<15;		//only GPIO needed during power down.
 
 
-///TODO enable power down
+///TODO enable power down NOT easy to debug with this mode.
 	//set to power down, next 2 instructions give power down state.
-//	LPC_SC->PCON=1;									//power down option.
-//	SCB->SCR|=0x4;									//deepsleep bit.
+//	LPC_SC->PCON=1;									//STAGE 2 power down option.
+//	SCB->SCR|=0x4;									//STAGE 2 deepsleep bit.
+
+
+//	LPC_GPIO_NEATINT FIODIR |= (NEATINT);
+//	LPC_GPIO_NEATINT FIOSET = (NEATINT);
+
 
 
 	__WFI(); //go to power down.
 
 
+//	LPC_GPIO_NEATINT FIOCLR = (NEATINT);
+
+
+
+	 fullSpeed();
 	 LPC_SC->PCONP     = Peripherals ;       // Power Control for Peripherals      */
-
-
+	  BTWAKE();				//if BT wakeup, respond with W.
 
 	 if(I2CBATTERY() >=95)//92=92*8*4.88mV =3.591V, 93=3.63V, 95=3.708V
 	 {
@@ -250,15 +290,16 @@ PUBLIC void powerDown(void)
 	 {
 		 LED1YELLOW();//battery low active.
 	 }
+	}
 
 
 
 
 
-	fullSpeed();
 
-
-
-
-
+	else
+	{
+		r=0;
+	}
+	 return r;
 }
