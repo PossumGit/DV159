@@ -23,10 +23,12 @@ PUBLIC int txoverflow = 0;
 
 //Private variables
 int maxtime;
-int NEAT=0;
+int SEQUENCE=0;
 int ID=0;
 char alarm=0;
 char battery=0xFF;
+char IRtype,IRrep;
+int IRcode;
 //External variables
 EXTERNAL int Buffer[]; ///< Whole of RAM2 is Buffer, reused for NEAT, Bluetooth, audio and IR replay and capture
 EXTERNAL uint8_t I2CSlaveBuffer[256];
@@ -90,24 +92,24 @@ PUBLIC int processBT(void)
     if (rxstart != rxend)
 	{
 	a = rx[rxstart++];
-	switch (NEAT)//a sequence of N,alarm, battery, IDMSB, IDLSB.
+	switch (SEQUENCE)//a sequence of N,alarm, battery, IDMSB, IDLSB.
 	{
 	case 1:
 	{
 		battery=a;
-		NEAT=2;
+		SEQUENCE=2;
 		break;
 	}
 	case 2:
 	{
 		alarm=a;
-		NEAT=3;
+		SEQUENCE=3;
 		break;
 	}
 	case 3:
 	{
 		ID=a<<8;
-		NEAT=4;
+		SEQUENCE=4;
 		break;
 	}
 	case 4:
@@ -115,11 +117,36 @@ PUBLIC int processBT(void)
 		ID=ID|a;
 
 
-		NEATTX(0xFF,0x01,0x1234);		//battery state, LARM type, ID(16 bits)
+//		NEATTX(0xFF,0x01,0x1234);		//battery state, LARM type, ID(16 bits)
 //		NEATTX(0xEE,0x08,0x2345);		//battery state, ALARM type, ID(16 bits)
-	//	NEATTX(battery,alarm,ID);
-		NEAT=0;
+		NEATTX(battery,alarm,ID);
+		SEQUENCE=0;
 		sendBT(ACK, sizeof(ACK));
+		break;
+	}
+	case 0x100:
+	{
+		IRtype=a;
+		SEQUENCE=0x101;
+		break;
+	}
+	case 0x101:
+
+	{	IRrep=a;
+		SEQUENCE=0x102;
+		break;
+	}
+	case 0x102:
+	{	IRcode=a<<8;
+		SEQUENCE=0x103;
+		break;
+	}
+	case 0x103:
+	{
+		IRcode=IRcode|a;
+		IRsynthesis(IRtype,IRrep,IRcode);
+		sendBT(ACK, sizeof(ACK));
+		SEQUENCE=0;
 		break;
 	}
 
@@ -137,7 +164,7 @@ PUBLIC int processBT(void)
 	case 'B':
 	{
 		I2CREAD();
-		sendBT(I2CSlaveBuffer,9);  //register 0x0a to register 0x11 of DS2745.
+		sendBT(I2CSlaveBuffer,8);  //register 0x0a to register 0x11 of DS2745.
 
 		//0A(10): Temperature MSB
 		//0B(11): Temperature LSB
@@ -159,12 +186,8 @@ PUBLIC int processBT(void)
 	    break;
 	    }
 
-	case 'F':
-	case 'f':
-	{
-		I2CFullCharge();
-		break;
-	}
+
+
 
 	case 'i':
 	case 'I':
@@ -177,7 +200,15 @@ PUBLIC int processBT(void)
 	case 'n':
 	{
 
-		 NEAT=1;
+		 SEQUENCE=1;
+		break;
+	}
+
+	case 'M':
+	case 'm':
+	{
+		NEATTX(0xFF,0x00,0xCAFE);		//battery state, LARM type, ID(16 bits)
+		sendBT(ACK, sizeof(ACK));
 		break;
 	}
 
@@ -199,6 +230,16 @@ PUBLIC int processBT(void)
 	    break;
 	    }
 
+
+
+	case 's': //synthesise IR
+	case 'S':
+	    {
+	    	SEQUENCE=0x100;
+
+
+	    break;
+	    }
 	    //w is acknowledged with A, then send buffer, ending with 4 bytes of 0. transfer must be multiple of 4 bytes.
 	case 'w':
 	case 'W':
@@ -514,6 +555,8 @@ PUBLIC void sendBT(char istat[], int ilength)
 PUBLIC int rxtxBT(void)
     {
     int s, r,a;
+	SystemCoreClockUpdate ();
+	s=SystemCoreClock; //4MHz
     r = 0;
     s = LPC_UART1->LSR;
     while (1 & LPC_UART1->LSR)
@@ -534,6 +577,21 @@ PUBLIC int rxtxBT(void)
 	}
     return r;
 
+    }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief BT comms with BT module RN42/RN41 Receiver data. Transmit only
+///@param void
+///@return void
+///for use in IR capture and replay.
+/////////////////////////////////////////////////////////////////////////////////////////////////
+PUBLIC void txBT(void)
+    {
+
+    while ((txstart != txend) && (0 != (1 << 5 & LPC_UART1->LSR)))//data available and buffer available
+	{
+	LPC_UART1->THR = tx[(txstart++) % txlen];
+	}
     }
 
 
@@ -604,8 +662,6 @@ PUBLIC void initBT(void)
     LPC_GPIO_BTMASTER FIOCLR = BTMASTER; //MASTER PIO6. OUT LOW = SLAVE
     LPC_GPIO_BTMASTER FIODIR |= BTMASTER; //MASTER PIO6. OUT LOW = SLAVE
 
-    LPC_GPIO_BTRESET FIOSET = BTRESET; //NRESET OUT High, Low to reset.
-    LPC_GPIO_BTRESET FIODIR |= BTRESET; //NRESET OUT High, Low to reset.
 
     LPC_GPIO_BTFACTORY FIOSET = BTFACTORY; //FACTORY RESET PIO4. OUT Set this switch ON, power up unit, and toggle the switch from
     //ON to OFF 3 times to return the unit to factory settings.
@@ -625,7 +681,19 @@ PUBLIC void initBT(void)
     LPC_GPIO_BTCONNECTED FIODIR &= ~(BTCONNECTED); //CONNECTED PIO2. INPUT HIGH if CONNECTED.
 
 
-    SysTick->CTRL = 1 << 0 | 1 << 2; //enabled| use processor clock
+
+    LPC_GPIO_BTSPICS FIOCLR = (BTSPICS);		//BTSPI is high with NC.
+    LPC_PINCON->PINMODE3|=2<<31;			//no pullup or pulldown.
+    LPC_GPIO_BTSPICS FIODIR  &= ~(BTSPICS);			//input
+
+
+
+    LPC_GPIO_BTRESET FIOSET = BTRESET; //NRESET OUT High, Low to reset.
+      LPC_GPIO_BTRESET FIODIR |= BTRESET; //NRESET OUT High, Low to reset.
+
+
+
+  //  SysTick->CTRL = 1 << 0 | 1 << 2; //enabled| use processor clock
     //	clearBT();
     }
 
@@ -640,10 +708,10 @@ PUBLIC void resetBT()
     {
     int i;
     LPC_GPIO_BTRESET FIOCLR = BTRESET; //NRESET OUT High, Low to reset.
-    ms();
+    us(10000);
     LPC_GPIO_BTRESET FIOSET = BTRESET; //NRESET OUT High, Low to reset.
-    for (i = 0; i < 10; i++)
-	ms(); //10ms delay
+
+	us(100000); //10ms delay
     }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -656,32 +724,25 @@ PUBLIC void factoryBT(void)
     {
     int i;
     LED1GREEN();
-    for (i = 0; i < 500; i++)
-	ms(); //1s delay
+  	us(500000); //1s delay
     LPC_GPIO_BTFACTORY FIOCLR = BTFACTORY;
     LED1YELLOW();
-    for (i = 0; i < 500; i++)
-	ms(); //1s delay
+ 	us(500000); //1s delay
     LPC_GPIO_BTFACTORY FIOSET = BTFACTORY;
     LED1GREEN();
-    for (i = 0; i < 500; i++)
-	ms(); //1s delay
+	us(500000); //1s delay
     LPC_GPIO_BTFACTORY FIOCLR = BTFACTORY;
     LED1YELLOW();
-    for (i = 0; i < 500; i++)
-	ms(); //1s delay
+ 	us(500000); //1s delay
     LPC_GPIO_BTFACTORY FIOSET = BTFACTORY;
     LED1GREEN();
-    for (i = 0; i < 500; i++)
-	ms(); //1s delay
+  	us(500000); //1s delay
     LPC_GPIO_BTFACTORY FIOCLR = BTFACTORY;
     LED1YELLOW();
-    for (i = 0; i < 500; i++)
-	ms(); //1s delay
+	us(500000); //1s delay
     LPC_GPIO_BTFACTORY FIOSET = BTFACTORY;
     LED1GREEN();
-    for (i = 0; i < 500; i++)
-	ms(); //1s delay
+	us(500000); //1s delay
     LED1OFF();
     }
 
@@ -712,8 +773,9 @@ PUBLIC void discoverBT(void)
 ////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC void setupBT(void)
     {
-    int i;
-
+    int i,s;
+	SystemCoreClockUpdate ();
+	s=SystemCoreClock; //4MHz
     char CMD[] =
 	{
 	'$', '$', '$'
@@ -728,21 +790,21 @@ PUBLIC void setupBT(void)
 	}; //		Disable config timeout = 255.
 
 
-    char LowPowerConnect[] =
+    char BTsleep[] =
     {
-    	'S','l',',','0','1','1','0','\r','\n'
+    	'S','W',',','0','1','0','0','\r','\n'			//number in hex 256*0.625ms=160ms
     };
 
 
     LED1GREEN();
-    for (i = 0; i < 2000; i++, ms())
+    for (i = 0; i < 1000; i++, us(1000))
 	; //1s delay
 
     rxstart = rxend;
     sendBT(CMD, sizeof(CMD));
-    for (i = 0; i < 1000; i++)
+    for (i = 0; i < 3000; i++)
 	{
-	ms();
+	us(1000);
 	rxtxBT();
 	if ((rxstart + 5) % rxlen <= rxend)
 	    {
@@ -752,16 +814,16 @@ PUBLIC void setupBT(void)
 		    && (rx[(rxstart + 2) % rxlen] == 'D'))
 		{
 		LED1YELLOW();
-		i = 1000;
+		i = 20000;				//
 		}
 	    }
 	}
 
     rxstart = rxend;
     sendBT(NoTimeOut, sizeof(NoTimeOut));
-    for (i = 0; i < 1000; i++)
+    for (i = 0; i < 3000; i++)
 	{
-	ms();
+	us(1000);
 	rxtxBT();
 	if ((rxstart + 5) % rxlen <= rxend)
 	    {
@@ -771,16 +833,34 @@ PUBLIC void setupBT(void)
 		    && (rx[(rxstart + 2) % rxlen] == 'K'))
 		{
 		LED1GREEN();
-		i = 1000;
+		i = 20000;
 		}
 	    }
 	}
 
     rxstart = rxend;
-    sendBT(ENDCMD, sizeof(ENDCMD));
-    for (i = 0; i < 1000; i++)
+    sendBT(BTsleep, sizeof(BTsleep));
+    for (i = 0; i < 3000; i++)
 	{
-	ms();
+	us(1000);
+	rxtxBT();
+	if ((rxstart + 5) % rxlen <= rxend)
+	    {
+	    if (rx[rxstart] != 'A')
+		rxstart = (rxstart + 1) % rxlen;
+	    if ((rx[rxstart] == 'A') && (rx[(rxstart + 1) % rxlen] == 'O')
+		    && (rx[(rxstart + 2) % rxlen] == 'K'))
+		{
+		LED1GREEN();
+		i = 20000;
+		}
+	    }
+	}
+    rxstart = rxend;
+    sendBT(ENDCMD, sizeof(ENDCMD));
+    for (i = 0; i < 3000; i++)
+	{
+	us(1000);
 	rxtxBT();
 	if ((rxstart + 5) % rxlen <= rxend)
 	    {
@@ -790,7 +870,7 @@ PUBLIC void setupBT(void)
 		    && (rx[(rxstart + 2) % rxlen] == 'D'))
 		{
 		LED1YELLOW();
-		i = 1000;
+		i = 20000;
 		}
 	    }
 	}

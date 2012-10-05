@@ -13,7 +13,7 @@
 //
 //
 //
-#define PCBissue 2		//pcb issue, options 2, 3
+#define PCBissue 3		//pcb issue, options 2, 3
 //for conditional compile based on PCB issue.
 /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
@@ -77,10 +77,10 @@
 #define NEATINT			1<<10			// P1.25 MOD to P2.10 B on PCB.
 #define LPC_GPIO_NEATINT LPC_GPIO2->
 
-#define LED1G			1<<17			// P1.17
+#define LED1G			1<<16			// P1.17
 #define LPC_GPIO_LED1G LPC_GPIO1->
 
-#define LED1Y			1<<16			// P1.16
+#define LED1Y			1<<17			// P1.16
 #define LPC_GPIO_LED1Y LPC_GPIO1->
 
 #define BTCTS			1<<22			// P0.22
@@ -88,6 +88,10 @@
 
 #define BTRTS			1<<17			// P0.17
 #define LPC_GPIO_BTCTS LPC_GPIO0->
+
+#define BTSPICS			1<<31			//P1.31
+#define LPC_GPIO_BTSPICS LPC_GPIO1->
+
 
 #elif PCBissue==2						//issue 2 PCB
 #define OFF  		1<<21				// P0.21
@@ -188,7 +192,7 @@ char readSSP0Byte(void);///< Read one byte over SSSP serial port.
 
 
 
-void initSSP0Flash(void);
+void initSSP0(void);
 
 void I2CINIT(void);
 void I2CREAD(void);
@@ -196,7 +200,7 @@ void I2CFullCharge(void);
 int I2CBATTERY(void);
 void initBT(void);
 
-void ms (void);
+void us (int);
 
 void resetBT(void);
 
@@ -208,6 +212,7 @@ void	factoryBT(void);
 void	discoverBT(void);
 void	sendBT(char [] ,int );
 int	rxtxBT(void);
+void txBT(void);
 int processBT(void);
 char	INPUT(void);
 char	inputChange(void);
@@ -216,12 +221,23 @@ void clearBT(void);
 void initUART(void);
 void timer2Start(void);
 
- void	fullSpeed(void);
- void 	LowPower(void);
+ void	CPU100MHz(void);
+ void 	CPU12MHz(void);
 
 void enableExtInterrupt(void);
+void disableInputInterrupt(void);
 
 void goToSleepQ(void);
 int powerDown(void);
  void txshortBT(char istat[], int ilength);
  void BTWAKE(void);
+ void BatteryState(void);
+ int repeatInput(void);
+  void timer2CPU12(void);
+  void timer2CPU100(void);
+  void SSPNEATCPU4(void);
+  void SSPNEATCPU12(void);
+  void SSPNEATCPU100(void);
+  void	BTbaudCPU12(void);
+  void	BTbaudCPU100(void);
+  void	BTbaudCPU4(void);

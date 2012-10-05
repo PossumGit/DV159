@@ -61,20 +61,24 @@ PUBLIC int captureIR(void) {
 	char d;
 	IRAddress = CaptureFirst;
 	LED1GREEN();
+	CPU100MHz();
+	//CPU100MHz disables interrupts except TIMER 0 and TIMER 1
+
 	startCaptureIR(); //initiate IR capture
 	while ((IRAddress != CaptureFirst) ? (LPC_TIM0->TC < WaitEndIR
 			+ LPC_TIM0->CR0) : (LPC_TIM0->TC < WaitForIR)) // IR timeouts, WaitEndIR(3s), WaitForIR(10s).Wait here during capture IR.
 	{
-		if (1 & LPC_UART1->LSR) //if character comes in from bluetooth, read char and abort.
-		{
-			d = LPC_UART1->RBR; //read BT char.
-			return 0; //indicate abort
-			break; //any bluetooth data aborts capture.
-		}
+		if (1 & LPC_UART1->LSR) //if character comes in from bluetooth, read char and abort if its not an A.
+		if('A'!=LPC_UART1->RBR)	break;
+		repeatInput();	//change of input?
+		txBT();		//send any available data from change of input to BT.
+
 	}
 	endCaptureIR();
 	correctIR();
+	CPU12MHz();
 	LED1OFF();
+
 	if (IRAddress > CaptureFirst)
 		return 1;
 	return 0;
@@ -95,15 +99,19 @@ PUBLIC int captureIR(void) {
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC void playIR(void) {
 	if (Buffer[2] != 0) {
-
+		LED1GREEN();
+		CPU100MHz();	//CPU100MHz disables interrupts except TIMER 0 and TIMER 1
 		startPlayIR();
-		LED1YELLOW();
 		while (IRData > 0)//wait here during play IR
 		{
-	//		__WFI(); //sleep, wait for interrupt.
+			if (1 & LPC_UART1->LSR) //if character comes in from bluetooth, read char and abort if its not an A.
+			if('A'!=LPC_UART1->RBR)	break;
+			repeatInput();	//change of input?
+			txBT();		//send any available data from change of input to BT.
 		}
 		LED1OFF();
 		endPlayIR();
+		CPU12MHz();
 
 	}
 }
@@ -155,8 +163,8 @@ void TIMER1_IRQHandler(void) {
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PRIVATE void compress(void) {
 	//coded scheme if most significant bit is 1.
-	int a, b;
-	uint32_t IRspace, t;
+	int a=0, b=0;
+	uint32_t IRspace=0, t=0;
 	IRData = Buffer[IRAddress];
 	while (1) {
 		switch ((IRData >> 28) & 0xF) {
@@ -195,6 +203,7 @@ PRIVATE void compress(void) {
 					IRData = 0;
 				break;
 			}
+			break;
 		}
 		case 0b1010://DATA
 		{

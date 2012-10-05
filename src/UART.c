@@ -19,8 +19,8 @@
 //External variables
 
 //Private functions
-PRIVATE void baud115(void);
-PRIVATE void baud921(void);
+
+
 
 //External functions
 
@@ -54,40 +54,22 @@ PUBLIC void initUART(void)
 	LPC_PINCON->PINSEL1 |= (1 << 0|1<<2|1<<12); 	//UART1 RXD1//|CTS1|RTS1 OK
 	LPC_UART1->FCR =1|2<<6;							//RTS goes high after 8 chars, RTS low when 4 chars or less
 	LPC_UART1->MCR=1<<6|1<<7;						//AUTO RTS|AUTO CTS
-	baud115();
-	ms();//1ms delay
+	BTbaudCPU12();
+	us(1000);//1ms delay
 }
 
 
 
-
-/////////////////////////////////////////////////////////////////////////////////////////////////
-///@brief set up UART baud rate to 921Kbaud maximum allowed by BT module RN42/RN41
-///@param void
-///@return void
-/////////////////////////////////////////////////////////////////////////////////////////////////
-void	baud921(void)
-{
-	LPC_UART1->LCR =3<<0|1<<7;						//8 bit word, divisor latch enable. OK
-	LPC_SC->PCLKSEL0 |=  0<< 8; 					//100MHz/4= 25MHz. UART clock (CCLK/4 by RESET)OK
-													//0<<8=/4,  1<<8=/1,  2<<8=/2,  3<<8=/8
-	LPC_UART1->DLL =1;								//UART CLOCK.
-	LPC_UART1->DLM =0;								//UART CLOCK.
-	LPC_UART1->FDR =9<<0|13<<4;					//Fractional divide. 921kbaud
-	///clear DLAB for comms
-	LPC_UART1->LCR =3<<0|0<<7;						//8 bit word, divisor latch enable. OK
-}
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 ///@brief set up UART baud rate to 115.2Kbaud to match BT module RN42/RN41
 ///@param void
 ///@return void
+///100MHz CPU clock version
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
-//100MHz CCLK version.
-
-void	baud115()
+void	BTbaudCPU100()
 {
 	///set DLAB to set up Baud rate.
 	LPC_UART1->LCR =3<<0|1<<7;						//8 bit word, divisor latch enable. OK
@@ -102,9 +84,17 @@ void	baud115()
 	///clear DLAB for comms
 	LPC_UART1->LCR =3<<0|0<<7;						//8 bit word, divisor latch enable. OK
 }
-/*
-//6MHz version.
-void	baud115()
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief set up UART baud rate to 115.2Kbaud to match BT module RN42/RN41
+///@param void
+///@return void
+///12MHz CPU clock version
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+void	BTbaudCPU12()
 {
 	///set DLAB to set up Baud rate.
 	LPC_UART1->LCR =3<<0|1<<7;						//8 bit word, divisor latch enable. OK
@@ -112,14 +102,12 @@ void	baud115()
 	///PCLK = 25MHz= 100MHz/4	(PCLSEL1)
 	///baud rate = PCLK/(16*(256*DLM+DLL)*(1+DIV/MUL))
 	///
-	LPC_SC->PCLKSEL0 |=  1<< 8; 					//6MHz/1=6MHz
+	LPC_SC->PCLKSEL0 |=  2<< 8; 					//12MHz/2=6MHz
 	LPC_UART1->DLL =3;								//UART CLOCK.
 	LPC_UART1->DLM =0;								//UART CLOCK.
 	LPC_UART1->FDR =1<<0|12<<4;					//Fractional divide.
 	///clear DLAB for comms
 	LPC_UART1->LCR =3<<0|0<<7;						//8 bit word, divisor latch enable. OK
 }
-*/
-
 
 

@@ -19,9 +19,9 @@
 PRIVATE char Copyright[] = "Copyright Possum 2012, HC8500"; ///< machine readable copyright message.
 PRIVATE char b = 0; //used for input state memory.
 
-PRIVATE char in[] = { 'I', ' ' };
 
-PRIVATE int ilength = sizeof(in);
+
+
 //External variables
 EXTERNAL int Buffer[]; ///< Whole of RAM2 is Buffer, reused for NEAT, Bluetooth, audio and IR replay and capture
 EXTERNAL int FlashAddress; ///<This address needs to be set before flash read and flash write.
@@ -36,12 +36,11 @@ EXTERNAL uint32_t SWNEAT;
 //Local functions
 PRIVATE void powerupHEX(void);
 PRIVATE void LOOP(void);
-PRIVATE int repeatInput(void);
 
 //External functions
 //EXTERNAL void fullSpeed(void);
 EXTERNAL int powerDown(void);
-EXTERNAL int readNEAT(void);
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -54,19 +53,17 @@ EXTERNAL int readNEAT(void);
 ///@return never returns
 ////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC int main(void) {
-	while (1) {
+	while (1)
+
+	{
 		int a;
 		LPC_GPIO_OFF FIOCLR = OFF; //SD(shutdown) =OFF button set low to keep on, set high to turn off.
 		LPC_GPIO_OFF FIODIR |= OFF; //SD(shutdown) =OFF. //1K pull-down prevents turning on during power up. (3.3mA is OK)
 									//set GPIO0_11 to turn off device.
-
-
-		fullSpeed();		//set clock to 100MHz.
-
-		//
 		//set various inputs/outputs to default state.
 		LPC_GPIO_IROUT FIOCLR = IROUT; //clear IR output (IR off).
 		LPC_GPIO_IROUT FIODIR |= IROUT; //IR defined as an output. Small reduction Iq -190uA
+
 
 		LPC_GPIO_MICCE FIOCLR = MICCE; //MIC CHIPEN=0=disabled. PORTCHANGE
 		LPC_GPIO_MICCE FIODIR |= MICCE; //CHIPEN on mic =output. Small increase Iq +50uA PORTCHANGE
@@ -79,24 +76,18 @@ PUBLIC int main(void) {
 
 
 
-		NEATRESET();
-		readNEATINIT();
 
 
-		timer2Start(); //initiate timer2 to 1MHz.
-
-		initUART();
-		initBT();
-		 I2CINIT();
 //		I2CFullCharge();	//reset charge counter to full.(FFFF), note count does not wrap so stays at FFFF if more charge.
 //		ms();
-		 I2CREAD();
+	//	 I2CREAD();
 	//	 I2CINIT();
 	//	 I2CREAD();
 
 
 			powerupHEX(); //HEX options like factory reset on power up.
 
+			for(;;);
 
 			//	initInput();
 
@@ -119,54 +110,23 @@ PRIVATE void LOOP(void) {
 	int a, b,c,r;
 	c=0;
 
+
 	inputChange();
-	enableInputInterrupt();
-	LED1YELLOW();
-	timer2Start();
+
+/////////////////////////////////////////////
+///main loop.
+///processor always comes back here.
+///after 3s it goes to sleep in powerDown();
+///it wakes up from input, BT or NEAT interrupts.
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
 	while (1) {
-			if (powerDown());
-			{
-
-			}
-
-		rxtxBT(); //receive/transmit Bluetooth.
-		readNEAT();
-		rxtxBT(); //receive/transmit Bluetooth.
-
-		LPC_TIM2->TC = 0; // timer2 used for going back to sleep. Reset gives another 3 seconds.
-
-
-		while (3000000 > LPC_TIM2->TC)
-		{
-			readNEAT();
-			r=repeatInput(); //check if change of input, send via BT to android if change.
-			r=r+processBT(); //process received information.
-			r=r+rxtxBT(); //receive/transmit any BT data//may be possible to DMA here.
-			if (r)LPC_TIM2->TC = 0;		//reset timer2.
-		}
-
+			powerDown();  	//Go to low power state if no comms, and timer2>3s:
+			processBT(); 	//process received information.
+			rxtxBT(); 		//receive/transmit any BT data//may be possible to DMA here.
 	}
-
-}
-
-/////////////////////////////////////////////////////////////////////////////////////////////////
-///@brief When input changes send new state to BT.
-///@param void
-///@return 0 if inactive, else 1
-/////////////////////////////////////////////////////////////////////////////////////////////////
-PRIVATE int repeatInput(void) {
-	in[1] = inputChange();
-	if (in[1] & 0x80) //bit 7 high indicates change
-	{
-
-		in[0] = 'H' | (in[1] & 0x01);
-		in[1] = (in[1] & 0x7f) | 0x01; //clear bit 7, set bit 1.
-
-		//		in[1]=((in[1]&0x2)<<4)|((in[1]&0x1)<<4);	//TECLA, bit 5 is ext, bit 4 is int, bit 3 is plugged in.
-		sendBT(in, ilength);
-		return 1;
-	}
-	return 0;
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////////////////////////////
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -180,14 +140,15 @@ PRIVATE int repeatInput(void) {
 
 PRIVATE void powerupHEX(void) {
 	char a;
-	int i;
+	int s,b,c,d,e,f,g,h,i;
 	a = HEX();
+
+
+
+
+
 	switch (a) {
-	case 0x0F: //HEX2=0, HEX1=F  Set up BT then bluetooth discovery.
-		setupBT();
-//		discoverBT();
-		break;
-	case 0x0E:
+	case 0x0F:
 		factoryBT(); //HEX2=0, HEX1=E Factory reset BT.
 		break;
 	case 0x0D:		//test turn off after 1 second.
@@ -199,12 +160,11 @@ PRIVATE void powerupHEX(void) {
 //
 	//			}
 
+	//			readNEAT();
+				NEATTX(0xFF,0x00,0xAAAA);		//battery state, LARM type, ID(16 bits)
 
-				NEATTX(0xFF,0x00,0xABCD);		//battery state, LARM type, ID(16 bits)
-		for(i=0;i<1000;i++)
-		{
-			ms();
-		}
+			us(1000000);
+			while(1);
 		LPC_GPIO_OFF FIOSET =OFF; //OFF button set high to turn off.
 		LPC_GPIO_OFF FIODIR |= OFF; //
 		while(1);
@@ -214,6 +174,71 @@ PRIVATE void powerupHEX(void) {
 		}
 		; //wait for ever at max clock for debug.
 		break;
+
+
+	case 0x0B:
+		SystemCoreClockUpdate ();
+		s=SystemCoreClock; //4MHz
+		CPU100MHz();
+		SystemCoreClockUpdate ();
+		s=SystemCoreClock; //4MHz
+
+			b=NEATRD(0x10);
+			c=NEATRD(0x11);
+			d=NEATRD(0x12);
+			e=NEATRD(0x13);
+			f=NEATRD(0x14);
+			g=NEATRD(0x15);
+			NEATWR(2,0xA0);			//reset read
+			NEATWR(1,0x01);			//reset NEAT module.
+
+
+
+
+
+		break;
+	case 0x0A:
+		CPU12MHz();
+		initBT();
+			setupBT();
+
+
+
+		break;
+
+
+		s=LPC_TIM2->TC;
+
+
+		if (3000000 < LPC_TIM2->TC)
+	case 0x09:
+		while(1)
+		{
+		LPC_TIM2->TC=0;
+		 while (2000000>LPC_TIM2->TC);
+		 IRsynthesis('P',4,0x2);		//Plessey  4 repeats, code 3
+
+		 LED1OFF();
+
+		}
+	case 0x00:
+//		timer2Start(); //initiate timer2 to 1MHz.
+		CPU12MHz();
+
+		enableInputInterrupt();
+
+		initUART();
+		initBT();
+		resetBT();
+		setupBT();
+		LED1YELLOW();
+		I2CINIT();
+		CPU12MHz();
+		NEATRESET();
+
+		LOOP();			//never exits this loop.
+		break;
+
 	default:
 		break;
 	}

@@ -15,6 +15,8 @@ PUBLIC uint32_t LastInputTime=0;
 
 //Private variables
 PRIVATE char InputState=0;
+PRIVATE char in[] = { 'I', ' ' };
+PRIVATE int ilength = sizeof(in);
 //External variables
 
 //Private functions
@@ -114,11 +116,25 @@ PUBLIC char	inputChange(void)
 {
 	char	a,b,c,d;
 
-#if PSBissue==3
+#if PCBissue==3
+	LPC_GPIO2->FIODIR&=~(1<<11);			//internal
+	LPC_GPIO0->FIODIR&=~(1<<21);			//external tip
+	LPC_GPIO2->FIODIR&=~(1<<12);			//external mid
+
+
+
+
+
+
+
+
 	a=(LPC_GPIO2->FIOPIN &(1<<11))>>6;	//bit 5	//bit 0=>>11;		//INTERNAL
 	b=(~LPC_GPIO0->FIOPIN &(1<<21))>>17; 	//bit 4	//bit 1=>>0;		//EXTERNAL
 	c=(~LPC_GPIO2->FIOPIN &(1<<12))>>12;	//bit 0	//bit 2=>>11;		//EXTERNAL MID/connected
 #elif PCBissue==2
+	LPC_GPIO2->FIODIR&=~(1<<11);
+	LPC_GPIO0->FIODIR&=~(1<<1);
+	LPC_GPIO2->FIODIR&=~(1<<13);
 	a=(LPC_GPIO2->FIOPIN &(1<<11))>>6;	//bit 5	//bit 0=>>11;		//INTERNAL
 	b=(~LPC_GPIO0->FIOPIN &(1<<1))<<3; 	//bit 4	//bit 1=>>0;		//EXTERNAL
 	c=(~LPC_GPIO2->FIOPIN &(1<<13))>>13;	//bit 0	//bit 2=>>11;		//EXTERNAL MID/connected
@@ -157,9 +173,42 @@ PUBLIC uint32_t	inputTime(void)
 PUBLIC void timer2Start(void)
 {
 	LPC_SC->PCONP|=1<<22	;	//enable timer 2.
-//	LPC_SC->PCLKSEL1 |= 0 << 12; //TIMER1 PREDIVIDE =4 (system clock/4)=default.
-	LPC_TIM2->PR = 25; //counts at 1MHz. Max time 4295s
 
+
+//if 100MHz
+//	LPC_SC->PCLKSEL1 |= 0 << 12; //TIMER1 PREDIVIDE =4 (system clock/4)=default=100MHz/4=25MHz.
+//	LPC_TIM2->PR = 25-1; //counts at 1MHz. Max time 4295s
+//if 12MHz
+
+//	LPC_SC->PCLKSEL1 |= 0 << 12; //TIMER1 PREDIVIDE =4 (system clock/4)=default=12Mhz/3=4MHz.
+	LPC_TIM2->PR = 3-1; //counts at 1MHz. Max time 4295s
+
+//end of CPU clock sections.
+
+
+	LPC_TIM2->TCR = 0 | 1 << 1; //disable timer2, reset timer2
+	LPC_TIM2->TCR = 1 | 0 << 1; //enable timer2 (start timer2)
+}
+PUBLIC void timer2CPU4(void)
+{
+	LPC_SC->PCONP|=1<<22	;	//enable timer 2.
+	LPC_TIM2->PR = 1-1; //(4MHz/4)/1 counts at 1MHz. Max time 4295s
+	LPC_TIM2->TCR = 0 | 1 << 1; //disable timer2, reset timer2
+	LPC_TIM2->TCR = 1 | 0 << 1; //enable timer2 (start timer2)
+}
+
+PUBLIC void timer2CPU12(void)
+{
+	LPC_SC->PCONP|=1<<22	;	//enable timer 2.
+	LPC_TIM2->PR = 3-1; //(12MHz/4)/3 counts at 1MHz. Max time 4295s
+	LPC_TIM2->TCR = 0 | 1 << 1; //disable timer2, reset timer2
+	LPC_TIM2->TCR = 1 | 0 << 1; //enable timer2 (start timer2)
+}
+
+PUBLIC void timer2CPU100(void)
+{
+	LPC_SC->PCONP|=1<<22	;	//enable timer 2.
+	LPC_TIM2->PR = 25-1; //(100Mhz/4)/25 counts at 1MHz. Max time 4295s
 	LPC_TIM2->TCR = 0 | 1 << 1; //disable timer2, reset timer2
 	LPC_TIM2->TCR = 1 | 0 << 1; //enable timer2 (start timer2)
 }
@@ -170,38 +219,60 @@ PUBLIC void timer2Start(void)
 
 
 
+
 /////////////////////////////////////////////////////////////////////////////////////////////////
-///@brief 1ms delay
-///@param void
+///@brief delay of time us.
+///@param int:time in us
 ///@return void
 ///
-///assumes 100MHz main clock.
-///uses SysTick clock, but no interrupts.
+///uses main clock, but no interrupts.
 /////////////////////////////////////////////////////////////////////////////////////////////////
-PUBLIC void	ms(void)
+PUBLIC void	us(int time_us)
 {
-SysTick->CTRL=1<<0|1<<2;	//enabled| use processor clock
-SysTick->LOAD=100000;
-while (SysTick->VAL>50000);
-while(SysTick->VAL<50000);
+
+//change to use TIMER2, always clocks at 1MHz
+
+	time_us=time_us+LPC_TIM2->TC;
+	while (time_us>LPC_TIM2->TC);
+
+}
+
+
+
+
+
+void BatteryState()
+{
+if(I2CBATTERY() >=95)//92=92*8*4.88mV =3.591V, 93=3.63V, 95=3.708V
+{
+
+	LED1GREEN();//battery good active
+}
+else
+{
+	 LED1YELLOW();//battery low active.
+}
 }
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
-///@brief 200us delay
+///@brief When input changes send new state to BT.
 ///@param void
-///@return void
-///
-///assumes 100MHz main clock.
-///uses SysTick clock, but no interrupts.
+///@return 0 if inactive, else 1
 /////////////////////////////////////////////////////////////////////////////////////////////////
-PUBLIC void	us200(void)
-{
-SysTick->CTRL=1<<0|1<<2;	//enabled| use processor clock
-SysTick->LOAD=20000;
-while (SysTick->VAL>10000);
-while(SysTick->VAL<10000);
-}
+ int repeatInput(void) {
+	in[1] = inputChange();
+	if (in[1] & 0x80) //bit 7 high indicates change
+	{
 
+		in[0] = 'H' | (in[1] & 0x01);
+		in[1] = (in[1] & 0x7f) | 0x01; //clear bit 7, set bit 1.
+
+		//		in[1]=((in[1]&0x2)<<4)|((in[1]&0x1)<<4);	//TECLA, bit 5 is ext, bit 4 is int, bit 3 is plugged in.
+		sendBT(in, ilength);
+		return 1;
+	}
+	return 0;
+}
 
 

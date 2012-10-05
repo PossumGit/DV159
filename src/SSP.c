@@ -51,7 +51,7 @@ PUBLIC void writeSSP0Byte(char b) {
 ///@param void.
 ///@return void.
 ////////////////////////////////////////////////////////////////////////////////////////////////
-PUBLIC void initSSP0Flash(void) {
+PUBLIC void initSSP0(void) {
 
 	LPC_GPIO_FLASHCS FIOSET = FLASHCS; //Flash disable
 	LPC_GPIO_FLASHCS FIODIR |= FLASHCS; //CHIPEN on flash.
@@ -77,6 +77,25 @@ PUBLIC void initSSP0Flash(void) {
 	LPC_SSP0->CR0 = 7 << 0 | 0 << 4 | 1 << 6 | 1 << 7 | 3 << 8;
 	LPC_SSP0->CR1 = 0 << 0 | 1 << 1 | 0 << 2;
 //	LPC_SSP0->CPSR = 2; //divide clock for SSP0 //gives 25MHz clock for FLASH
-	LPC_SSP0->CPSR = 50; //divide by 50(must be even) gives 1MHz clock for NEAT (max 1.8MHz.)
+	LPC_SSP0->CPSR = 2; //divide by 50 for 100MHZ, 6 for 12MHz, 2 for 4MHz (must be even) gives 1MHz clock for NEAT (max 1.8MHz.)
 
 }
+
+PUBLIC void SSPNEATCPU4(void)
+{
+	LPC_SSP0->CPSR = 2; //divide by 50 for 100MHZ, 6 for 12MHz, 2 for 4MHz (must be even) gives 1MHz clock for NEAT (max 1.8MHz.)
+
+}
+
+PUBLIC void SSPNEATCPU12(void)
+{
+	LPC_SSP0->CPSR = 6; //divide by 50 for 100MHZ, 6 for 12MHz, 2 for 4MHz (must be even) gives 1MHz clock for NEAT (max 1.8MHz.)
+
+}
+PUBLIC void SSPNEATCPU100(void)
+{
+	LPC_SSP0->CPSR = 50; //divide by 50 for 100MHZ, 6 for 12MHz, 2 for 4MHz (must be even) gives 1MHz clock for NEAT (max 1.8MHz.)
+
+}
+
+
