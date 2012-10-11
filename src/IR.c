@@ -60,8 +60,15 @@ PUBLIC int captureIR(void) {
 
 	char d;
 	IRAddress = CaptureFirst;
-	LED1GREEN();
+	LED1YELLOW();
 	CPU100MHz();
+#if PCBissue==3
+
+	LPC_GPIO1-> FIOSET |=1<<29			;//IR capture on.
+#elif PCBissue==2
+
+#endif
+
 	//CPU100MHz disables interrupts except TIMER 0 and TIMER 1
 
 	startCaptureIR(); //initiate IR capture
@@ -78,6 +85,12 @@ PUBLIC int captureIR(void) {
 	correctIR();
 	CPU12MHz();
 	LED1OFF();
+#if PCBissue==3
+
+	LPC_GPIO1->FIOCLR |=1<<29			;//IR capture off.
+#elif PCBissue==2
+
+#endif
 
 	if (IRAddress > CaptureFirst)
 		return 1;

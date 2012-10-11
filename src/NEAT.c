@@ -114,6 +114,8 @@ void NEATRESET()
 
 void NEATTX(char battery, char alarm, int ID)
 {	int a,b,c,d;
+
+//	NEATRESET();
 	a=NEATRD(3);
 	while (0x80&NEATRD(3));
 	b=NEATRD(3);
@@ -129,6 +131,8 @@ void NEATTX(char battery, char alarm, int ID)
 
 	c=NEATRD(3);
 	NEATWR(0x03,0x80);		//transmit code.
+	while (0x80&NEATRD(3));
+
 	d=NEATRD(3);
 }
 
@@ -149,7 +153,7 @@ PUBLIC void NEATWR(char address, char data)
 			b=readSSP0Byte();
 			us(200);
 			LPC_GPIO_NEATCS FIOSET = NEATCS; //NEAT disable
-			us(10000);
+			us(20000);
 }
 
 PUBLIC char NEATRD(char address)

@@ -74,7 +74,7 @@
 #define NEATCS			1<<21			// P1.21
 #define LPC_GPIO_NEATCS LPC_GPIO1->
 
-#define NEATINT			1<<10			// P1.25 MOD to P2.10 B on PCB.
+#define NEATINT			1<<5			// P1.25 MOD to P2.5 pin 68 on PCB.
 #define LPC_GPIO_NEATINT LPC_GPIO2->
 
 #define LED1G			1<<16			// P1.17

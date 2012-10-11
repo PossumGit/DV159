@@ -225,6 +225,8 @@ void EINT3_IRQHandler(void)				//GPIO interrupt.
 	a=a;
 	int s,t,u,v,w;
 
+
+
 	s=LPC_GPIOINT->IO0IntEnR;
 	t=LPC_GPIOINT->IO0IntEnF;
 	u=LPC_GPIO2->FIOPIN;
@@ -254,8 +256,8 @@ void EINT3_IRQHandler(void)				//GPIO interrupt.
 		LPC_GPIOINT->IO0IntClr=0x1<<21;					//SW3 bit 2 MID
 	if (SWBT=(LPC_GPIOINT->IO0IntStatR&(0x1<<16))>>16)
 		LPC_GPIOINT->IO0IntClr=0x1<<16;					//BT Interrupt
-	if (SWNEAT=(LPC_GPIOINT->IO2IntStatF&(0x1<<10))>>10)
-		LPC_GPIOINT->IO2IntClr=0x1<<10;					//NEAT Interrupt MOD, wire NEAT INTERRUPt to BOOT pin B.
+	if (SWNEAT=(LPC_GPIOINT->IO2IntStatF&(0x1<<4))>>4)
+		LPC_GPIOINT->IO2IntClr=0x1<<4;					//NEAT Interrupt MOD, wire NEAT INTERRUPt to P2.5 pin 68.
 
 
 #elif PCBissue==2
@@ -275,8 +277,8 @@ void EINT3_IRQHandler(void)				//GPIO interrupt.
 	LPC_GPIOINT->IO2IntClr=0x1<<0|0x1<<11|0x1<<13;		//NEAT|INT|MID
 
 #endif
-	SystemCoreClockUpdate ();
-	s=SystemCoreClock; //4MHz
+//	SystemCoreClockUpdate ();
+//	s=SystemCoreClock; //4MHz
 
 	//First check CPU speed.
 	//options: 12MHz xtal.
@@ -286,9 +288,14 @@ void EINT3_IRQHandler(void)				//GPIO interrupt.
 
 	LPC_SC->PCONP     = Peripherals ;       // Enable Power for Peripherals      */
 	LPC_TIM2->TC = 0;
+	a=HEX();
+	if ((3==HEX()) && SWNEAT)
+	{
+	//	SWNEAT=0;
+		return;
+	}
 
-
-	if (SW1|SW2|SW3|SWF1|SWF2|SWF3)
+	else if (SW1|SW2|SW3|SWF1|SWF2|SWF3)
 		{
 
 			CPU12MHz();
@@ -356,7 +363,7 @@ PUBLIC void enableInputInterrupt(void)
 //	LPC_GPIOINT->IO2IntEnR|=0x1<<12;			//MID input rising
 //	LPC_GPIOINT->IO2IntEnF|=0x1<<12;			//MID input falling
 
-	LPC_GPIOINT->IO2IntEnF|=0x1<<10;			//NEAT falling
+	LPC_GPIOINT->IO2IntEnF|=0x1<<4;			//NEAT falling
 
 
 
@@ -430,11 +437,16 @@ PUBLIC int powerDown(void)
 	CPU4MHz();						//reduce power.
 	LPC_SC->PCONP=1<<15;		//only GPIO needed during power down.
 	CPUSPEED=0;		//0 means asleep, 12=12MHz, 100=100MHz.
-//	enableInputInterrupt();
-//	LPC_GPIOINT->IO0IntEnR|=0x1<<16;			//Bluetooth rising interrupt
-	__WFI(); //go to power down.
+	enableInputInterrupt();
+	LPC_GPIOINT->IO0IntEnR|=0x1<<16;			//Bluetooth rising interrupt
 
 	POWERDOWN=LPC_SC->PCON;
+	 //Power down mode.
+		SCB->SCR = 0x4;
+		LPC_SC->PCON = 0x01;
+	__WFI(); //go to power down.
+
+
 
 	 LPC_SC->PCONP     = Peripherals ;       // Enable Power for Peripherals      */
 

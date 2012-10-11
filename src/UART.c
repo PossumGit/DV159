@@ -42,20 +42,19 @@
 ////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC void initUART(void)
 {
-
+int a;
 
 	LPC_GPIO_BTCTS FIOCLR	=BTCTS;					//RTS(CPU) BTCTS. OUT  HIGH to stop BT sending data, LOW to enable BT sending.
 	LPC_GPIO_BTCTS FIODIR	|= BTCTS;				//RTS(CPU) BTRTS UARTCTS. HIGH to stop BT sending data
-	LPC_GPIO_BTCTS FIODIR	|= ~(BTRTS);			//INPUT CTS(CPU) UARTRTS. IN HIGH means stop transmitting.
-
+	LPC_GPIO_BTCTS FIODIR	&= ~(BTRTS);			//INPUT CTS(CPU) UARTRTS. IN HIGH means stop transmitting.
 	LPC_SC->PCONP |= 1 << 4;						//enable UART1 (RESET enables.) OK
-
 	LPC_PINCON->PINSEL0 |= (1 << 30);				//UART1 TXD1 OK
 	LPC_PINCON->PINSEL1 |= (1 << 0|1<<2|1<<12); 	//UART1 RXD1//|CTS1|RTS1 OK
 	LPC_UART1->FCR =1|2<<6;							//RTS goes high after 8 chars, RTS low when 4 chars or less
 	LPC_UART1->MCR=1<<6|1<<7;						//AUTO RTS|AUTO CTS
 	BTbaudCPU12();
 	us(1000);//1ms delay
+
 }
 
 

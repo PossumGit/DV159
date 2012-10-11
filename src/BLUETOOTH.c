@@ -212,6 +212,14 @@ PUBLIC int processBT(void)
 		break;
 	}
 
+	case 'l':
+	case 'L':
+	{
+		IRsynthesis('P',4,0x2);		//Plessey  4 repeats, code 3
+	//	sendBT(ACK, sizeof(ACK));
+		break;
+	}
+
 	case 'p':
 	case 'P': //play IR
 	    {

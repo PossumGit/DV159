@@ -75,6 +75,13 @@ PUBLIC int main(void) {
 		LPC_GPIO_T2G FIODIR |= T2G; //T2Vgs=0, 3v3 on pin.
 
 
+#if PCBissue==3
+	LPC_GPIO1->FIOCLR |=1<<29			;//IR capture state=0.
+	LPC_GPIO1->FIODIR |=1<<29			;//IR capture =output.
+
+#elif PCBissue==2
+
+#endif
 
 
 
@@ -112,6 +119,7 @@ PRIVATE void LOOP(void) {
 
 
 	inputChange();
+	LED1OFF();
 
 /////////////////////////////////////////////
 ///main loop.
@@ -140,87 +148,17 @@ PRIVATE void LOOP(void) {
 
 PRIVATE void powerupHEX(void) {
 	char a;
-	int s,b,c,d,e,f,g,h,i;
+	int s,b,c,d,e,f,g,h,i,j,k,l;
+	unsigned int time;
+
+
+
+
+	while(1)
+	{
 	a = HEX();
-
-
-
-
-
 	switch (a) {
-	case 0x0F:
-		factoryBT(); //HEX2=0, HEX1=E Factory reset BT.
-		break;
-	case 0x0D:		//test turn off after 1 second.
 
-		LED1GREEN();
-	//			while(1)
-	//			{
-	//			a=readNEAT();
-//
-	//			}
-
-	//			readNEAT();
-				NEATTX(0xFF,0x00,0xAAAA);		//battery state, LARM type, ID(16 bits)
-
-			us(1000000);
-			while(1);
-		LPC_GPIO_OFF FIOSET =OFF; //OFF button set high to turn off.
-		LPC_GPIO_OFF FIODIR |= OFF; //
-		while(1);
-		break;
-	case 0x0C: //recover clock
-		while (1) {
-		}
-		; //wait for ever at max clock for debug.
-		break;
-
-
-	case 0x0B:
-		SystemCoreClockUpdate ();
-		s=SystemCoreClock; //4MHz
-		CPU100MHz();
-		SystemCoreClockUpdate ();
-		s=SystemCoreClock; //4MHz
-
-			b=NEATRD(0x10);
-			c=NEATRD(0x11);
-			d=NEATRD(0x12);
-			e=NEATRD(0x13);
-			f=NEATRD(0x14);
-			g=NEATRD(0x15);
-			NEATWR(2,0xA0);			//reset read
-			NEATWR(1,0x01);			//reset NEAT module.
-
-
-
-
-
-		break;
-	case 0x0A:
-		CPU12MHz();
-		initBT();
-			setupBT();
-
-
-
-		break;
-
-
-		s=LPC_TIM2->TC;
-
-
-		if (3000000 < LPC_TIM2->TC)
-	case 0x09:
-		while(1)
-		{
-		LPC_TIM2->TC=0;
-		 while (2000000>LPC_TIM2->TC);
-		 IRsynthesis('P',4,0x2);		//Plessey  4 repeats, code 3
-
-		 LED1OFF();
-
-		}
 	case 0x00:
 //		timer2Start(); //initiate timer2 to 1MHz.
 		CPU12MHz();
@@ -239,9 +177,155 @@ PRIVATE void powerupHEX(void) {
 		LOOP();			//never exits this loop.
 		break;
 
+	case 0x01:
+		CPU12MHz();
+		while(1)
+		{
+			captureIR();
+			playIR();
+			if(1!=HEX())break;
+		}
+		break;
+
+
+	case 0x02:			//NEAT transmit, inc ID every 10s.
+		CPU12MHz();
+		LPC_TIM2->TC=0;
+		time=0;			//
+		NEATRESET();
+		while(1)
+		for (l=0;l<10;(l++))
+		for (k=0;k<10;k++)
+		for (j=0;j<10;j++)
+		for (i=0;i<10;i++)
+		{
+			h=i+(j<<4)+(k<<8)+(l<<12);
+		NEATTX(0xFF,0x00,h);		//battery state, ALARM type, ID(16 bits)
+		time=time+10000000;			//+10s
+		while (LPC_TIM2->TC<time);
+		if(2!=HEX())break;
+
+		}
+		break;
+	case 0x03:			//NEAT rx, inc ID then transmit.
+		CPU12MHz();
+
+			enableInputInterrupt();
+			initUART();
+			initBT();
+			resetBT();
+			setupBT();
+			LED1YELLOW();
+			I2CINIT();
+			CPU12MHz();
+			NEATRESET();
+
+
+			while(1)
+			{
+			powerDown();
+			if(SWNEAT)
+			{
+			SWNEAT=0;
+			CPU12MHz();
+			i=NEATRD(0x61);
+			j=NEATRD(0x60);
+			NEATWR(2,0xA0);			//reset read
+			NEATRESET();
+			us(3000000);
+			NEATTX(0xFF,0x00,1+i+256*j);		//battery state, ALARM type, ID(16 bits)
+			LPC_TIM2->TC =0;
+			if(3!=HEX())break;
+			}
+			}
+
+		break;
+
+
+	case 04:
+		CPU4MHz();
+		while(1)
+		{
+			LED1GREEN();
+			us(400000);
+			LED1OFF();
+			us(400000);
+			if(4!=HEX())break;
+		}
+		break;
+	case 05:
+		CPU12MHz();
+		while(1)
+		{
+			LED1OFF();
+			us(400000);
+			LED1YELLOW();
+			us(400000);
+			if(5!=HEX())break;
+		}
+		break;
+	case 06:				//emc test 199MHz
+		CPU100MHz();
+		while(1)
+		{
+			LED1GREEN();
+			us(400000);
+			LED1YELLOW();
+			us(400000);
+			if(6!=HEX())break;
+		}
+		break;
+	case 07:				//test IR synthesis
+		CPU4MHz();
+		while(1)
+		{
+		 LPC_TIM2->TC=0;
+		 while (5000000>LPC_TIM2->TC);
+		 IRsynthesis('P',2,0x2);		//Plessey  2 repeats, code 3 for HC603c
+		 if(7!=HEX())break;
+		}
+		break;
+
+
+	case 0x08:		//test turn off after 2 seconds.
+		CPU4MHz();
+		LED1GREEN();
+		us(2000000);
+		a=3;
+		a=4;
+		LPC_GPIO_OFF FIOSET =OFF; //OFF button set high to turn off.
+		while(1);
+		break;
+
+	case 0x0B:					//USB.
+		break;
+
+	case 0x0C: //recover clock
+		while (1) {
+			LED1GREEN();
+
+			LED1GREEN();
+
+			LED1GREEN();
+			LED1YELLOW();
+			LED1GREEN();
+
+			LED1GREEN();
+
+		}
+		; //wait for ever for debug.
+		break;
+
+
+	case 0x0F:
+		factoryBT(); //HEX2=0, HEX1=E Factory reset BT.
+		while(1);
+		break;
+
 	default:
 		break;
 	}
+}
 }
 
 ///////////////////////////////////////////////////////////
