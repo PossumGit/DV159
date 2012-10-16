@@ -72,7 +72,8 @@ PUBLIC void	LED1OFF(void)
 ///0	0	USB
 ///F	0	BT discover.
 ///E    0   BT factory reset.
-///note on prototype bit 4,5 (HEX2 bit 0,1)lack pullup, so only use as 0 for now.
+///note on prototype PCB1 bit 4,5 (HEX2 bit 0,1)lacked pullups.
+///note with 0's at top of HEX switches, H1 is on right and is LSNibble.
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC char HEX(void)
 {
@@ -102,7 +103,7 @@ PUBLIC char HEX(void)
 	s= 15-(1+b+4+d);			//a,b fixed as high.
 	s=0;
 #endif
-	return r|s<<4;
+	return s|r<<4;
 }
 
 

@@ -34,6 +34,7 @@ PUBLIC uint32_t SWF2;
 PUBLIC uint32_t SWF3;
 PUBLIC uint32_t SWBT;
 PUBLIC uint32_t SWNEAT;
+PUBLIC char PENDALARM;
 
 PUBLIC int CPUSPEED=0;
 
@@ -294,13 +295,15 @@ void EINT3_IRQHandler(void)				//GPIO interrupt.
 	//	SWNEAT=0;
 		return;
 	}
-
+// NOTE flags are set up on every interrupt, so always indicate last interrupt cause.
+//	No need to separately reset flags.
 	else if (SW1|SW2|SW3|SWF1|SWF2|SWF3)
 		{
 
 			CPU12MHz();
 			repeatInput(); //check if change of input, send via BT to android if change.
 			LPC_TIM2->TC = 0;
+			PENDALARM=0x30^(inputChange()&0x30);	//NZ if EXT and/or INT pressed.
 		}
 
 	else if (SWBT)
@@ -405,19 +408,40 @@ PUBLIC int powerDown(void)
 {
 
 	int r=0;		//return value
-
+	char a;
 	int b,s,t,u,v,w;
 
 //first check if any serial process is active:
 	b=LPC_SSP0->SR;			//bit 7=1 is SPI transfers complete
 	b=LPC_UART1->LSR;
 	s=LPC_TIM2->TC;
+	if(PENDALARM)
+	{a=LPC_TIM2->TC/500000;
+		if (a==2||a==4)
+	{
+		LED1YELLOW();
+	}
+	else
+		LED1GREEN();
+
+
+	}
+	else
+		LED1GREEN();
 
 	if(0x40==((LPC_UART1->LSR)&(0x41)))	//bit 1=0 RX FIFO empty, bit 6=1 TX FIFO empty.
 	if(rxstart==rxend)					//nothing waiting in bluetooth rx buffer
 	if(txstart==txend)					//nothing waiting in bluetooth tx buffer
 	if (3000000 < LPC_TIM2->TC)
 	{
+
+		if (PENDALARM)
+		{
+			LED1YELLOW();
+			NEATTX(0xFF,0x00,0xDEAF);			//means cannot hear ANDROID.
+		}
+
+
 		disableInputInterrupt();
 	r=1;
 
@@ -442,8 +466,8 @@ PUBLIC int powerDown(void)
 
 	POWERDOWN=LPC_SC->PCON;
 	 //Power down mode.
-		SCB->SCR = 0x4;
-		LPC_SC->PCON = 0x01;
+//		SCB->SCR = 0x4;
+//		LPC_SC->PCON = 0x01;
 	__WFI(); //go to power down.
 
 

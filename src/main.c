@@ -245,34 +245,69 @@ PRIVATE void powerupHEX(void) {
 	case 04:
 		CPU4MHz();
 		while(1)
-		{
+		{	if(4!=HEX())break;
 			LED1GREEN();
 			us(400000);
-			LED1OFF();
+			a=inputChange();
+			if (~a&(1<<4))
+			{
+				LED1YELLOW();
+			}
+			else if (~a&(1<<5))
+			{	LED1GREEN();
+			}
+			else
+			{
+					LED1OFF();
+			}
 			us(400000);
-			if(4!=HEX())break;
+
 		}
 		break;
 	case 05:
 		CPU12MHz();
 		while(1)
 		{
-			LED1OFF();
-			us(400000);
-			LED1YELLOW();
-			us(400000);
+
 			if(5!=HEX())break;
+			LED1GREEN();
+			us(300000);
+				a=inputChange();
+				if (~a&(1<<4))
+				{
+					LED1YELLOW();
+				}
+				else if (~a&(1<<5))
+				{	LED1GREEN();
+				}
+				else
+				{
+						LED1OFF();
+				}
+				us(300000);
 		}
 		break;
 	case 06:				//emc test 199MHz
 		CPU100MHz();
 		while(1)
 		{
-			LED1GREEN();
-			us(400000);
-			LED1YELLOW();
-			us(400000);
+
 			if(6!=HEX())break;
+			LED1GREEN();
+			us(200000);
+				a=inputChange();
+				if (~a&(1<<4))
+				{
+					LED1YELLOW();
+				}
+				else if (~a&(1<<5))
+				{	LED1GREEN();
+				}
+				else
+				{
+						LED1OFF();
+				}
+				us(200000);
 		}
 		break;
 	case 07:				//test IR synthesis

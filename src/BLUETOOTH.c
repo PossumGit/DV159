@@ -33,6 +33,7 @@ int IRcode;
 EXTERNAL int Buffer[]; ///< Whole of RAM2 is Buffer, reused for NEAT, Bluetooth, audio and IR replay and capture
 EXTERNAL uint8_t I2CSlaveBuffer[256];
 EXTERNAL uint32_t SWBT;
+EXTERNAL char PENDALARM;
 //Private functions
 PRIVATE void
 sendBTbuffer(void);
@@ -92,6 +93,7 @@ PUBLIC int processBT(void)
     if (rxstart != rxend)
 	{
 	a = rx[rxstart++];
+	PENDALARM=0;
 	switch (SEQUENCE)//a sequence of N,alarm, battery, IDMSB, IDLSB.
 	{
 	case 1:
@@ -160,6 +162,10 @@ PUBLIC int processBT(void)
 	    sendBT(W, 1);
 	    break;
 	    }
+
+
+
+
 	case 'b':
 	case 'B':
 	{
@@ -474,7 +480,7 @@ PRIVATE void sendBTbuffer(void)
     {
     char a;
     int i;
-    for (i = 0; (Buffer[i] != 0) && i < CaptureMax; i++)
+    for (i = 0; (Buffer[i] != 0) && i < CaptureMax-1; i++)
 	{
 	while ((0 == (1 << 6 & LPC_UART1->LSR)))
 	    ;//data available and buffer available
