@@ -26,38 +26,59 @@
 #include "lpc17xx_pinsel.h"
 #include "lpc17xx.h"
 //Public variables
-PUBLIC uint32_t SW1;		//rising interrupt state
-PUBLIC uint32_t SW2;
-PUBLIC uint32_t SW3;
-PUBLIC uint32_t SWF1;		//falling interrupt state.
-PUBLIC uint32_t SWF2;
-PUBLIC uint32_t SWF3;
-PUBLIC uint32_t SWBT;
-PUBLIC uint32_t SWNEAT;
-PUBLIC char PENDALARM;
+PUBLIC volatile word SW1;		//rising interrupt state
+PUBLIC volatile word SW2;
+PUBLIC volatile word SW3;
+PUBLIC volatile word SWF1;		//falling interrupt state.
+PUBLIC volatile word SWF2;
+PUBLIC volatile word SWF3;
+PUBLIC volatile word SWBT;
+PUBLIC volatile word SWNEAT;
+PUBLIC volatile byte PENDALARM;
+PUBLIC volatile int CPUSPEED=0;
 
-PUBLIC int CPUSPEED=0;
+//Private variables
+
+//External variables
 
 EXTERNAL int txstart;
 EXTERNAL int txend;
 EXTERNAL int rxstart;
 EXTERNAL int rxend;
 
-//Private variables
- PRIVATE int POWERDOWN=0;
-//External variables
-EXTERNAL char I2CSlaveBuffer[];
+
 
 //Private functions
 
+//public functions
+PUBLIC void CPU4MHz(void);
+PUBLIC void CPU12MHz(void);
+PUBLIC void CPU100MHz (void);
+PUBLIC void disableInputInterrupt(void);
+PUBLIC void enableInputInterrupt(void);
+PUBLIC int powerDown(void);
 //External functions
+EXTERNAL byte I2CSlaveBuffer[];
+EXTERNAL void timer2CPU4(void);
+EXTERNAL void readNEAT(void);
+EXTERNAL void NEATTX(byte, byte, word);
+EXTERNAL int repeatInput(void);
+EXTERNAL void	LED1GREEN(void);
+EXTERNAL void	LED1YELLOW(void);
+EXTERNAL void	LED1OFF(void);
+EXTERNAL void timer2CPU4(void);
+EXTERNAL void timer2CPU12(void);
+EXTERNAL void timer2CPU100(void);
+EXTERNAL void SSPNEATCPU4(void);
+EXTERNAL void SSPNEATCPU12(void);
+EXTERNAL void SSPNEATCPU100(void);
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
-
-void CPU100MHz (void)
+///CPU100MHz disables GPIO interrupts
+PUBLIC void CPU100MHz (void)
 {
 
 //If already at 100MHz, fullspeed do nothing.
@@ -92,7 +113,7 @@ void CPU100MHz (void)
   LPC_SC->CLKOUTCFG = CLKOUTCFG_Val;    // Clock Output Configuration
 
   LPC_SC->FLASHCFG  = (LPC_SC->FLASHCFG & ~0x0000F000) | FLASHCFG_Val;
-
+  //CPU100MHz disables GPIO interrupts
 	  }
 
 	  timer2CPU100();		//generate 1MHz system clock for sleep and delays from 100MHz cpu clock.
@@ -104,7 +125,7 @@ void CPU100MHz (void)
 
 PUBLIC void CPU12MHz(void)
 {
-	char a;
+
 	/* Clock Setup                        */
 
 	  if (((LPC_SC->PLL0STAT >> 24) & 3) == 3)		//PLL  connected and enabled.
@@ -159,7 +180,7 @@ PUBLIC void CPU12MHz(void)
 
 PUBLIC void CPU4MHz(void)
 {
-	char a;
+
 	/* Clock Setup                        */
 
 	  if (((LPC_SC->PLL0STAT >> 24) & 3) == 3)		//PLL  connected and enabled.
@@ -222,8 +243,8 @@ PUBLIC void CPU4MHz(void)
 void EINT3_IRQHandler(void)				//GPIO interrupt.
 {
 //interrupts on input change state and bluetooth character.
-	char a;
-	a=a;
+	byte a=1;
+
 	int s,t,u,v,w;
 
 
@@ -243,22 +264,22 @@ void EINT3_IRQHandler(void)				//GPIO interrupt.
 
 #if PCBissue==3
 	//get interrupt status.
-	if(SW2=(LPC_GPIOINT->IO2IntStatR&(0x1<<12))>>11)
+	if((SW2=(LPC_GPIOINT->IO2IntStatR&(0x1<<12)))>>11)
 		LPC_GPIOINT->IO2IntClr=0x1<<12;					//SW2 bit 1	EXT
-	if(SW1=(LPC_GPIOINT->IO2IntStatR&(0x1<<11))>>11)
+	if((SW1=(LPC_GPIOINT->IO2IntStatR&(0x1<<11)))>>11)
 		LPC_GPIOINT->IO2IntClr=0x1<<11;					//SW1 bit 0 INT
-	if (SW3=(LPC_GPIOINT->IO0IntStatR&(0x1<<21))>>19)
+	if ((SW3=(LPC_GPIOINT->IO0IntStatR&(0x1<<21)))>>19)
 		LPC_GPIOINT->IO0IntClr=0x1<<21;					//SW3 bit 2 MID
-	if (SWF2=(LPC_GPIOINT->IO2IntStatF&(0x1<<12))>>11)
+	if ((SWF2=(LPC_GPIOINT->IO2IntStatF&(0x1<<12)))>>11)
 		LPC_GPIOINT->IO2IntClr=0x1<<12;					//SW2 bit 1	EXT
-	if (SWF1=(LPC_GPIOINT->IO2IntStatF&(0x1<<11))>>11)
+	if ((SWF1=(LPC_GPIOINT->IO2IntStatF&(0x1<<11)))>>11)
 		LPC_GPIOINT->IO2IntClr=0x1<<11;					//SW1 bit 0 INT
-	if (SWF3=(LPC_GPIOINT->IO0IntStatF&(0x1<<21))>>19)
+	if ((SWF3=(LPC_GPIOINT->IO0IntStatF&(0x1<<21)))>>19)
 		LPC_GPIOINT->IO0IntClr=0x1<<21;					//SW3 bit 2 MID
-	if (SWBT=(LPC_GPIOINT->IO0IntStatR&(0x1<<16))>>16)
+	if ((SWBT=(LPC_GPIOINT->IO0IntStatR&(0x1<<16)))>>16)
 		LPC_GPIOINT->IO0IntClr=0x1<<16;					//BT Interrupt
-	if (SWNEAT=(LPC_GPIOINT->IO2IntStatF&(0x1<<4))>>4)
-		LPC_GPIOINT->IO2IntClr=0x1<<4;					//NEAT Interrupt MOD, wire NEAT INTERRUPt to P2.5 pin 68.
+	if ((SWNEAT=(LPC_GPIOINT->IO2IntStatF&(0x1<<4)))>>4)
+		LPC_GPIOINT->IO2IntClr=0x1<<4;					//NEAT Interrupt MOD, wire NEAT INTERRUPt to P2.4 pin 69.
 
 
 #elif PCBissue==2
@@ -278,13 +299,7 @@ void EINT3_IRQHandler(void)				//GPIO interrupt.
 	LPC_GPIOINT->IO2IntClr=0x1<<0|0x1<<11|0x1<<13;		//NEAT|INT|MID
 
 #endif
-//	SystemCoreClockUpdate ();
-//	s=SystemCoreClock; //4MHz
 
-	//First check CPU speed.
-	//options: 12MHz xtal.
-	//or 100MHZ full speed.
-	//Could be 12MHz or 100MHz.
 
 
 	LPC_SC->PCONP     = Peripherals ;       // Enable Power for Peripherals      */
@@ -292,7 +307,7 @@ void EINT3_IRQHandler(void)				//GPIO interrupt.
 	a=HEX();
 	if ((3==HEX()) && SWNEAT)
 	{
-	//	SWNEAT=0;
+
 		return;
 	}
 // NOTE flags are set up on every interrupt, so always indicate last interrupt cause.
@@ -340,7 +355,7 @@ void EINT3_IRQHandler(void)				//GPIO interrupt.
 
 PUBLIC void enableInputInterrupt(void)
 {
-	int a,b,c,d;
+	int a,b;
 #if PCBissue==3
 	NVIC->ISER[0]|=0x1<<21;					//enable eint3/GPIO  interrupt.(SHARED on bit 21.)
 
@@ -408,8 +423,8 @@ PUBLIC int powerDown(void)
 {
 
 	int r=0;		//return value
-	char a;
-	int b,s,t,u,v,w;
+	byte a;
+	int b,s;
 
 //first check if any serial process is active:
 	b=LPC_SSP0->SR;			//bit 7=1 is SPI transfers complete
@@ -464,7 +479,7 @@ PUBLIC int powerDown(void)
 	enableInputInterrupt();
 	LPC_GPIOINT->IO0IntEnR|=0x1<<16;			//Bluetooth rising interrupt
 
-	POWERDOWN=LPC_SC->PCON;
+
 	 //Power down mode.
 //		SCB->SCR = 0x4;
 //		LPC_SC->PCON = 0x01;

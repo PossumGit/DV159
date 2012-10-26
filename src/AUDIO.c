@@ -3,7 +3,6 @@
 ///@version     	test
 ///@copyright  		Possum UK 23 April 2012
 
-//Defines
 
 //Includes
 #include "HUB.h"
@@ -11,61 +10,57 @@
 #include "lpc17xx_pinsel.h"
 #include "lpc17xx_i2s.h"
 
-//Public variables
 
-//Private variables
-
-//External variables
-
-//Private functions
-
-//External functions
-
-
-/////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////////////////
-/////////////////////////////////////////////////////////////////////////////////////////////////
-
-
-	int 	TPtr;
-
-
-/************************** PRIVATE DEFINITIONS *************************/
-/* Max buffer length */
+///Private Defines
+// Max buffer length
 #define BUFFER_SIZE				0x400
-/* I2S Buffer Source Address is AHBRAM1_BASE that used for USB RAM purpose, but
- * it is not used in this example, so this memory section can be used for general purpose
- * memory
- */
-#define I2S_BUFFER_SRC			Buffer //LPC_AHBRAM1_BASE //0x20080000
-/* I2S Buffer Destination Address is (AHBRAM1_BASE + 0x100UL) that used for USB RAM purpose, but
- * it is not used in this example, so this memory section can be used for general purpose
- * memory
- */
+// I2S Buffer Source Address is AHBRAM1_BASE that used for USB RAM purpose, but
+// it is not used in this example, so this memory section can be used for general purpose
+// memory
+//
+#define I2S_BUFFER_SRC			Buffer
+//LPC_AHBRAM1_BASE //0x20080000
+// I2S Buffer Destination Address is (AHBRAM1_BASE + 0x100UL) that used for USB RAM purpose, but
+// it is not used in this example, so this memory section can be used for general purpose
+// memory
+//
 #define I2S_BUFFER_DST			(I2S_BUFFER_SRC+0x1000UL) //0x20081000
 
 #define RXFIFO_EMPTY		0
 #define TXFIFO_FULL			8
 
 
-EXTERNAL int  Buffer[];
-PRIVATE uint32_t  BufferPtr;
+///Public variables
 
-volatile uint8_t  I2STXDone = 0;
-volatile uint8_t  I2SRXDone = 0;
+///External variables
+	EXTERNAL word  Buffer[];
+///Private variables
+	word 	TPtr;
+	PRIVATE word  BufferPtr;
 
-volatile uint32_t *I2STXBuffer = (uint32_t*)(I2S_BUFFER_SRC);
-volatile uint32_t *I2SRXBuffer = (uint32_t *)(I2S_BUFFER_DST);
+	volatile byte  I2STXDone = 0;
+	volatile byte  I2SRXDone = 0;
 
-volatile uint32_t I2SReadLength = 0;
-volatile uint32_t I2SWriteLength = 0;
+	volatile word *I2STXBuffer = (word*)(I2S_BUFFER_SRC);
+	volatile word *I2SRXBuffer = (word *)(I2S_BUFFER_DST);
 
-uint8_t tx_depth_irq = 0;
-uint8_t rx_depth_irq = 0;
-uint8_t dummy=0;
+	volatile word I2SReadLength = 0;
+	volatile word I2SWriteLength = 0;
 
+	byte tx_depth_irq = 0;
+	byte rx_depth_irq = 0;
+	byte dummy=0;
 
+///External functions
+
+///Private functions
+
+///local functions(code)
+///
+/////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -80,6 +75,7 @@ PUBLIC void initAudio(void)
 	LPC_GPIO_LNR FIOCLR = LNR; 		//L/R =1
 	LPC_GPIO_MICCE FIODIR |=MICCE; 		//CHIPEN on mic =output.
 	LPC_GPIO_MICCE FIOSET = MICCE; 		//CHIPEN=1=enabled.
+
 
 
 		int	i;
@@ -179,14 +175,14 @@ PUBLIC void playAudio(void)
 
  void I2S_IRQHandler()
 {
-//	uint32_t RXLevel = 0;
+//	word RXLevel = 0;
 
 
 
 
 
 	int	a,x;
-		a++;
+
 		a=LPC_I2S->I2SSTATE;
 
 		x=LPC_I2S->I2SRXFIFO;
@@ -196,7 +192,8 @@ PUBLIC void playAudio(void)
 
 
 
-		if (BufferPtr<BufferMax)
+
+		if (BufferPtr<CaptureMax)
 		{
 
 		Buffer[BufferPtr++] = x;
@@ -229,7 +226,7 @@ PUBLIC void playAudio(void)
 			LPC_I2S->I2STXFIFO=0x80008000;
 			LPC_I2S->I2STXFIFO=0x80008000;
 			LPC_I2S->I2STXFIFO=0x80008000;
-			if (TPtr>=BufferMax)
+			if (TPtr>=CaptureMax)
 			{
 			TPtr=1000;
 		}

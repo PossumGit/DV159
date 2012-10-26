@@ -25,8 +25,8 @@
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 ///RAM region specific variable definitions.
-__DATA(RAM1)int Buffer2[CaptureExt];
+__DATA(RAM1)volatile word  Buffer2[CaptureExt];
 
 /// RAM region definitions.
-__DATA(RAM2)int Buffer[CaptureMax];
+__DATA(RAM2)volatile word Buffer[CaptureMax];
 

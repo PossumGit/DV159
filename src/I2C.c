@@ -19,6 +19,7 @@
 
 
 
+
 //Includes
 #include "HUB.h"
 #include "lpc17xx_clkpwr.h"
@@ -26,27 +27,30 @@
 #include "lpc17xx_i2s.h"
 
 //Public variables
-PUBLIC uint8_t I2CSlaveBuffer[32];
+PUBLIC byte I2CSlaveBuffer[32];
 //Private variables
 
-volatile uint32_t I2CMasterState = I2CSTATE_IDLE;
-volatile uint32_t I2CSlaveState = I2CSTATE_IDLE;
+volatile word I2CMasterState = I2CSTATE_IDLE;
+volatile word I2CSlaveState = I2CSTATE_IDLE;
 
-volatile uint8_t I2CMasterBuffer[32];
+volatile byte I2CMasterBuffer[32];
 
-volatile uint32_t I2CReadLength;
-volatile uint32_t I2CWriteLength;
 
-volatile uint32_t RdIndex = 0;
-volatile uint32_t WrIndex = 0;
-int COUNT=0;
-int L4=3;
-int L5=0xD2;
+volatile word I2CReadLength;
+volatile word I2CWriteLength;
+
+volatile word RdIndex = 0;
+volatile word WrIndex = 0;
+word COUNT=0;
+word L4=3;
+word L5=0xD2;
 //External variables
 
 //Private functions
+//public functions
+PUBLIC int I2CBATTERY(void);
 
-PRIVATE void I2CSTART(void);
+//PRIVATE void I2CSTART(void);
 
 PRIVATE void I2CGO(void);
 
@@ -62,8 +66,9 @@ void ISTOP(void);
 //External functions
 
 
-
-
+//public functions
+PUBLIC void I2CINIT(void);
+PUBLIC void I2CREAD(void);
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -76,8 +81,8 @@ void ISTOP(void);
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC void I2CINIT(void)
 {
-	int	i,j,k,l,q;
-	char a,b;
+//	word	i,j,k,l,q;
+//	char a,b;
 	LPC_SC->PCONP |=1<<19;						// bit 19. enable I2C1
 	LPC_SC->PCLKSEL1 |= 0<<6;					//PCLK_I2C(bit 6,7)=CCLK/4=100MHz/4. Not reliable if /1.
 	LPC_PINCON->PINSEL1 |=(3<<6 |3<<8);			//I2C1 P0.19(SDA1), P0.20(SCL1)
@@ -113,8 +118,8 @@ PUBLIC void I2CINIT(void)
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC void I2CREAD(void)
 {
- char a;
- int i;
+ //char a;
+ //word i;
 
 
 	I2CMasterBuffer[0]=0x90;
@@ -162,7 +167,7 @@ PUBLIC void I2CREAD(void)
 PUBLIC int I2CBATTERY(void)
 {
  char a;
- int i;
+// word i;
 
 	I2CMasterBuffer[0]=0x90;
 	I2CMasterBuffer[1]=0x0C;
@@ -172,6 +177,7 @@ PUBLIC int I2CBATTERY(void)
 	I2CGO();
 
 	a=I2CSlaveBuffer[0];
+	return a;
 }
 
 
@@ -188,8 +194,7 @@ PUBLIC int I2CBATTERY(void)
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC void I2CFullCharge(void)
 {
- char a;
- int i;
+
 
 
 	I2CMasterBuffer[0]=0x90;
@@ -241,7 +246,7 @@ PUBLIC void I2CFullCharge(void)
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PRIVATE void I2CGO(void)
 {
-	 char a;
+
 	 LPC_I2C1->I2CONSET=I2EN;					//bit 6=enable I2C
 	  I2CMasterState = I2CSTATE_IDLE;
 	  RdIndex = 0;
@@ -279,7 +284,7 @@ PRIVATE void I2CGO(void)
 ///////////////////////////////////////////////////////////////////////////////////
 void I2C1_IRQHandler(void)
 {
-	uint8_t StatValue;
+	byte StatValue;
 	char a;
 
 	// this handler deals with master read and master write only //

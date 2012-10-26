@@ -11,28 +11,29 @@
 #define WaitForIR	10*Second			///< Nominal 10s
 #define WaitEndIR	3*Second			///< Nominal 3s
 //includes
+
 #include "HUB.h"
 #include "lpc17xx_clkpwr.h"
 #include "lpc17xx_timer.h"
 #include "lpc17xx_pinsel.h"
 //public variables
 //local variables.
-PRIVATE uint32_t IRAddress = 0; ///< Count IR pulses during capture/replay
-PRIVATE uint32_t PulseWidth = 100; ///< 100 system clocks=1uS.
-PRIVATE uint32_t IRData = 1; ///< Used to communicate end from interrupt routines.
-PRIVATE uint32_t IRTimeMatch = 1;///< Last time set into match regsister.
-PRIVATE uint32_t Period = 2632; //38KHz default.
-PRIVATE uint32_t Mark = 0x10000; //Mark burst in IR compression processing. Initial is bigger than max mark.
-PRIVATE uint32_t Space = 0; //Space gap between bursts in IR compression.
-PRIVATE uint32_t SymbolBank = 0; //location of first symbol (skip) in SYMBOL BANK
-PRIVATE uint32_t SymbolWord = 0;
-PRIVATE uint32_t DataStep = 0; //used in compression timer1 ISR
-PRIVATE uint32_t Pulse = 1; //1=pulse, 0=no pulse.
-PRIVATE uint32_t Delay = 0;//delay in compress routine.
+PRIVATE word IRAddress = 0; ///< Count IR pulses during capture/replay
+PRIVATE word PulseWidth = 100; ///< 100 system clocks=1uS.
+PRIVATE word IRData = 1; ///< Used to communicate end from interrupt routines.
+PRIVATE word IRTimeMatch = 1;///< Last time set into match regsister.
+PRIVATE word Period = 2632; //38KHz default.
+PRIVATE word Mark = 0x10000; //Mark burst in IR compression processing. Initial is bigger than max mark.
+PRIVATE word Space = 0; //Space gap between bursts in IR compression.
+PRIVATE word SymbolBank = 0; //location of first symbol (skip) in SYMBOL BANK
+PRIVATE word SymbolWord = 0;
+PRIVATE word DataStep = 0; //used in compression timer1 ISR
+PRIVATE word Pulse = 1; //1=pulse, 0=no pulse.
+PRIVATE word Delay = 0;//delay in compress routine.
 PRIVATE int COUNT[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
 
 //external variables
-EXTERNAL int Buffer[]; ///< Whole of RAM2 is Buffer, reused for NEAT, Bluetooth, audio and IR replay and capture
+EXTERNAL volatile int Buffer[]; ///< Whole of RAM2 is Buffer, reused for NEAT, Bluetooth, audio and IR replay and capture
 
 //Local functions
 PRIVATE void startCaptureIR(void);
@@ -43,7 +44,19 @@ PRIVATE void correctIR(void);
 PRIVATE void compress(void);
 
 //External functions
+EXTERNAL void	LED1YELLOW(void);
+EXTERNAL void	LED1GREEN(void);
+EXTERNAL void	LED1OFF(void);
+EXTERNAL void CPU100MHz (void);
+EXTERNAL void CPU12MHz(void);
+EXTERNAL int repeatInput(void);
+EXTERNAL void txBT(void);
+EXTERNAL byte	inputChange(void);
+EXTERNAL word	inputTime(void);
+// PUBLIC functions
 
+PUBLIC int captureIR(void);
+PUBLIC void playIR(void);
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -58,7 +71,7 @@ PRIVATE void compress(void);
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC int captureIR(void) {
 
-	char d;
+
 	IRAddress = CaptureFirst;
 	LED1YELLOW();
 	CPU100MHz();
@@ -149,6 +162,7 @@ void TIMER1_IRQHandler(void) {
 	//0 is end of buffer.
 	if (IRAddress < CaptureMax) {
 
+
 		IRData = Buffer[IRAddress];
 		if (IRData & (1 << 31))
 			compress();
@@ -177,7 +191,7 @@ void TIMER1_IRQHandler(void) {
 PRIVATE void compress(void) {
 	//coded scheme if most significant bit is 1.
 	int a=0, b=0;
-	uint32_t IRspace=0, t=0;
+	word IRspace=0, t=0;
 	IRData = Buffer[IRAddress];
 	while (1) {
 		switch ((IRData >> 28) & 0xF) {

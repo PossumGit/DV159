@@ -11,17 +11,37 @@
 
 //Public variables
 
-PUBLIC uint32_t LastInputTime=0;
+PUBLIC volatile word LastInputTime=0;
 
 //Private variables
-PRIVATE char InputState=0;
-PRIVATE char in[] = { 'I', ' ' };
-PRIVATE int ilength = sizeof(in);
+
+
+
 //External variables
 
 //Private functions
 
 //External functions
+EXTERNAL void sendBT(byte istat[], unsigned int ilength);
+EXTERNAL int I2CBATTERY(void);
+//public functions
+
+PUBLIC int repeatInput(void);
+PUBLIC byte	inputChange(void);
+
+PUBLIC void	LED1GREEN(void);
+PUBLIC void	LED1YELLOW(void);
+PUBLIC void	LED1OFF(void);
+PUBLIC void	LED2GREEN(void);
+PUBLIC void	LED2YELLOW(void);
+PUBLIC void	LED2OFF(void);
+PUBLIC byte HEX(void);
+PUBLIC  void	us(unsigned int time_us);
+PUBLIC void timer2CPU4(void);
+PUBLIC void timer2CPU12(void);
+PUBLIC void timer2CPU100(void);
+PUBLIC word	inputTime(void);
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -62,11 +82,47 @@ PUBLIC void	LED1OFF(void)
 	LPC_GPIO1->FIOCLR = LED1Y; 		//
 	LPC_GPIO1->FIOCLR = LED1G; 		//LED3 OFF
 	}
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief Turn LED3 GREEN
+///@param void
+///@return void
+/////////////////////////////////////////////////////////////////////////////////////////////////
+PUBLIC void	LED2GREEN(void)
+	{
+	LPC_GPIO1->FIODIR |= LED2G; 		//IR defined as an output.
+	LPC_GPIO1->FIODIR |= LED2Y; 		//IR defined as an output.
+	LPC_GPIO1->FIOCLR = LED2Y; 		//
+	LPC_GPIO1->FIOSET = LED2G; 		//LED3	GREEN
+	}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief Turn LED3 Yellow
+///@param void
+///@return void
+/////////////////////////////////////////////////////////////////////////////////////////////////
+PUBLIC void	LED2YELLOW(void)
+	{
+	LPC_GPIO1->FIODIR |= LED2G; 		//IR defined as an output.
+	LPC_GPIO1->FIODIR |= LED2Y; 		//IR defined as an output.
+	LPC_GPIO1->FIOSET = LED2Y; 		//
+	LPC_GPIO1->FIOCLR = LED2G; 		//LED3 YELLOW
+	}
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief Turn LED3 off
+///@param void
+///@return void
+/////////////////////////////////////////////////////////////////////////////////////////////////
+PUBLIC void	LED2OFF(void)
+	{
+	LPC_GPIO1->FIOCLR = LED2Y; 		//
+	LPC_GPIO1->FIOCLR = LED2G; 		//LED3 OFF
+	}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 ///@brief Read HEX switches
 ///@param void
-///@return char with value equal to HEX2<<4|HEX1.
+///@return byte with value equal to HEX2<<4|HEX1.
 ///
 ///HEX1 HEX2
 ///0	0	USB
@@ -75,9 +131,9 @@ PUBLIC void	LED1OFF(void)
 ///note on prototype PCB1 bit 4,5 (HEX2 bit 0,1)lacked pullups.
 ///note with 0's at top of HEX switches, H1 is on right and is LSNibble.
 /////////////////////////////////////////////////////////////////////////////////////////////////
-PUBLIC char HEX(void)
+PUBLIC byte HEX(void)
 {
-	char a,b,c,d,r,s;
+	byte a,b,c,d,r,s;
 
 #if PCBissue==3
 	a=(LPC_GPIO0->FIOPIN &(1<<1))>>1;
@@ -113,9 +169,10 @@ PUBLIC char HEX(void)
 ///@param void
 ///@return 30-37 depending on input state change or 0xFF if no change.
 /////////////////////////////////////////////////////////////////////////////////////////////////
-PUBLIC char	inputChange(void)
+PUBLIC byte	inputChange(void)
 {
-	char	a,b,c,d;
+	static volatile byte InputState=0;
+	byte	a,b,c,d;
 
 #if PCBissue==3
 	LPC_GPIO2->FIODIR&=~(1<<11);			//internal
@@ -156,7 +213,7 @@ PUBLIC char	inputChange(void)
 ///@param void
 ///@return time in ms since last input change.
 /////////////////////////////////////////////////////////////////////////////////////////////////
-PUBLIC uint32_t	inputTime(void)
+PUBLIC word	inputTime(void)
 {
 		return LPC_TIM2->TC-LastInputTime;			//time in us since last input change.
 }
@@ -228,7 +285,7 @@ PUBLIC void timer2CPU100(void)
 ///
 ///uses main clock, but no interrupts.
 /////////////////////////////////////////////////////////////////////////////////////////////////
-PUBLIC void	us(int time_us)
+PUBLIC void	us(unsigned int time_us)
 {
 
 //change to use TIMER2, always clocks at 1MHz
@@ -262,6 +319,7 @@ else
 ///@return 0 if inactive, else 1
 /////////////////////////////////////////////////////////////////////////////////////////////////
  int repeatInput(void) {
+	 byte in[] = { 'I', ' ' };
 	in[1] = inputChange();
 	if (in[1] & 0x80) //bit 7 high indicates change
 	{
@@ -270,7 +328,7 @@ else
 		in[1] = (in[1] & 0x7f) | 0x01; //clear bit 7, set bit 1.
 
 		//		in[1]=((in[1]&0x2)<<4)|((in[1]&0x1)<<4);	//TECLA, bit 5 is ext, bit 4 is int, bit 3 is plugged in.
-		sendBT(in, ilength);
+		sendBT(in, sizeof(in));
 		return 1;
 	}
 	return 0;

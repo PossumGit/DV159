@@ -6,25 +6,28 @@
 
 //Defines
 
+
 //Includes
 #include "HUB.h"
 #include "lpc17xx_pinsel.h"
 
+///Local variables
 
-//Public variables
-PUBLIC int FlashAddress; ///< The address used for flash read and flash write.
+///Public variables
+PUBLIC word FlashAddress; ///< The address used for flash read and flash write.
 
-//Local variables
-EXTERNAL int Buffer[]; ///< Used for Audio and IR store and replay.
+///External variables
+EXTERNAL word Buffer[]; ///< Used for Audio and IR store and replay.
 
-//External variables
 
-//Local functions
-PRIVATE int readStatus(void);
-PRIVATE void writeBlock(int);
+///Local functions
+PRIVATE word readStatus(void);
+PRIVATE void writeBlock(word);
+///public functions
 
-//External functions
-
+///External functions
+EXTERNAL byte readSSP0Byte(void);
+EXTERNAL void writeSSP0Byte(byte b);
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -37,7 +40,7 @@ PRIVATE void writeBlock(int);
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC void eraseFlash(void)
 {
-	int a;
+	word a;
 	while (1 & readStatus()); //wait for not busy.
 	//first command is write enable
 	LPC_GPIO_FLASHCS FIOCLR = FLASHCS; //Flash enable
@@ -67,7 +70,7 @@ PUBLIC void eraseFlash(void)
 ////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC void writeFlashLow(void)
 {
-	int i = 0;
+	word i = 0;
 	for (i = 0; i < 64; i++) //64 blocks of 64 words from 0 to 4095 words.
 		writeBlock(i); //write 64 words
 }
@@ -84,11 +87,12 @@ PUBLIC void writeFlashLow(void)
 /// 55ms for this. Worst case is around 210ms (64ms*3(write)+16ms(data comms))
 ////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC void writeFlashHigh(void) {
-	int i = 0;
+	word i = 0;
 	for (i = 64; i < 128; i++) //64 blocks of 64 words from 4096 to 8191 words.
 		writeBlock(i); //write 64 words
 
 }
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 ///@brief Read 16384 bytes from Flash from address FlashAddress, little endian, to last 4096 words of Buffer[].
@@ -105,9 +109,9 @@ PUBLIC void readFlashHigh(void) {
 	while (1 & readStatus())
 		; //wait for not busy
 	//set up SPI for flash.
-	char a, b, c, d;
-	int i;
-	char address0, address8, address16;
+	byte a, b, c, d;
+	word i;
+	byte address0, address8, address16;
 	address0 = 0xFF & FlashAddress;
 	address8 = 0xFF & (FlashAddress >> 8);
 	address16 = 0xFF & (FlashAddress >> 16);
@@ -150,9 +154,9 @@ PUBLIC void readFlashLow(void) {
 	while (1 & readStatus())
 		; //wait for not busy
 	//set up SPI for flash.
-	char a, b, c, d;
-	int i;
-	char address0, address8, address16;
+	byte a, b, c, d;
+	word i;
+	byte address0, address8, address16;
 	address0 = 0xFF & FlashAddress;
 	address8 = 0xFF & (FlashAddress >> 8);
 	address16 = 0xFF & (FlashAddress >> 16);
@@ -193,16 +197,16 @@ PUBLIC void readFlashLow(void) {
 ///
 ///@par Modifies
 /// FlashAddress=FlashAddress+256.
-/// Buffer[] first half is written from flash memory pointed to by FlashAddress
+/// Buffer[] first half is written from flash memory poworded to by FlashAddress
 ///@par Time
 /// 0.25ms(data comms) to read 256B or 64 words, 0.7ms typical to program page, maximum 3ms.
 /////////////////////////////////////////////////////////////////////////////////////////////////
-PRIVATE void writeBlock(int i) {
-	char a;
-	char b, c, d, e;
-	int j, k, p;
+PRIVATE void writeBlock(word i) {
+	byte a;
+	byte b, c, d, e;
+	word j, k, p;
 	k = i * 64;
-	char address0, address8, address16;
+	byte address0, address8, address16;
 	while (1 & readStatus())
 		; //wait for not busy (ready).
 	LPC_GPIO_FLASHCS FIOCLR = FLASHCS; //Flash CS enable
@@ -246,8 +250,8 @@ PRIVATE void writeBlock(int i) {
 ///@param void
 ///@return int. If bit 1=1 flash memory is busy, else ready
 /////////////////////////////////////////////////////////////////////////////////////////////////
-PRIVATE int readStatus(void) {
-	int a, b;
+PRIVATE word readStatus(void) {
+	word a, b;
 	LPC_GPIO_FLASHCS FIOCLR = FLASHCS; //Flash enable
 	writeSSP0Byte(0x05); //read
 	writeSSP0Byte(0x00); //read address

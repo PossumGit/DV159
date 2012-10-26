@@ -1,3 +1,6 @@
+//Notes
+//void NVIC_SystemReset(void) to programmatically reset.
+//
 ///@name        	Main C entry code and main loop.
 ///@author     		Duncan Irvine
 ///@version     	test
@@ -15,31 +18,63 @@
 //Public variables
 //PUBLIC__CRP const unsigned int CRP_WORD = CRP_NO_CRP;///< code protection word
 
-//Private variables
-PRIVATE char Copyright[] = "Copyright Possum 2012, HC8500"; ///< machine readable copyright message.
-PRIVATE char b = 0; //used for input state memory.
+//Private variables local to this file
 
 
 
 
 //External variables
-EXTERNAL int Buffer[]; ///< Whole of RAM2 is Buffer, reused for NEAT, Bluetooth, audio and IR replay and capture
+EXTERNAL volatile int Buffer[]; ///< Whole of RAM2 is Buffer, reused for NEAT, Bluetooth, audio and IR replay and capture
 EXTERNAL int FlashAddress; ///<This address needs to be set before flash read and flash write.
-EXTERNAL uint32_t SW1;
-EXTERNAL uint32_t SW2;
-EXTERNAL uint32_t SW3;
-EXTERNAL uint32_t SWF1;
-EXTERNAL uint32_t SWF2;
-EXTERNAL uint32_t SWF3;
-EXTERNAL uint32_t SWBT;
-EXTERNAL uint32_t SWNEAT;
+EXTERNAL volatile word SW1;
+EXTERNAL volatile word SW2;
+EXTERNAL volatile word SW3;
+EXTERNAL volatile word SWF1;
+EXTERNAL volatile word SWF2;
+EXTERNAL volatile word SWF3;
+EXTERNAL volatile word SWBT;
+EXTERNAL volatile word SWNEAT;
 //Local functions
 PRIVATE void powerupHEX(void);
 PRIVATE void LOOP(void);
 
 //External functions
-//EXTERNAL void fullSpeed(void);
+EXTERNAL void initUART(void);
+EXTERNAL void setupBT(void);
+EXTERNAL word rxtxBT(void);
+EXTERNAL void factoryBT(void);
+EXTERNAL void initBT(void);
+EXTERNAL int processBT(void);
+EXTERNAL void resetBT();
+EXTERNAL void setupBT(void);
+
+EXTERNAL void CPU4MHz(void);
+EXTERNAL void CPU12MHz(void);
+EXTERNAL void CPU100MHz (void);
+EXTERNAL void enableInputInterrupt(void);
 EXTERNAL int powerDown(void);
+
+EXTERNAL void IRsynthesis(byte IRtype, byte IRrep, int IRcode);
+EXTERNAL int captureIR(void);
+EXTERNAL void playIR(void);
+
+EXTERNAL void NEATTX(byte battery, byte alarm, int ID);
+EXTERNAL void NEATRESET();
+EXTERNAL byte NEATRD(byte r);
+EXTERNAL void NEATWR(byte r, byte d);
+
+
+EXTERNAL void	LED1GREEN(void);
+EXTERNAL void	LED1YELLOW(void);
+EXTERNAL void	LED1OFF(void);
+EXTERNAL void	LED2GREEN(void);
+EXTERNAL void	LED2YELLOW(void);
+EXTERNAL void	LED2OFF(void);
+EXTERNAL byte 	HEX(void);
+EXTERNAL void	us(unsigned int time_us);
+EXTERNAL byte	inputChange(void);
+
+EXTERNAL void I2CINIT(void);
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -56,47 +91,37 @@ PUBLIC int main(void) {
 	while (1)
 
 	{
-		int a;
-		LPC_GPIO_OFF FIOCLR = OFF; //SD(shutdown) =OFF button set low to keep on, set high to turn off.
-		LPC_GPIO_OFF FIODIR |= OFF; //SD(shutdown) =OFF. //1K pull-down prevents turning on during power up. (3.3mA is OK)
-									//set GPIO0_11 to turn off device.
-		//set various inputs/outputs to default state.
-		LPC_GPIO_IROUT FIOCLR = IROUT; //clear IR output (IR off).
-		LPC_GPIO_IROUT FIODIR |= IROUT; //IR defined as an output. Small reduction Iq -190uA
+
+		LPC_GPIO_OFF FIOCLR = OFF; 			//SD(shutdown) =OFF button set low to keep on, set high to turn off.
+		LPC_GPIO_OFF FIODIR |= OFF; 		//SD(shutdown) =OFF. //1K pull-down prevents turning on during power up. (3.3mA is OK)
+											//set GPIO0_11 to turn off device.
+
+		LPC_GPIO_IROUT FIOCLR = IROUT; 		//clear IR output (IR off).
+		LPC_GPIO_IROUT FIODIR |= IROUT; 	//IR defined as an output.
 
 
-		LPC_GPIO_MICCE FIOCLR = MICCE; //MIC CHIPEN=0=disabled. PORTCHANGE
-		LPC_GPIO_MICCE FIODIR |= MICCE; //CHIPEN on mic =output. Small increase Iq +50uA PORTCHANGE
+		LPC_GPIO_MICCE FIOCLR = MICCE; 		//MIC CHIPEN=0=disabled.
+		LPC_GPIO_MICCE FIODIR |= MICCE; 	//CHIPEN on mic =output.
 
-		LPC_GPIO_FLASHCS FIOSET = FLASHCS; //CHIPEN=1=disabled.
-		LPC_GPIO_FLASHCS FIODIR |= FLASHCS; //CHIPEN 1 disabled on FLASH.	Small reduction Iq -30uA
+		LPC_GPIO_FLASHCS FIOSET = FLASHCS; 	//CHIPEN=1=disabled.
+		LPC_GPIO_FLASHCS FIODIR |= FLASHCS; //CHIPEN 1 disabled on FLASH.
 
-		LPC_GPIO_T2G FIOSET = T2G; //T2g=1=disabled.			No effect Iq
-		LPC_GPIO_T2G FIODIR |= T2G; //T2Vgs=0, 3v3 on pin.
+		LPC_GPIO_T2G FIOSET = T2G; 			//T2g=1=disabled.
+		LPC_GPIO_T2G FIODIR |= T2G; 		//T2Vgs=0, 3v3 on pin.
 
 
-#if PCBissue==3
+
+#if PCBissue==3||PCBissue==4
 	LPC_GPIO1->FIOCLR |=1<<29			;//IR capture state=0.
-	LPC_GPIO1->FIODIR |=1<<29			;//IR capture =output.
+	LPC_GPIO1->FIODIR |=1<<29			;//IR capture =output. SET for capture IR, clear for low power.
 
 #elif PCBissue==2
 
 #endif
 
-
-
-//		I2CFullCharge();	//reset charge counter to full.(FFFF), note count does not wrap so stays at FFFF if more charge.
-//		ms();
-	//	 I2CREAD();
-	//	 I2CINIT();
-	//	 I2CREAD();
-
-
 			powerupHEX(); //HEX options like factory reset on power up.
 
-			for(;;);
-
-			//	initInput();
+	//should not return, but if it does:
 
 			LOOP(); //main loop, everything controlled form LOOP.
 			//return here means reset.
@@ -109,33 +134,20 @@ PUBLIC int main(void) {
 ///@brief Main loop. Everything comes back here.
 ///@param void
 ///@return void
+///after 3s it goes to sleep in powerDown();
+///it wakes up from input, BT or NEAT interrupts.
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PRIVATE void LOOP(void) {
 
-	//check BT, check Input, check for all sent, all rx, if none sleep.
-
-	int a, b,c,r;
-	c=0;
-
-
-	inputChange();
-	LED1OFF();
-
-/////////////////////////////////////////////
-///main loop.
-///processor always comes back here.
-///after 3s it goes to sleep in powerDown();
-///it wakes up from input, BT or NEAT interrupts.
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
 	while (1) {
 			powerDown();  	//Go to low power state if no comms, and timer2>3s:
 			processBT(); 	//process received information.
 			rxtxBT(); 		//receive/transmit any BT data//may be possible to DMA here.
 	}
-///////////////////////////////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////////////////////////////
 }
+
+
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 ///@brief CHECK HEX switch at power up
@@ -147,10 +159,9 @@ PRIVATE void LOOP(void) {
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 PRIVATE void powerupHEX(void) {
-	char a;
-	int s,b,c,d,e,f,g,h,i,j,k,l;
+	byte a;
+	int h,i,j,k,l;
 	unsigned int time;
-
 
 
 
@@ -159,25 +170,8 @@ PRIVATE void powerupHEX(void) {
 	a = HEX();
 	switch (a) {
 
-	case 0x00:
-//		timer2Start(); //initiate timer2 to 1MHz.
-		CPU12MHz();
 
-		enableInputInterrupt();
-
-		initUART();
-		initBT();
-		resetBT();
-		setupBT();
-		LED1YELLOW();
-		I2CINIT();
-		CPU12MHz();
-		NEATRESET();
-
-		LOOP();			//never exits this loop.
-		break;
-
-	case 0x01:
+	case 0x01:			//TEST IR capture and playback.
 		CPU12MHz();
 		while(1)
 		{
@@ -188,7 +182,7 @@ PRIVATE void powerupHEX(void) {
 		break;
 
 
-	case 0x02:			//NEAT transmit, inc ID every 10s.
+	case 0x02:			//TEST NEAT transmit, inc ID every 10s.
 		CPU12MHz();
 		LPC_TIM2->TC=0;
 		time=0;			//
@@ -207,7 +201,8 @@ PRIVATE void powerupHEX(void) {
 
 		}
 		break;
-	case 0x03:			//NEAT rx, inc ID then transmit.
+	case 0x03:			//TEST NEAT RX, receive an alarm,inc ID then re-transmit.
+						//works well with TREX pager 2.
 		CPU12MHz();
 
 			enableInputInterrupt();
@@ -242,29 +237,30 @@ PRIVATE void powerupHEX(void) {
 		break;
 
 
-	case 04:
+	case 04:					//TEST 4MHz LED flash
 		CPU4MHz();
 		while(1)
 		{	if(4!=HEX())break;
-			LED1GREEN();
+			LED2YELLOW();
+			LED2GREEN();
 			us(400000);
 			a=inputChange();
 			if (~a&(1<<4))
 			{
-				LED1YELLOW();
+				LED2YELLOW();
 			}
 			else if (~a&(1<<5))
-			{	LED1GREEN();
+			{	LED2GREEN();
 			}
 			else
 			{
-					LED1OFF();
+					LED2OFF();
 			}
 			us(400000);
 
 		}
 		break;
-	case 05:
+	case 05:				//TEST 12MHz LED flash
 		CPU12MHz();
 		while(1)
 		{
@@ -287,7 +283,7 @@ PRIVATE void powerupHEX(void) {
 				us(300000);
 		}
 		break;
-	case 06:				//emc test 199MHz
+	case 06:				//TEST 100MHz (emc test) LED Flash
 		CPU100MHz();
 		while(1)
 		{
@@ -310,7 +306,7 @@ PRIVATE void powerupHEX(void) {
 				us(200000);
 		}
 		break;
-	case 07:				//test IR synthesis
+	case 07:				//test IR synthesis Transmit code Plessey 3 every 5 seconds.
 		CPU4MHz();
 		while(1)
 		{
@@ -322,7 +318,7 @@ PRIVATE void powerupHEX(void) {
 		break;
 
 
-	case 0x08:		//test turn off after 2 seconds.
+	case 0x08:				//TEST turn off after 2 seconds.
 		CPU4MHz();
 		LED1GREEN();
 		us(2000000);
@@ -332,33 +328,45 @@ PRIVATE void powerupHEX(void) {
 		while(1);
 		break;
 
-	case 0x0B:					//USB.
+	case 0x0B:				//Enable USB programming.
 		break;
 
-	case 0x0C: //recover clock
+	case 0x0C: 				//DEBUG recover clock
 		while (1) {
 			LED1GREEN();
-
 			LED1GREEN();
-
 			LED1GREEN();
 			LED1YELLOW();
 			LED1GREEN();
-
 			LED1GREEN();
-
 		}
 		; //wait for ever for debug.
 		break;
 
 
-	case 0x0F:
+	case 0x0F:				//factory reset Blue Tooth.
 		factoryBT(); //HEX2=0, HEX1=E Factory reset BT.
 		while(1);
 		break;
 
+
+	case 0x00:		//main startup and execute for QWAYO
 	default:
+		CPU12MHz();
+		enableInputInterrupt();
+		initUART();
+		initBT();
+		resetBT();
+		setupBT();
+		LED1YELLOW();
+		I2CINIT();
+		CPU12MHz();
+		NEATRESET();
+		inputChange();
+		LED1OFF();
+		LOOP();			//never exits this loop.
 		break;
+;
 	}
 }
 }

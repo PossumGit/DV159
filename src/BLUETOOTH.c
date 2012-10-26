@@ -3,90 +3,125 @@
 ///@version     	test
 ///@copyright  		Possum UK 23 April 2012
 
-//Defines
+
+///Private Defines
 #define rxlen   2000				//length of rx buffer
 #define txlen   2000				//length of rx buffer
-//Includes
+///Includes
 #include "HUB.h"
 #include "lpc17xx_pinsel.h"
 
-//Public variables
-PUBLIC char rx[rxlen];
-PUBLIC int rxstart = 0;
-PUBLIC int rxend = 0;
-PUBLIC int rxoverflow = 0;
+///local variables
+//needs to be accessible from functions in this file only and to be persistent, but can change in interrupt.
 
-PUBLIC char tx[txlen];
-PUBLIC int txstart = 0;
-PUBLIC int txend = 0;
-PUBLIC int txoverflow = 0;
+PRIVATE volatile byte rx[rxlen];		// BT RX buffer.
+PRIVATE volatile int rxoverflow = 0;	// DEBUG detect overflow BT RX.
+PRIVATE volatile byte tx[txlen];		// BT TX buffer.
+PRIVATE volatile int txoverflow = 0;	// DEBUG detect overflow BT TX.
+PRIVATE volatile unsigned int maxtime;			//DEBUG only, measure BT response time.
 
-//Private variables
-int maxtime;
-int SEQUENCE=0;
-int ID=0;
-char alarm=0;
-char battery=0xFF;
-char IRtype,IRrep;
-int IRcode;
-//External variables
-EXTERNAL int Buffer[]; ///< Whole of RAM2 is Buffer, reused for NEAT, Bluetooth, audio and IR replay and capture
-EXTERNAL uint8_t I2CSlaveBuffer[256];
-EXTERNAL uint32_t SWBT;
-EXTERNAL char PENDALARM;
-//Private functions
-PRIVATE void
-sendBTbuffer(void);
-PRIVATE void
-receiveBTbuffer(void);
-PRIVATE int
-waitBTRX( uint32_t);///<wait for data ready in BT receive channel, timeout after uint32_t us.
-PUBLIC void
-setupBT(void);
-//External functions
 
+///Public variables
+PUBLIC volatile unsigned int rxstart = 0;		// BT RX.
+PUBLIC volatile unsigned int rxend = 0;		// BT RX.
+PUBLIC volatile unsigned int txstart = 0;		// BT TX.
+PUBLIC volatile unsigned int txend = 0;		// BT TX.
+///External variables
+EXTERNAL volatile word Buffer[]; ///< Whole of RAM2 is Buffer, reused for audio and IR replay and capture
+EXTERNAL byte I2CSlaveBuffer[];
+EXTERNAL volatile word SWBT;
+EXTERNAL volatile byte PENDALARM;
+
+///local functions
+PRIVATE void sendBTbuffer(void);
+PRIVATE void receiveBTbuffer(void);
+PRIVATE int waitBTRX( word);	///<wait for data ready in BT receive channel, timeout after word us.
+
+/// public functions
+PUBLIC void sendBT(byte* , unsigned int );
+PUBLIC int processBT(void);
+PUBLIC word rxtxBT(void);
+PUBLIC void resetBT();
+PUBLIC void setupBT(void);
+PUBLIC void initBT(void);
+PUBLIC void factoryBT(void);
+PUBLIC void txBT(void);
+
+
+///External functions
+EXTERNAL void NEATTX(byte battery, byte alarm, word ID);
+EXTERNAL void IRsynthesis(byte IRtype, byte IRrep, word IRcode);
+EXTERNAL void	LED1GREEN(void);
+EXTERNAL void	LED1YELLOW(void);
+EXTERNAL void	LED1OFF(void);
+EXTERNAL void I2CREAD(void);
+EXTERNAL int captureIR(void);
+EXTERNAL void playIR(void);
+EXTERNAL byte HEX(void);
+EXTERNAL void	us(unsigned int time_us);
+EXTERNAL void	BTbaudCPU100();
+EXTERNAL void	BTbaudCPU12();
+
+
+///local functions(code)
+
+///
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
+
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 ///@brief process BT commands.
 ///@param void
-///@return void
+///@return int =1 if processed data, 0 if no data to process.
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC int processBT(void)
     {
-    char a;
-    int i = 0;
+    byte a;
 
 
+static  int SEQUENCE=0;			//used in ProcessBT for NEAT and IR sequence.
 
-    char ACK[] =
+static  word ID=0;				//NEAT sequence used in ProcessBT.
+static  byte alarm=0;			//NEAT sequence used in ProcessBT.
+static  byte battery=0xFF;		//NEAT sequence used in ProcessBT.
+
+static byte IRtype,IRrep;		//IR sequence used in ProcessBT.
+static word IRcode;				//IR sequence used in ProcessBT.
+
+
+    byte ACK[] =
 	{
 	'A'
 	};
-    char NACK[] =
+    byte NACK[] =
 	{
 	'N'
 	};
 
-
-#if PCBissue==3
-    char I[] =
+#if PCBissue==4
+    byte I[] =
  	{
-	"Hub version 0.1, PCB version 3."
+	"QWAYO firmware version 0.1, HC8500 PCB version 4. Copyright Possum 2012."
+ 	};
+#elif PCBissue==3
+    byte I[] =
+ 	{
+	"QWAYO firmware version 0.1, HC8500 PCB version 3. Copyright Possum 2012."
  	};
 #elif PCBissue==2						//issue 2 PCB
-    char I[] =
+    byte I[] =
  	{
-	"Hub version 0.1, PCB version 2."
+	"QWAYO firmware version 0.1, HC8500 PCB version 2. Copyright Possum 2012."
  	};
 #endif
 
 
 
-    char W[] =
+    byte W[] =
 	{
 	'W'
 	};
@@ -147,7 +182,7 @@ PUBLIC int processBT(void)
 	{
 		IRcode=IRcode|a;
 		IRsynthesis(IRtype,IRrep,IRcode);
-		sendBT(ACK, sizeof(ACK));
+//		sendBT(ACK, sizeof(ACK));
 		SEQUENCE=0;
 		break;
 	}
@@ -276,79 +311,6 @@ PUBLIC int processBT(void)
 		}
 	    break;
 	    }
-	case 'x'://fill Buffer with test data.
-	case 'X':
-	    {
-	    i = 0;
-
-	    /*		 Buffer[i++]=0x8<<28|10<<16|400<<4|0x0<<0;//0x08=header,1000=pulsewidth, 2632=period,0=next word = IData.
-
-	     Buffer[i++]=1000;
-	     Buffer[i++]=1200;
-	     Buffer[i++]=1400;
-	     Buffer[i++]=1600;
-	     Buffer[i++]=1720;
-	     Buffer[i++]=1900;
-	     Buffer[i++]=2050;
-	     Buffer[i++]=2150;
-	     Buffer[i++]=2250;
-	     Buffer[i++]=0x00;		//end of data.
-	     */
-
-	    //using symbols +repeat
-	    Buffer[i++] = 0x8 << 28 | 10 << 16 | 200 << 4 | 0x0 << 0;//0x08=header,1000=pulsewidth, 2632=period,0=next word = IData.
-	    //			 Buffer[i++]=0xc<<28|0x2<<25|20<<8|0xff<<0;//SUBSIDIARY 20s if released, 255s if pressed, wait for press.
-	    Buffer[i++] = 0x90016c10;//DATA0 0x9=symbol, 0x16c=space, 0x10=Mark (16 pulses at period intervals)
-	    Buffer[i++] = 0x9002e810;//SYNC 0x9=symbol, 0x2e8=space, 0x10=Mark (16 pulses at period intervals)
-	    Buffer[i++] = 0x90016c10;//DATA0 0x9=symbol, 0x16c=space, 0x10=Mark (16 pulses at period intervals)
-	    Buffer[i++] = 0x90016c10;//DATA0 0x9=symbol, 0x16c=space, 0x10=Mark (16 pulses at period intervals)
-	    Buffer[i++] = 0x90016c10;//DATA0 0x9=symbol, 0x16c=space, 0x10=Mark (16 pulses at period intervals)
-	    Buffer[i++] = 0x9000ed10;//DATA1 0x9=symbol, 0xed =space, 0x10=Mark (16 pulses at period intervals)
-	    Buffer[i++] = 0x90016c10;//DATA0 0x9=symbol, 0x16c=space, 0x10=Mark (16 pulses at period intervals)
-	    Buffer[i++] = 0x9002e810;//SYNC 0x9=symbol, 0x2e8=space, 0x10=Mark (16 pulses at period intervals)
-	    Buffer[i++] = 0x90016c10;//DATA0 0x9=symbol, 0x16c=space, 0x10=Mark (16 pulses at period intervals)
-	    Buffer[i++] = 0x90016c10;//DATA0 0x9=symbol, 0x16c=space, 0x10=Mark (16 pulses at period intervals)
-	    Buffer[i++] = 0x90016c10;//DATA0 0x9=symbol, 0x16c=space, 0x10=Mark (16 pulses at period intervals)
-	    Buffer[i++] = 0x9000ed10;//DATA1 0x9=symbol, 0xed =space, 0x10=Mark (16 pulses at period intervals)
-	    Buffer[i++] = 0x90016c10;//DATA0 0x9=symbol, 0x16c=space, 0x10=Mark (16 pulses at period intervals)
-	    Buffer[i++] = 0x9002e810;//SYNC 0x9=symbol, 0x2e8=space, 0x10=Mark (16 pulses at period intervals)
-	    Buffer[i++] = 0xc << 28 | 0x0 << 25 | 300; //INPUT|Delay| 300*10ms
-	    //			 Buffer[i++]=0x90858810;//long gap SYNC 0x9=symbol, 0x2e8=space, 0x10=Mark (16 pulses at period intervals)
-	    //			 Buffer[i++]=0xc<<28|0x00<<25;//ABORT if released.
-	    //			 Buffer[i++]=0xc<<28|0x2<<25|20<<8|3<<0;//SUBSIDIARY 20s if released, 3s if pressed.
-	    Buffer[i++] = 0xb << 28 | 0 << 25 | 0x20 << 17 | 0x1;//REPEAT|COUNTER|COUNT|ADDRESS
-	    Buffer[i++] = 0x00; //end of data.
-
-
-	    //using symbols
-	    Buffer[i++] = 0x9002e810;//SYNC 0x9=symbol, 0x2e8=space, 0x10=Mark (16 pulses at period intervals)
-	    Buffer[i++] = 0x90016c10;//DATA0 0x9=symbol, 0x16c=space, 0x10=Mark (16 pulses at period intervals)
-	    Buffer[i++] = 0x90016c10;//DATA0 0x9=symbol, 0x16c=space, 0x10=Mark (16 pulses at period intervals)
-	    Buffer[i++] = 0x90016c10;//DATA0 0x9=symbol, 0x16c=space, 0x10=Mark (16 pulses at period intervals)
-	    Buffer[i++] = 0x9000ed10;//DATA1 0x9=symbol, 0xed =space, 0x10=Mark (16 pulses at period intervals)
-	    Buffer[i++] = 0x90016c10;//DATA0 0x9=symbol, 0x16c=space, 0x10=Mark (16 pulses at period intervals)
-	    Buffer[i++] = 0x9002e810;//SYNC 0x9=symbol, 0x2e8=space, 0x10=Mark (16 pulses at period intervals)
-	    Buffer[i++] = 0x90016c10;//DATA0 0x9=symbol, 0x16c=space, 0x10=Mark (16 pulses at period intervals)
-	    Buffer[i++] = 0x90016c10;//DATA0 0x9=symbol, 0x16c=space, 0x10=Mark (16 pulses at period intervals)
-	    Buffer[i++] = 0x90016c10;//DATA0 0x9=symbol, 0x16c=space, 0x10=Mark (16 pulses at period intervals)
-	    Buffer[i++] = 0x9000ed10;//DATA1 0x9=symbol, 0xed =space, 0x10=Mark (16 pulses at period intervals)
-	    Buffer[i++] = 0x90016c10;//DATA0 0x9=symbol, 0x16c=space, 0x10=Mark (16 pulses at period intervals)
-	    Buffer[i++] = 0x9002e810;//SYNC 0x9=symbol, 0x2e8=space, 0x10=Mark (16 pulses at period intervals)
-	    Buffer[i++] = 0x00; //end of data.
-
-
-	    //using symbol bank and DATA words.
-	    Buffer[i++] = 0x8 | 0x524 | 0xa48 << 4 | 0x3 << 0;//0x08=header,0x524=pulsewidth, 0xa48=period, 3=skip 3 to start of data
-	    Buffer[i++] = 0x90016c10;//0x9=symbol, 0x16c=space, 0x10=Mark (16 pulses at period intervals)
-	    Buffer[i++] = 0x9000ed10;//0x9=symbol, 0xed =space, 0x10=Mark (16 pulses at period intervals)
-	    Buffer[i++] = 0x9002e810;//0x9=symbol, 0x2e8=space, 0x10=Mark (16 pulses at period intervals)
-	    Buffer[i++] = 0xa1211131;//0xA=data,1=symbol in Buffer[header+1], 2=symbol in buffer[header+2] etc.
-	    Buffer[i++] = 0xa3121113;//0xA=data,1=symbol in Buffer[header+1], 2=symbol in buffer[header+2] etc.
-	    Buffer[i++] = 0x00; //end of data.
-	    sendBT(ACK, sizeof(ACK));//send ack.
-
-	    break;
-	    }
 
 	    }
 	}
@@ -358,32 +320,16 @@ PUBLIC int processBT(void)
     return 0;
     }
 
-/////////////////////////////////////////////////////////////////////////////////////////////////
-///@brief BT comms clear all rweceived data.
-///@param void
-///@return void
-///
-/// read all available chars from bluetooth.
-/////////////////////////////////////////////////////////////////////////////////////////////////
-PUBLIC void clearBT(void)
-    {
-    int b;
-    for (;;)
-	{
-	if (waitBTRX(100000))
-	    break; //wait for char, break if 100ms timeout.
-	b = LPC_UART1->RBR;
-	}
-    }
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 ///@brief BT wait until RX char is ready
 ///@param void
 ///@return 1 if char, 0 if timeout.
 /////////////////////////////////////////////////////////////////////////////////////////////////
-PRIVATE int waitBTRX(uint32_t us)
+PRIVATE int waitBTRX(word us)
     {
-    uint32_t p, r, s;
+    word p, r, s;
 
     p = LPC_TIM2->TC; //current value of timer 2 in us.
 
@@ -412,9 +358,9 @@ PRIVATE void receiveBTbuffer(void)
     {
 
     int a, b, c, d, e, i, x;
-    char Dollar = ' ';
+    byte Dollar = ' ';
+    word m;
     maxtime = 0;
-    uint32_t m;
     for (i = 0; i < CaptureMax; i++)
 	{
 	if (waitBTRX(1000000))
@@ -478,7 +424,7 @@ PRIVATE void receiveBTbuffer(void)
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PRIVATE void sendBTbuffer(void)
     {
-    char a;
+    byte a;
     int i;
     for (i = 0; (Buffer[i] != 0) && i < CaptureMax-1; i++)
 	{
@@ -542,12 +488,13 @@ PRIVATE void sendBTbuffer(void)
 
     }
 
+
 /////////////////////////////////////////////////////////////////////////////////////////////////
 ///@brief BT comms with BT module RN42/RN41 transmit data
 ///@param void
 ///@return void
 /////////////////////////////////////////////////////////////////////////////////////////////////
-PUBLIC void sendBT(char istat[], int ilength)
+PUBLIC void sendBT(byte istat[], unsigned int ilength)
     {
     int i;
     for (i = 0; i < ilength; i++)
@@ -555,8 +502,8 @@ PUBLIC void sendBT(char istat[], int ilength)
 	tx[(txend++) % txlen] = istat[i];
 	if (txend == txstart)
 	    {
-	    txstart = (txstart + 1) % txlen;
-	    txoverflow = 1;
+	    txstart = (txstart + 1) % txlen;		//overflow, lose old data
+	    txoverflow = 1;							//record that overflow occurred.
 	    }
 	}
     }
@@ -566,7 +513,7 @@ PUBLIC void sendBT(char istat[], int ilength)
 ///@param void
 ///@return void
 /////////////////////////////////////////////////////////////////////////////////////////////////
-PUBLIC int rxtxBT(void)
+PUBLIC word rxtxBT(void)
     {
     int s, r,a;
 	SystemCoreClockUpdate ();
@@ -578,8 +525,8 @@ PUBLIC int rxtxBT(void)
 	rx[(rxend++) % rxlen] = LPC_UART1->RBR;
 	if (rxend == rxstart)
 	    {
-	    rxstart = (rxstart + 1) % rxlen;
-	    rxoverflow = 1;
+	    rxstart = (rxstart + 1) % rxlen;			//overflow, lose old data
+	    rxoverflow = 1;								//record that overflow occurred.
 	    }
 	r = 1;
 	}
@@ -609,10 +556,14 @@ PUBLIC void txBT(void)
     }
 
 
-
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief on waking up from BT interrupt responds by transmitting bluetooth W
+///@param void
+///@return void
+/////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC void BTWAKE(void)
 {
-	char WAKE[] = { 'W' };
+	byte WAKE[] = { 'W' };
 
 	if (SWBT) {
 	SWBT=0;
@@ -620,34 +571,6 @@ PUBLIC void BTWAKE(void)
 //	txshortBT(WAKE, 1);
 }
 }
-
-/////////////////////////////////////////////////////////////////////////////////////////////////
-///@brief BT transmit short(<16) to BT module RN42/RN41 Receiver data.
-///@param void
-///@return void
-/////////////////////////////////////////////////////////////////////////////////////////////////
-PUBLIC void txshortBT(char istat[], int ilength)
-    {
-
-
-	    int i;
-
-
-
-
-
-    while (0 == (1 << 6 & LPC_UART1->LSR))//wait until FIFO buffer is empty.
-    {
-    }
-    for (i = 0; i < ilength; i++)		//now send short message.
-	{
-	LPC_UART1->THR = istat[i];
-	}
-
-
-
-
-    }
 
 
 
@@ -720,7 +643,7 @@ PUBLIC void initBT(void)
 ////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC void resetBT()
     {
-    int i;
+
     LPC_GPIO_BTRESET FIOCLR = BTRESET; //NRESET OUT High, Low to reset.
     us(10000);
     LPC_GPIO_BTRESET FIOSET = BTRESET; //NRESET OUT High, Low to reset.
@@ -736,7 +659,7 @@ PUBLIC void resetBT()
 ////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC void factoryBT(void)
     {
-    int i;
+
     LED1GREEN();
   	us(500000); //1s delay
     LPC_GPIO_BTFACTORY FIOCLR = BTFACTORY;
@@ -790,21 +713,21 @@ PUBLIC void setupBT(void)
     int i,s;
 	SystemCoreClockUpdate ();
 	s=SystemCoreClock; //4MHz
-    char CMD[] =
+    byte CMD[] =
 	{
 	'$', '$', '$'
 	}; //,'\r','\n'};    \r is CR, \n is LF
-    char ENDCMD[] =
+    byte ENDCMD[] =
 	{
 	'-', '-', '-', '\r', '\n'
 	};
-    char NoTimeOut[] =
+    byte NoTimeOut[] =
 	{
 	'S', 'T', ',', '2', '5', '5', '\r', '\n'
 	}; //		Disable config timeout = 255.
 
 
-    char BTsleep[] =
+    byte BTsleep[] =
     {
     	'S','W',',','0','1','0','0','\r','\n'			//number in hex 256*0.625ms=160ms
     };
@@ -876,17 +799,19 @@ PUBLIC void setupBT(void)
 	{
 	us(1000);
 	rxtxBT();
-	if ((rxstart + 5) % rxlen <= rxend)
+	if ((rxstart + 5) % rxlen == rxend)
 	    {
 	    if (rx[rxstart] != 'E')
 		rxstart = (rxstart + 1) % rxlen;
 	    if ((rx[rxstart] == 'E') && (rx[(rxstart + 1) % rxlen] == 'N')
 		    && (rx[(rxstart + 2) % rxlen] == 'D'))
 		{
+	    	rxstart=rxend;
 		LED1YELLOW();
 		i = 20000;
 		}
 	    }
 	}
+    rxstart=rxend;
     }
 

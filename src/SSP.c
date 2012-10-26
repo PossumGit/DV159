@@ -10,16 +10,24 @@
 #include "lpc17xx_pinsel.h"
 #include "lpc17xx_clkpwr.h"
 
-//Public variables
+///Public variables
 
-//Private variables
+///Private variables
 
-//External variables
+///External variables
 
-//Private functions
+///Private functions
 
-//External functions
+///External functions
 
+///public functions
+PUBLIC byte readSSP0Byte(void);
+PUBLIC void writeSSP0Byte(byte);
+PUBLIC void SSPNEATCPU4(void);
+PUBLIC void SSPNEATCPU12(void);
+PUBLIC void SSPNEATCPU100(void);
+
+///local functions(code)
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -28,7 +36,7 @@
 ///@param void
 ///@return char 8 bit byte.
 ////////////////////////////////////////////////////////////////////////////////////////////////
-PUBLIC char readSSP0Byte(void) {
+PUBLIC byte readSSP0Byte(void) {
 	while (0 == ((LPC_SSP0->SR) & (1 << 2)))
 		//wait for byte.
 		;
@@ -40,7 +48,7 @@ PUBLIC char readSSP0Byte(void) {
 ///@param char 8 bit byte
 ///@return void.
 ////////////////////////////////////////////////////////////////////////////////////////////////
-PUBLIC void writeSSP0Byte(char b) {
+PUBLIC void writeSSP0Byte(byte b) {
 	while (0 == ((LPC_SSP0->SR) & (1 << 1)))
 		; //wait for TX FIFO not full. (ready)
 	LPC_SSP0->DR = b;
