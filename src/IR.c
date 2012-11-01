@@ -72,9 +72,16 @@ PUBLIC void playIR(void);
 PUBLIC int captureIR(void) {
 
 
+
+
 	IRAddress = CaptureFirst;
 	LED1YELLOW();
-	CPU100MHz();
+	CPU100MHz();		//also disables ext interrupts.
+	LPC_WDT->WDTC = 20000000;	//set timeout 20s watchdog timer
+	LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
+	LPC_WDT->WDFEED=0x55;			//watchdog feed
+	LPC_WDT->WDTC = 5000000;	//set timeout 5s watchdog timer
+
 #if PCBissue==3
 
 	LPC_GPIO1-> FIOSET |=1<<29			;//IR capture on.
@@ -124,9 +131,17 @@ PUBLIC int captureIR(void) {
 /// WaitEndIR(3s) wait for repeat IR. WaitForIr(10s) wait for first IR
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC void playIR(void) {
+
+
+
+
 	if (Buffer[2] != 0) {
 		LED1GREEN();
 		CPU100MHz();	//CPU100MHz disables interrupts except TIMER 0 and TIMER 1
+		LPC_WDT->WDTC = 20000000;	//set timeout 20s watchdog timer
+		LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
+		LPC_WDT->WDFEED=0x55;			//watchdog feed
+		LPC_WDT->WDTC = 5000000;	//set timeout 5s watchdog timer
 		startPlayIR();
 		while (IRData > 0)//wait here during play IR
 		{

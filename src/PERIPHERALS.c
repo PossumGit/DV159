@@ -15,7 +15,8 @@ PUBLIC volatile word LastInputTime=0;
 
 //Private variables
 
-
+	word ErrorResetTime;
+	int watchCount=0;
 
 //External variables
 
@@ -41,6 +42,10 @@ PUBLIC void timer2CPU4(void);
 PUBLIC void timer2CPU12(void);
 PUBLIC void timer2CPU100(void);
 PUBLIC word	inputTime(void);
+PUBLIC void ErrorTimeOut(word timeout);
+PUBLIC void ErrorReset(int error);
+PUBLIC void EnableWDT(void);
+PUBLIC void  DisableWDT(void);
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -220,33 +225,37 @@ PUBLIC word	inputTime(void)
 
 
 
-
-
-
 /////////////////////////////////////////////////////////////////////////////////////////////////
-///@brief Timer2 used in some timing situations also for going to sleep.
-///@param void
+///@brief ErrorSetTime used with ErrorReset  to time out infinite loops.
+///@param int timeout. How long to time out in us.
+///@param int error. Error number, identifies loop where error ocurred.
+///uses Timer2.
 ///@return void
 /////////////////////////////////////////////////////////////////////////////////////////////////
-PUBLIC void timer2Start(void)
+PUBLIC void ErrorTimeOut(word timeout)
 {
-	LPC_SC->PCONP|=1<<22	;	//enable timer 2.
-
-
-//if 100MHz
-//	LPC_SC->PCLKSEL1 |= 0 << 12; //TIMER1 PREDIVIDE =4 (system clock/4)=default=100MHz/4=25MHz.
-//	LPC_TIM2->PR = 25-1; //counts at 1MHz. Max time 4295s
-//if 12MHz
-
-//	LPC_SC->PCLKSEL1 |= 0 << 12; //TIMER1 PREDIVIDE =4 (system clock/4)=default=12Mhz/3=4MHz.
-	LPC_TIM2->PR = 3-1; //counts at 1MHz. Max time 4295s
-
-//end of CPU clock sections.
-
-
-	LPC_TIM2->TCR = 0 | 1 << 1; //disable timer2, reset timer2
-	LPC_TIM2->TCR = 1 | 0 << 1; //enable timer2 (start timer2)
+	ErrorResetTime=timeout+LPC_TIM2->TC;
 }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief ErrorReset used to time out infinite loops.
+///@param int time. How long to time out in us.
+///@param int error. Error number, identifies loop where error ocurred.
+///uses Timer2.
+///@return void
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+
+
+PUBLIC void ErrorReset(int error)
+	{
+	if(LPC_TIM2->TC > ErrorResetTime)
+	{
+		NVIC_SystemReset();						//system reset
+	}
+	}
+
 PUBLIC void timer2CPU4(void)
 {
 	LPC_SC->PCONP|=1<<22	;	//enable timer 2.
@@ -333,5 +342,62 @@ else
 	}
 	return 0;
 }
+
+
+
+
+
+
+ ///////////////////////////////////////////////////////////
+ ///
+ ///Watchdog
+ void EnableWDT()
+ {
+
+			LPC_WDT->WDMOD =1<<0;		//watchdog enabled, set only, cannot disable. Bit 1 set for reset, else interrupt.
+	// Select internal RC for watchdog
+
+
+		//select timeout
+		LPC_WDT->WDTC = 5000000;	//set timeout 5s watchdog timer
+		LPC_WDT->WDCLKSEL=0;	//IRC source for watchdog. Set bit 31 to fix this selection.
+		LPC_WDT->WDFEED=0xAA;
+		LPC_WDT->WDFEED=0x55;
+		NVIC->ISER[0]|=0x1<<0;	//WDT interrupt.
+ }
+
+
+ void WatchFeed()
+ {
+int a,b,c,d,e,f,g;
+
+a=LPC_WDT->WDTV;
+b=LPC_WDT->WDTV;
+c=LPC_WDT->WDTV;
+d=LPC_WDT->WDTV;
+e=LPC_WDT->WDTV;
+f=LPC_WDT->WDTV;
+g=LPC_WDT->WDTV;
+ }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////
+///WDT IRQ Handler traps the watchdog reset.
+///This interrupt only occurs once and cannot be cleared, it can however be disabled.
+///used only for debugging watchdog.
+ //note watchdog after interrupt counts down to 0, then reloads WDTC.
+ //if feed, then counts down again.
+ void WDT_IRQHandler(void)
+ {
+
+
+
+
+
+ NVIC->ICER[0]|=0x1<<0;	//disable WDT interrupt.
+
+	 NVIC_SystemReset();						//system reset
+
+
+ }
 
 

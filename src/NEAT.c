@@ -44,6 +44,29 @@ EXTERNAL void	us(unsigned int time_us);
 ///@brief NEATINIT initialises NEAT on power up.
 ///@param void
 ///@return void
+//Rx control register 2:
+//Rx On	Meaning
+//b7 = 1	Normal mode
+//b7 = 0	Power down mode
+
+//Pwr	Meaning
+//b6 = 1	Always active
+//b6 = 0	Power save mode (will only react on long preambles)
+
+//Rec All	Meaning
+//b5 = 1	Receive all ID codes
+//b5 = 0	Receive only pre-programmed ID codes
+
+//Ack	Meaning
+//b4 = 1	Send ACK to radio transmitter
+//b4 = 0	Do not send ACK to radio transmitter
+
+//Rcode	Meaning
+//b3 = 1	Radio code received (must be cleared in software)
+//b3 = 0	No radio code received. INT output will return to high state.
+
+//Bits 0-2 are reserved and should be set to zero.
+
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC void NEATINIT(void) {
 
@@ -69,7 +92,7 @@ PUBLIC int readNEAT(void)
 	int r=0,i;
 	byte a;
 	byte NEAT[0x28];
-	byte NEATASCII[5];
+	byte NEATASCII[0x10];
 	unsigned int NEATlength=0x21;
 //	if ((SWNEAT==1)||((LPC_GPIO_NEATINT FIOPIN) &(NEATINT))==0)
 				{
@@ -100,7 +123,30 @@ PUBLIC int readNEAT(void)
 				a=0x30+(NEAT[2]&0x0F);
 				(a>0x39)?(a+=0x07):a;
 				NEATASCII[4]=a;
-				sendBT(NEATASCII, 5);
+
+				a=0x30+(NEAT[5]>>4);
+				(a>0x39)?(a+=0x07):a;
+				NEATASCII[5]=a;
+				a=0x30+(NEAT[5]&0xF);
+				(a>0x39)?(a+=0x07):a;
+				NEATASCII[6]=a;
+				a=0x30+(NEAT[6]>>4);
+				(a>0x39)?(a+=0x07):a;
+				NEATASCII[7]=a;
+				a=0x30+(NEAT[6]&0x0F);
+				(a>0x39)?(a+=0x07):a;
+				NEATASCII[8]=a;
+				NEATASCII[9]=' ';
+
+
+
+
+				sendBT(NEATASCII, 10);
+
+
+
+
+
 	//			NEAT[0]='N';
 	//			NEATlength=1;
 	//		sendBT(NEAT, NEATlength);
@@ -166,6 +212,13 @@ void NEATTX(byte battery, byte alarm, word ID)
 
 	c=NEATRD(3);
 	NEATWR(0x03,0x80);		//transmit code.
+
+	disableInputInterrupt();
+	LPC_WDT->WDTC = 10000000;	//set timeout 10s watchdog timer
+	LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
+	LPC_WDT->WDFEED=0x55;			//watchdog feed
+	LPC_WDT->WDTC = 5000000;	//set timeout 5s watchdog timer
+	enableInputInterrupt();
 	while (0x80&NEATRD(3));
 
 	d=NEATRD(3);

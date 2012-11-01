@@ -11,6 +11,7 @@
 //xor ^
 //ternary  ? :
 //
+//NVIC_SystemReset() to reset system.
 //
 //
 #define PCBissue 3		//pcb issue, options 2, 3

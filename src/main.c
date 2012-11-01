@@ -20,7 +20,7 @@
 
 //Private variables local to this file
 
-
+PRIVATE int watchCount=0;
 
 
 //External variables
@@ -92,6 +92,10 @@ PUBLIC int main(void) {
 
 	{
 
+
+		 LED2YELLOW();
+
+
 		LPC_GPIO_OFF FIOCLR = OFF; 			//SD(shutdown) =OFF button set low to keep on, set high to turn off.
 		LPC_GPIO_OFF FIODIR |= OFF; 		//SD(shutdown) =OFF. //1K pull-down prevents turning on during power up. (3.3mA is OK)
 											//set GPIO0_11 to turn off device.
@@ -143,6 +147,7 @@ PRIVATE void LOOP(void) {
 			powerDown();  	//Go to low power state if no comms, and timer2>3s:
 			processBT(); 	//process received information.
 			rxtxBT(); 		//receive/transmit any BT data//may be possible to DMA here.
+
 	}
 }
 
@@ -160,9 +165,9 @@ PRIVATE void LOOP(void) {
 
 PRIVATE void powerupHEX(void) {
 	byte a;
-	int h,i,j,k,l;
-	unsigned int time;
 
+	unsigned int time;
+	int b,c,d,e,f,g,h,i,j,k,l;
 
 
 	while(1)
@@ -173,6 +178,7 @@ PRIVATE void powerupHEX(void) {
 
 	case 0x01:			//TEST IR capture and playback.
 		CPU12MHz();
+		LED2OFF();
 		while(1)
 		{
 			captureIR();
@@ -184,6 +190,7 @@ PRIVATE void powerupHEX(void) {
 
 	case 0x02:			//TEST NEAT transmit, inc ID every 10s.
 		CPU12MHz();
+		LED2OFF();
 		LPC_TIM2->TC=0;
 		time=0;			//
 		NEATRESET();
@@ -204,6 +211,7 @@ PRIVATE void powerupHEX(void) {
 	case 0x03:			//TEST NEAT RX, receive an alarm,inc ID then re-transmit.
 						//works well with TREX pager 2.
 		CPU12MHz();
+		LED2OFF();
 
 			enableInputInterrupt();
 			initUART();
@@ -239,6 +247,7 @@ PRIVATE void powerupHEX(void) {
 
 	case 04:					//TEST 4MHz LED flash
 		CPU4MHz();
+		LED2OFF();
 		while(1)
 		{	if(4!=HEX())break;
 			LED2YELLOW();
@@ -262,6 +271,7 @@ PRIVATE void powerupHEX(void) {
 		break;
 	case 05:				//TEST 12MHz LED flash
 		CPU12MHz();
+		LED2OFF();
 		while(1)
 		{
 
@@ -285,6 +295,7 @@ PRIVATE void powerupHEX(void) {
 		break;
 	case 06:				//TEST 100MHz (emc test) LED Flash
 		CPU100MHz();
+		LED2OFF();
 		while(1)
 		{
 
@@ -308,6 +319,7 @@ PRIVATE void powerupHEX(void) {
 		break;
 	case 07:				//test IR synthesis Transmit code Plessey 3 every 5 seconds.
 		CPU4MHz();
+		LED2OFF();
 		while(1)
 		{
 		 LPC_TIM2->TC=0;
@@ -320,6 +332,7 @@ PRIVATE void powerupHEX(void) {
 
 	case 0x08:				//TEST turn off after 2 seconds.
 		CPU4MHz();
+
 		LED1GREEN();
 		us(2000000);
 		a=3;
@@ -327,6 +340,10 @@ PRIVATE void powerupHEX(void) {
 		LPC_GPIO_OFF FIOSET =OFF; //OFF button set high to turn off.
 		while(1);
 		break;
+
+
+
+
 
 	case 0x0B:				//Enable USB programming.
 		break;
@@ -346,6 +363,7 @@ PRIVATE void powerupHEX(void) {
 
 	case 0x0F:				//factory reset Blue Tooth.
 		factoryBT(); //HEX2=0, HEX1=E Factory reset BT.
+		LED2OFF();
 		while(1);
 		break;
 
@@ -353,7 +371,7 @@ PRIVATE void powerupHEX(void) {
 	case 0x00:		//main startup and execute for QWAYO
 	default:
 		CPU12MHz();
-		enableInputInterrupt();
+	//	enableInputInterrupt();
 		initUART();
 		initBT();
 		resetBT();
@@ -364,6 +382,10 @@ PRIVATE void powerupHEX(void) {
 		NEATRESET();
 		inputChange();
 		LED1OFF();
+		LED2OFF();
+		LPC_TIM2->TC = 3000000;
+		EnableWDT();
+		enableInputInterrupt();
 		LOOP();			//never exits this loop.
 		break;
 ;

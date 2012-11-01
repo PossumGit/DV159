@@ -72,6 +72,8 @@ EXTERNAL void timer2CPU100(void);
 EXTERNAL void SSPNEATCPU4(void);
 EXTERNAL void SSPNEATCPU12(void);
 EXTERNAL void SSPNEATCPU100(void);
+EXTERNAL void  DisableWDT(void);
+EXTERNAL void  EnableWDT(void);
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -246,7 +248,7 @@ void EINT3_IRQHandler(void)				//GPIO interrupt.
 	byte a=1;
 
 	int s,t,u,v,w;
-
+	int b,c,d,e,f,g,h,i,j,k;
 
 
 	s=LPC_GPIOINT->IO0IntEnR;
@@ -314,6 +316,7 @@ void EINT3_IRQHandler(void)				//GPIO interrupt.
 //	No need to separately reset flags.
 	else if (SW1|SW2|SW3|SWF1|SWF2|SWF3)
 		{
+
 
 			CPU12MHz();
 			repeatInput(); //check if change of input, send via BT to android if change.
@@ -425,8 +428,38 @@ PUBLIC int powerDown(void)
 	int r=0;		//return value
 	byte a;
 	int b,s;
+	int c,d,e,f,g,h,i,j,k;
+	//FEED watchdog.
 
+	b=LPC_WDT->WDTV;
+	c=LPC_WDT->WDTV;
+
+
+	if(b<100000)
+	{
+	d=LPC_WDT->WDTV;
+	e=LPC_WDT->WDTV;
+	}
+	f=LPC_WDT->WDTV;
+	g=LPC_WDT->WDTV;
+	h=LPC_WDT->WDTV;
+	i=LPC_WDT->WDTV;
+
+	LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
+	LPC_WDT->WDFEED=0x55;			//watchdog feed
+
+	b=LPC_WDT->WDTV;
+	c=LPC_WDT->WDTV;
+	d=LPC_WDT->WDTV;
+	e=LPC_WDT->WDTV;
+	f=LPC_WDT->WDTV;
+	g=LPC_WDT->WDTV;
+	h=LPC_WDT->WDTV;
+	i=LPC_WDT->WDTV;
+	j=LPC_WDT->WDTV;
 //first check if any serial process is active:
+
+
 	b=LPC_SSP0->SR;			//bit 7=1 is SPI transfers complete
 	b=LPC_UART1->LSR;
 	s=LPC_TIM2->TC;
@@ -476,22 +509,24 @@ PUBLIC int powerDown(void)
 	CPU4MHz();						//reduce power.
 	LPC_SC->PCONP=1<<15;		//only GPIO needed during power down.
 	CPUSPEED=0;		//0 means asleep, 12=12MHz, 100=100MHz.
-	enableInputInterrupt();
+
 	LPC_GPIOINT->IO0IntEnR|=0x1<<16;			//Bluetooth rising interrupt
 
-
+//	DisableWDT();
 	 //Power down mode.
-//		SCB->SCR = 0x4;
-//		LPC_SC->PCON = 0x01;
+		SCB->SCR = 0x4;			//sleepdeep bit
+		LPC_SC->PCON = 0x01;	//combined with sleepdeep bit gives power down mode. IRC is disabled, so WDT disabled.
+		enableInputInterrupt();
 	__WFI(); //go to power down.
 
 
 
 	 LPC_SC->PCONP     = Peripherals ;       // Enable Power for Peripherals      */
-
-
+//	 EnableWDT();
+	LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
+	LPC_WDT->WDFEED=0x55;			//watchdog feed
 	BatteryState();			//LED Orange/yellow depending on battery state.
-
+//	 WatchFeed();
 	}
 
 	 return r;

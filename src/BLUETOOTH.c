@@ -61,6 +61,8 @@ EXTERNAL byte HEX(void);
 EXTERNAL void	us(unsigned int time_us);
 EXTERNAL void	BTbaudCPU100();
 EXTERNAL void	BTbaudCPU12();
+EXTERNAL void ErrorTimeOut(word timeout);
+EXTERNAL void ErrorReset(int error);
 
 
 ///local functions(code)
