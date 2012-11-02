@@ -49,6 +49,7 @@ extern "C" {
 // will be called by startup code rather than in application's main()
 #if defined (__USE_CMSIS)
 #include "system_LPC17xx.h"
+#include "lpc17xx.h"
 #endif
 
 //*****************************************************************************
@@ -335,6 +336,7 @@ ResetISR(void) {
 	// main() shouldn't return, but if it does, we'll just enter an infinite loop
 	//
 	while (1) {
+		 NVIC_SystemReset();
 		;
 	}
 }
@@ -348,6 +350,7 @@ void NMI_Handler(void)
 {
     while(1)
     {
+    	 NVIC_SystemReset();
     }
 }
 __attribute__ ((section(".after_vectors")))
@@ -355,6 +358,7 @@ void HardFault_Handler(void)
 {
     while(1)
     {
+    	 NVIC_SystemReset();
     }
 }
 __attribute__ ((section(".after_vectors")))
@@ -362,6 +366,7 @@ void MemManage_Handler(void)
 {
     while(1)
     {
+    	 NVIC_SystemReset();
     }
 }
 __attribute__ ((section(".after_vectors")))
@@ -369,6 +374,7 @@ void BusFault_Handler(void)
 {
     while(1)
     {
+    	 NVIC_SystemReset();
     }
 }
 __attribute__ ((section(".after_vectors")))
@@ -376,6 +382,7 @@ void UsageFault_Handler(void)
 {
     while(1)
     {
+    	 NVIC_SystemReset();
     }
 }
 __attribute__ ((section(".after_vectors")))
@@ -383,6 +390,7 @@ void SVCall_Handler(void)
 {
     while(1)
     {
+    	 NVIC_SystemReset();
     }
 }
 __attribute__ ((section(".after_vectors")))
@@ -390,6 +398,7 @@ void DebugMon_Handler(void)
 {
     while(1)
     {
+    	 NVIC_SystemReset();
     }
 }
 __attribute__ ((section(".after_vectors")))
@@ -397,6 +406,7 @@ void PendSV_Handler(void)
 {
     while(1)
     {
+    	 NVIC_SystemReset();
     }
 }
 __attribute__ ((section(".after_vectors")))
@@ -404,6 +414,7 @@ void SysTick_Handler(void)
 {
     while(1)
     {
+    	 NVIC_SystemReset();
     }
 }
 
@@ -418,7 +429,6 @@ void IntDefaultHandler(void)
 {
     while(1)
     {
-    	int a;
-    	a++;
+    	 NVIC_SystemReset();
     }
 }

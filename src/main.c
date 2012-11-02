@@ -14,6 +14,7 @@
 #include "lpc17xx_timer.h"
 #include "lpc17xx_pinsel.h"
 #include "lpc17xx.h"
+#include "lpc17xx_rtc.h"
 
 //Public variables
 //PUBLIC__CRP const unsigned int CRP_WORD = CRP_NO_CRP;///< code protection word
@@ -75,6 +76,9 @@ EXTERNAL void	us(unsigned int time_us);
 EXTERNAL byte	inputChange(void);
 
 EXTERNAL void I2CINIT(void);
+EXTERNAL void EnableWDT10s(void);
+EXTERNAL void EnableWDT2s(void);
+
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -164,10 +168,10 @@ PRIVATE void LOOP(void) {
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 PRIVATE void powerupHEX(void) {
-	byte a;
+
 
 	unsigned int time;
-	int b,c,d,e,f,g,h,i,j,k,l;
+	int a,b,c,d,e,f,g,h,i,j,k,l;
 
 
 	while(1)
@@ -178,6 +182,7 @@ PRIVATE void powerupHEX(void) {
 
 	case 0x01:			//TEST IR capture and playback.
 		CPU12MHz();
+		us(100000);
 		LED2OFF();
 		while(1)
 		{
@@ -190,6 +195,7 @@ PRIVATE void powerupHEX(void) {
 
 	case 0x02:			//TEST NEAT transmit, inc ID every 10s.
 		CPU12MHz();
+		us(100000);
 		LED2OFF();
 		LPC_TIM2->TC=0;
 		time=0;			//
@@ -211,6 +217,7 @@ PRIVATE void powerupHEX(void) {
 	case 0x03:			//TEST NEAT RX, receive an alarm,inc ID then re-transmit.
 						//works well with TREX pager 2.
 		CPU12MHz();
+		us(100000);
 		LED2OFF();
 
 			enableInputInterrupt();
@@ -247,6 +254,7 @@ PRIVATE void powerupHEX(void) {
 
 	case 04:					//TEST 4MHz LED flash
 		CPU4MHz();
+		us(100000);
 		LED2OFF();
 		while(1)
 		{	if(4!=HEX())break;
@@ -271,6 +279,7 @@ PRIVATE void powerupHEX(void) {
 		break;
 	case 05:				//TEST 12MHz LED flash
 		CPU12MHz();
+		us(100000);
 		LED2OFF();
 		while(1)
 		{
@@ -295,6 +304,7 @@ PRIVATE void powerupHEX(void) {
 		break;
 	case 06:				//TEST 100MHz (emc test) LED Flash
 		CPU100MHz();
+		us(100000);
 		LED2OFF();
 		while(1)
 		{
@@ -319,6 +329,7 @@ PRIVATE void powerupHEX(void) {
 		break;
 	case 07:				//test IR synthesis Transmit code Plessey 3 every 5 seconds.
 		CPU4MHz();
+		us(100000);
 		LED2OFF();
 		while(1)
 		{
@@ -332,7 +343,8 @@ PRIVATE void powerupHEX(void) {
 
 	case 0x08:				//TEST turn off after 2 seconds.
 		CPU4MHz();
-
+		us(100000);
+		LED2OFF();
 		LED1GREEN();
 		us(2000000);
 		a=3;
@@ -342,9 +354,46 @@ PRIVATE void powerupHEX(void) {
 		break;
 
 
+	case 0x09:
+		CPU12MHz();
+		EnableWDT2s();
 
 
+		if(LPC_RTC->GPREG4)
+		{
+			LPC_RTC->GPREG4=0;
+			LED1GREEN();
+		}
+		else
+		{
+			LPC_RTC->GPREG4=1;
+			LED1YELLOW();
+		}
 
+		us(100000);
+		LED2OFF();
+		for(;;);
+		break;
+	case 0x0A:
+
+		CPU4MHz();
+		us(100000);
+		LED2OFF();
+		while(1)
+		{
+		us(2000000);
+		 IRsynthesis('H',1,0x0401);		//HC1820  4 repeats, code  for HC1820 socket 1
+		us(2000000);
+		 IRsynthesis('H',1,0x0402);		//HC1820  4 repeats, code  for HC1820 socket 1
+		us(2000000);
+		 IRsynthesis('H',1,0x0401);		//HC1820  4 repeats, code  for HC1820 socket 1
+		us(2000000);
+		 IRsynthesis('H',1,0x0402);		//HC1820  4 repeats, code  for HC1820 socket 1
+
+		 if(0x0A!=HEX())break;
+		}
+
+		break;
 	case 0x0B:				//Enable USB programming.
 		break;
 
@@ -370,6 +419,10 @@ PRIVATE void powerupHEX(void) {
 
 	case 0x00:		//main startup and execute for QWAYO
 	default:
+		EnableWDT10s();		//10s watchdog until LOOP.
+		LPC_WDT->WDTC = 5000000;	//5s after next FEED(in powerDown in LOOP). set timeout 5s watchdog timer
+
+
 		CPU12MHz();
 	//	enableInputInterrupt();
 		initUART();
@@ -384,7 +437,7 @@ PRIVATE void powerupHEX(void) {
 		LED1OFF();
 		LED2OFF();
 		LPC_TIM2->TC = 3000000;
-		EnableWDT();
+
 		enableInputInterrupt();
 		LOOP();			//never exits this loop.
 		break;

@@ -44,8 +44,9 @@ PUBLIC void timer2CPU100(void);
 PUBLIC word	inputTime(void);
 PUBLIC void ErrorTimeOut(word timeout);
 PUBLIC void ErrorReset(int error);
-PUBLIC void EnableWDT(void);
-PUBLIC void  DisableWDT(void);
+PUBLIC void EnableWDT10s(void);
+PUBLIC void EnableWDT2s(void);
+
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -350,35 +351,33 @@ else
 
  ///////////////////////////////////////////////////////////
  ///
- ///Watchdog
- void EnableWDT()
+ ///Watchdog 10s
+ void EnableWDT10s()
  {
-
-			LPC_WDT->WDMOD =1<<0;		//watchdog enabled, set only, cannot disable. Bit 1 set for reset, else interrupt.
+		LPC_WDT->WDMOD =1<<0;		//watchdog enabled, set only, cannot disable. Bit 1 set for reset, else interrupt.
 	// Select internal RC for watchdog
-
-
-		//select timeout
-		LPC_WDT->WDTC = 5000000;	//set timeout 5s watchdog timer
+	//select timeout
+		LPC_WDT->WDTC = 10000000;	//set timeout 5s watchdog timer
 		LPC_WDT->WDCLKSEL=0;	//IRC source for watchdog. Set bit 31 to fix this selection.
 		LPC_WDT->WDFEED=0xAA;
 		LPC_WDT->WDFEED=0x55;
 		NVIC->ISER[0]|=0x1<<0;	//WDT interrupt.
  }
 
+ ///Watchdog 2s
+ void EnableWDT2s()
+  {
+		LPC_WDT->WDMOD =1<<0;		//watchdog enabled, set only, cannot disable. Bit 1 set for reset, else interrupt.
+ 	// Select internal RC for watchdog
+ 		//select timeout
+ 		LPC_WDT->WDTC = 2000000;	//set timeout 5s watchdog timer
+ 		LPC_WDT->WDCLKSEL=0;	//IRC source for watchdog. Set bit 31 to fix this selection.
+ 		LPC_WDT->WDFEED=0xAA;
+ 		LPC_WDT->WDFEED=0x55;
+ 		NVIC->ISER[0]|=0x1<<0;	//WDT interrupt.
+  }
 
- void WatchFeed()
- {
-int a,b,c,d,e,f,g;
 
-a=LPC_WDT->WDTV;
-b=LPC_WDT->WDTV;
-c=LPC_WDT->WDTV;
-d=LPC_WDT->WDTV;
-e=LPC_WDT->WDTV;
-f=LPC_WDT->WDTV;
-g=LPC_WDT->WDTV;
- }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////
 ///WDT IRQ Handler traps the watchdog reset.
@@ -388,16 +387,8 @@ g=LPC_WDT->WDTV;
  //if feed, then counts down again.
  void WDT_IRQHandler(void)
  {
-
-
-
-
-
- NVIC->ICER[0]|=0x1<<0;	//disable WDT interrupt.
-
 	 NVIC_SystemReset();						//system reset
-
-
+	 NVIC->ICER[0]|=0x1<<0;	//disable WDT interrupt.
  }
 
 
