@@ -117,6 +117,8 @@ PUBLIC int main(void) {
 		LPC_GPIO_T2G FIOSET = T2G; 			//T2g=1=disabled.
 		LPC_GPIO_T2G FIODIR |= T2G; 		//T2Vgs=0, 3v3 on pin.
 
+		LPC_GPIO_BTRESET FIOSET	= BTRESET;	//Bluetooth reset.
+		LPC_GPIO_BTRESET FIODIR |= BTRESET;	//
 
 
 #if PCBissue==3||PCBissue==4
@@ -171,11 +173,13 @@ PRIVATE void powerupHEX(void) {
 
 
 	unsigned int time;
-	int a,b,c,d,e,f,g,h,i,j,k,l;
-
+	int e,f,g,h,i,j,k,l;
+	static volatile byte InputState=0;
+		byte	a,b,c,d;
 
 	while(1)
 	{
+
 	a = HEX();
 	switch (a) {
 
@@ -188,6 +192,7 @@ PRIVATE void powerupHEX(void) {
 		{
 			captureIR();
 			playIR();
+			CPU12MHz();
 			if(1!=HEX())break;
 		}
 		break;
@@ -195,7 +200,7 @@ PRIVATE void powerupHEX(void) {
 
 	case 0x02:			//TEST NEAT transmit, inc ID every 10s.
 		CPU12MHz();
-		us(100000);
+		us(1000000);
 		LED2OFF();
 		LPC_TIM2->TC=0;
 		time=0;			//
@@ -207,7 +212,9 @@ PRIVATE void powerupHEX(void) {
 		for (i=0;i<10;i++)
 		{
 			h=i+(j<<4)+(k<<8)+(l<<12);
+			LED1GREEN();
 		NEATTX(0xFF,0x00,h);		//battery state, ALARM type, ID(16 bits)
+		LED1OFF();
 		time=time+10000000;			//+10s
 		while (LPC_TIM2->TC<time);
 		if(2!=HEX())break;
@@ -217,36 +224,62 @@ PRIVATE void powerupHEX(void) {
 	case 0x03:			//TEST NEAT RX, receive an alarm,inc ID then re-transmit.
 						//works well with TREX pager 2.
 		CPU12MHz();
-		us(100000);
+		us(1000000);
 		LED2OFF();
 
-			enableInputInterrupt();
-			initUART();
-			initBT();
-			resetBT();
-			setupBT();
-			LED1YELLOW();
-			I2CINIT();
-			CPU12MHz();
-			NEATRESET();
 
+	//		LED1YELLOW();
+		EnableWDT10s();		//10s watchdog until LOOP.
+		LPC_WDT->WDTC = 5000000;	//5s after next FEED(in powerDown in LOOP). set timeout 5s watchdog timer
+
+
+		CPU12MHz();
+		LPC_GPIO_BTRESET FIOCLR	= BTRESET;	//Bluetooth reset.	RESET BT
+		us(10000);
+		LPC_GPIO_BTRESET FIOSET	= BTRESET;	//Bluetooth reset.
+		us(50000);
+		initUART();
+		initBT();
+		resetBT();
+		setupBT();
+		LED1YELLOW();
+		I2CINIT();
+		I2CREAD();		//first read is not valid, so throw it away.
+
+
+			NEATRESET();
+			enableInputInterrupt();
+			LPC_TIM2->TC =3000000;
 
 			while(1)
 			{
+			LED1OFF();
 			powerDown();
 			if(SWNEAT)
 			{
+
 			SWNEAT=0;
 			CPU12MHz();
 			i=NEATRD(0x61);
 			j=NEATRD(0x60);
+
+
+			LED1GREEN();
+
 			NEATWR(2,0xA0);			//reset read
 			NEATRESET();
 			us(3000000);
+			LED1YELLOW();
 			NEATTX(0xFF,0x00,1+i+256*j);		//battery state, ALARM type, ID(16 bits)
-			LPC_TIM2->TC =0;
+			LED1OFF();
+			LPC_TIM2->TC =3000000;
+			SWNEAT=0;		//ignore repeats within 4s.
+			NEATWR(2,0xA0);			//reset read
+
 			if(3!=HEX())break;
 			}
+
+
 			}
 
 		break;
@@ -328,15 +361,23 @@ PRIVATE void powerupHEX(void) {
 		}
 		break;
 	case 07:				//test IR synthesis Transmit code Plessey 3 every 5 seconds.
-		CPU4MHz();
+		CPU12MHz();
 		us(100000);
 		LED2OFF();
-		while(1)
+		while (1)
 		{
-		 LPC_TIM2->TC=0;
-		 while (5000000>LPC_TIM2->TC);
-		 IRsynthesis('P',2,0x2);		//Plessey  2 repeats, code 3 for HC603c
-		 if(7!=HEX())break;
+
+
+			us(2000000);
+
+					{
+		 IRsynthesis('P',3,0x2);		//Plessey  2 repeats, code 3 for HC603c
+			playIR();
+
+						}
+
+
+
 		}
 		break;
 
@@ -383,12 +424,16 @@ PRIVATE void powerupHEX(void) {
 		{
 		us(2000000);
 		 IRsynthesis('H',1,0x0401);		//HC1820  4 repeats, code  for HC1820 socket 1
+		 playIR();
 		us(2000000);
 		 IRsynthesis('H',1,0x0402);		//HC1820  4 repeats, code  for HC1820 socket 1
+		 playIR();
 		us(2000000);
 		 IRsynthesis('H',1,0x0401);		//HC1820  4 repeats, code  for HC1820 socket 1
+		 playIR();
 		us(2000000);
 		 IRsynthesis('H',1,0x0402);		//HC1820  4 repeats, code  for HC1820 socket 1
+		 playIR();
 
 		 if(0x0A!=HEX())break;
 		}
@@ -408,7 +453,18 @@ PRIVATE void powerupHEX(void) {
 		}
 		; //wait for ever for debug.
 		break;
+	case  0x0D:
+		CPU12MHz();
+		I2CINIT();
 
+		while (1)
+		{
+		I2CREAD();
+//		a=I2CBATTERY();
+		}
+
+
+		break;
 
 	case 0x0F:				//factory reset Blue Tooth.
 		factoryBT(); //HEX2=0, HEX1=E Factory reset BT.
@@ -416,6 +472,34 @@ PRIVATE void powerupHEX(void) {
 		while(1);
 		break;
 
+	case 0x10:
+		LED2OFF();
+
+		while(1)
+		{
+		a=0xf0&inputChange();
+		if (a==0x90||a==0xa0)
+		{
+			IRsynthesis('P',4,0x2);		//Plessey  2 repeats, code 3 for HC603c
+			playIR();
+		}
+		}
+
+		break;
+	case 0x20:
+		LED2OFF();
+		captureIR();
+	while (1)
+	{
+	a=0xf0&inputChange();
+		if (a==0x90||a==0xa0)
+		{
+
+	playIR();
+		}
+	}
+
+	break;
 
 	case 0x00:		//main startup and execute for QWAYO
 	default:
@@ -424,6 +508,15 @@ PRIVATE void powerupHEX(void) {
 
 
 		CPU12MHz();
+		LPC_TIM2->TC = 0;
+		LED1GREEN();
+		CPU12MHz();
+		LPC_GPIO_BTRESET FIOCLR	= BTRESET;	//Bluetooth reset.	RESET BT
+		us(50000);
+		LPC_GPIO_BTRESET FIOSET	= BTRESET;	//Bluetooth reset.
+		LED1YELLOW();
+		us(50000);
+
 	//	enableInputInterrupt();
 		initUART();
 		initBT();
@@ -431,6 +524,7 @@ PRIVATE void powerupHEX(void) {
 		setupBT();
 		LED1YELLOW();
 		I2CINIT();
+		I2CREAD();		//first read is not valid, so throw it away.
 		CPU12MHz();
 		NEATRESET();
 		inputChange();
@@ -443,6 +537,9 @@ PRIVATE void powerupHEX(void) {
 		break;
 ;
 	}
+
+
+
 }
 }
 

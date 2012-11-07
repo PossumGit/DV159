@@ -107,17 +107,17 @@ static word IRcode;				//IR sequence used in ProcessBT.
 #if PCBissue==4
     byte I[] =
  	{
-	"QWAYO firmware version 0.1, HC8500 PCB version 4. Copyright Possum 2012."
+	"QWAYO firmware version USB B, HC8500 PCB version 4. Copyright Possum 2012."
  	};
 #elif PCBissue==3
     byte I[] =
  	{
-	"QWAYO firmware version 0.1, HC8500 PCB version 3. Copyright Possum 2012."
+	"QWAYO firmware version USB B, HC8500 PCB version 3. Copyright Possum 2012."
  	};
 #elif PCBissue==2						//issue 2 PCB
     byte I[] =
  	{
-	"QWAYO firmware version 0.1, HC8500 PCB version 2. Copyright Possum 2012."
+	"QWAYO firmware version USB B, HC8500 PCB version 2. Copyright Possum 2012."
  	};
 #endif
 
@@ -184,7 +184,9 @@ static word IRcode;				//IR sequence used in ProcessBT.
 	{
 		IRcode=IRcode|a;
 		IRsynthesis(IRtype,IRrep,IRcode);
-//		sendBT(ACK, sizeof(ACK));
+		playIR();
+		CPU12MHz();
+		sendBT(ACK, sizeof(ACK));
 		SEQUENCE=0;
 		break;
 	}
@@ -199,6 +201,7 @@ static word IRcode;				//IR sequence used in ProcessBT.
 	    sendBT(W, 1);
 	    break;
 	    }
+
 
 
 
@@ -259,6 +262,8 @@ static word IRcode;				//IR sequence used in ProcessBT.
 	case 'L':
 	{
 		IRsynthesis('P',4,0x2);		//Plessey  4 repeats, code 3
+		playIR();
+		CPU12MHz();
 	//	sendBT(ACK, sizeof(ACK));
 		break;
 	}
@@ -267,7 +272,8 @@ static word IRcode;				//IR sequence used in ProcessBT.
 	case 'P': //play IR
 	    {
 
-	    playIR();
+	    playIR();		//convert to 100MHz and disable interrupt.
+		CPU12MHz();
 	    sendBT(ACK, sizeof(ACK));
 	    break;
 	    }

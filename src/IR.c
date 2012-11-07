@@ -152,7 +152,7 @@ PUBLIC void playIR(void) {
 		}
 		LED1OFF();
 		endPlayIR();
-		CPU12MHz();
+
 
 	}
 }
@@ -311,7 +311,7 @@ PRIVATE void compress(void) {
 		case 0b1100://INPUT
 		{
 			a = inputChange();
-			t = inputTime();
+//			t = inputTime();
 			switch (0x7 & (IRData >> 25)) {
 			case 0: //DELAY, ABORT if input released
 			{

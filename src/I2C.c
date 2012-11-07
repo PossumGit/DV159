@@ -106,7 +106,7 @@ PUBLIC void I2CINIT(void)
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
-///@brief get regs 0-0x11 I2C
+///@brief get regs 0x0A-0x11 I2C
 ///@param void
 ///@return void
 /// Descriptions:	The routine to complete a I2C transaction
@@ -115,6 +115,14 @@ PUBLIC void I2CINIT(void)
 ///
 ///					The read length, write length and I2C master buffer
 ///					need to be filled.
+//I2CSlaveBuffer[0]	Temperature MSB
+//I2CSlaveBuffer[1]	Temperature LSB
+//I2CSlaveBuffer[2]	Voltage MSB
+//I2CSlaveBuffer[3]	Voltage LSB
+//I2CSlaveBuffer[4]	Current MSB
+//I2CSlaveBuffer[5]	Current LSB
+//I2CSlaveBuffer[6]	Acc current MSB
+//I2CSlaveBuffer[7]	Acc current LSB
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC void I2CREAD(void)
 {
@@ -123,27 +131,91 @@ PUBLIC void I2CREAD(void)
 
 
 	I2CMasterBuffer[0]=0x90;
-	I2CMasterBuffer[1]=0x01;
+	I2CMasterBuffer[1]=0x0A;		//1 for status.
+	I2CMasterBuffer[2]=0x91;
+	I2CReadLength=1;
+	I2CWriteLength=2;
+	I2CGO();
+	I2CSlaveBuffer[9]=I2CSlaveBuffer[0];
+	I2CMasterBuffer[0]=0x90;
+	I2CMasterBuffer[1]=0x0B;		//1 for status.
+	I2CMasterBuffer[2]=0x91;
+	I2CReadLength=1;
+	I2CWriteLength=2;
+	I2CGO();
+	I2CSlaveBuffer[1]=I2CSlaveBuffer[0];
+	I2CMasterBuffer[0]=0x90;
+	I2CMasterBuffer[1]=0x0C;		//1 for status.
+	I2CMasterBuffer[2]=0x91;
+	I2CReadLength=1;
+	I2CWriteLength=2;
+	I2CGO();
+	I2CSlaveBuffer[2]=I2CSlaveBuffer[0];
+	I2CMasterBuffer[0]=0x90;
+	I2CMasterBuffer[1]=0x0D;		//1 for status.
+	I2CMasterBuffer[2]=0x91;
+	I2CReadLength=1;
+	I2CWriteLength=2;
+	I2CGO();
+	I2CSlaveBuffer[3]=I2CSlaveBuffer[0];
+	I2CMasterBuffer[0]=0x90;
+	I2CMasterBuffer[1]=0x0E;		//1 for status.
+	I2CMasterBuffer[2]=0x91;
+	I2CReadLength=1;
+	I2CWriteLength=2;
+	I2CGO();
+	I2CSlaveBuffer[4]=I2CSlaveBuffer[0];
+	I2CMasterBuffer[0]=0x90;
+	I2CMasterBuffer[1]=0x0F;		//1 for status.
+	I2CMasterBuffer[2]=0x91;
+	I2CReadLength=1;
+	I2CWriteLength=2;
+	I2CGO();
+	I2CSlaveBuffer[5]=I2CSlaveBuffer[0];
+	I2CMasterBuffer[0]=0x90;
+	I2CMasterBuffer[1]=0x10;		//1 for status.
+	I2CMasterBuffer[2]=0x91;
+	I2CReadLength=1;
+	I2CWriteLength=2;
+	I2CGO();
+	I2CSlaveBuffer[6]=I2CSlaveBuffer[0];
+
+	I2CMasterBuffer[0]=0x90;
+	I2CMasterBuffer[1]=0x11;		//1 for status.
+	I2CMasterBuffer[2]=0x91;
+	I2CReadLength=1;
+	I2CWriteLength=2;
+	I2CGO();
+	I2CSlaveBuffer[7]=I2CSlaveBuffer[0];
+
+	I2CMasterBuffer[0]=0x90;
+	I2CMasterBuffer[1]=0x1;		//1 for status.
 	I2CMasterBuffer[2]=0x91;
 	I2CReadLength=1;
 	I2CWriteLength=2;
 	I2CGO();
 	I2CSlaveBuffer[8]=I2CSlaveBuffer[0];
+	I2CSlaveBuffer[0]=I2CSlaveBuffer[9];
+
+
+
+
+	/*
 	I2CMasterBuffer[0]=0x90;
 	I2CMasterBuffer[1]=0x0A;
 	I2CMasterBuffer[2]=0x91;
 	I2CReadLength=8;
 	I2CWriteLength=2;
 	I2CGO();
-	if ((I2CSlaveBuffer[4]==0) && (I2CSlaveBuffer[5]==0))
-	{I2CSlaveBuffer[4]=L4;
-	 I2CSlaveBuffer[5]=L5;
-	}
-	else
-	{
-		L4=I2CSlaveBuffer[4];
-		L5=I2CSlaveBuffer[5];
-	}
+//	if ((I2CSlaveBuffer[4]==0) && (I2CSlaveBuffer[5]==0))
+//	{I2CSlaveBuffer[4]=L4;
+//	 I2CSlaveBuffer[5]=L5;
+//	}
+//	else
+//	{
+//		L4=I2CSlaveBuffer[4];
+//		L5=I2CSlaveBuffer[5];
+//	}
 
 
 	I2CSlaveBuffer[4]=~I2CSlaveBuffer[4];
@@ -151,6 +223,7 @@ PUBLIC void I2CREAD(void)
 	I2CSlaveBuffer[6]=~I2CSlaveBuffer[6];
 	I2CSlaveBuffer[7]=~I2CSlaveBuffer[7];
 	//a=I2CSlaveBuffer[0];
+	 */
 }
 
 

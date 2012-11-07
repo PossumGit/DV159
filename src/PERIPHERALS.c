@@ -11,7 +11,7 @@
 
 //Public variables
 
-PUBLIC volatile word LastInputTime=0;
+//PUBLIC volatile word LastInputTime=0;
 
 //Private variables
 
@@ -184,14 +184,6 @@ PUBLIC byte	inputChange(void)
 	LPC_GPIO2->FIODIR&=~(1<<11);			//internal
 	LPC_GPIO0->FIODIR&=~(1<<21);			//external tip
 	LPC_GPIO2->FIODIR&=~(1<<12);			//external mid
-
-
-
-
-
-
-
-
 	a=(LPC_GPIO2->FIOPIN &(1<<11))>>6;	//bit 5	//bit 0=>>11;		//INTERNAL
 	b=(~LPC_GPIO0->FIOPIN &(1<<21))>>17; 	//bit 4	//bit 1=>>0;		//EXTERNAL
 	c=(~LPC_GPIO2->FIOPIN &(1<<12))>>12;	//bit 0	//bit 2=>>11;		//EXTERNAL MID/connected
@@ -206,7 +198,7 @@ PUBLIC byte	inputChange(void)
 	d=a|b|c|0xe;						//0xe sets bits 1,2,3 for TECLA spec.
 	if (d!=InputState){
 		InputState=d;
-		LastInputTime=LPC_TIM2->TC;			//store time of last change of input
+//		LastInputTime=LPC_TIM2->TC;			//store time of last change of input
 		return 0x80|d;						//bit 7 set indicates change.
 	}
 	else return d;
@@ -219,10 +211,10 @@ PUBLIC byte	inputChange(void)
 ///@param void
 ///@return time in ms since last input change.
 /////////////////////////////////////////////////////////////////////////////////////////////////
-PUBLIC word	inputTime(void)
-{
-		return LPC_TIM2->TC-LastInputTime;			//time in us since last input change.
-}
+//PUBLIC word	inputTime(void)
+//{
+//		return LPC_TIM2->TC-LastInputTime;			//time in us since last input change.
+//}
 
 
 

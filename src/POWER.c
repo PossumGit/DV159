@@ -251,6 +251,7 @@ void EINT3_IRQHandler(void)				//GPIO interrupt.
 	int b,c,d,e,f,g,h,i,j,k;
 
 
+
 	s=LPC_GPIOINT->IO0IntEnR;
 	t=LPC_GPIOINT->IO0IntEnF;
 	u=LPC_GPIO2->FIOPIN;
@@ -307,7 +308,12 @@ void EINT3_IRQHandler(void)				//GPIO interrupt.
 	LPC_SC->PCONP     = Peripherals ;       // Enable Power for Peripherals      */
 	LPC_TIM2->TC = 0;
 	a=HEX();
-	if ((3==HEX()) && SWNEAT)
+	if ((3==a) && SWNEAT)
+	{
+
+		return;
+	}
+	if(0x0F<a)
 	{
 
 		return;
