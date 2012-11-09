@@ -359,10 +359,10 @@ else
  ///Watchdog 2s
  void EnableWDT2s()
   {
-		LPC_WDT->WDMOD =1<<0;		//watchdog enabled, set only, cannot disable. Bit 1 set for reset, else interrupt.
+		LPC_WDT->WDMOD =3<<0;		//watchdog enabled, and Watchdog reset set only, cannot disable. Bit 1 set for reset, else interrupt.
  	// Select internal RC for watchdog
  		//select timeout
- 		LPC_WDT->WDTC = 2000000;	//set timeout 5s watchdog timer
+ 	LPC_WDT->WDTC = 2000000;		//set timeout 5s watchdog timer
  		LPC_WDT->WDCLKSEL=0;	//IRC source for watchdog. Set bit 31 to fix this selection.
  		LPC_WDT->WDFEED=0xAA;
  		LPC_WDT->WDFEED=0x55;

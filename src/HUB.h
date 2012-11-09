@@ -4,6 +4,8 @@
  *  Created on: 4 Apr 2012
  *      Author: Duncan Irvine
  */
+///"../linkscripts/HUB.ld"
+///
 //operators
 //bitwise	~	&	|
 //logical	!	&&	||

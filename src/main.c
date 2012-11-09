@@ -97,8 +97,20 @@ PUBLIC int main(void) {
 	{
 
 
-		 LED2YELLOW();
+		 CPU12MHz();
+//ext interrupt 2 causes problems after USB. ICER0 bit 20.
+		NVIC->ICER[0]=0xFFFFFFFF;		//disable all interrupts.
+		NVIC->ICER[1]=0xFFFFFFFF;
+		LPC_TIM2->TC=0;
+		CPU12MHz();
+		LED2YELLOW();
 
+	//	 us(1000);
+	//	 while(1)
+	//	 {
+	//		 LED1YELLOW();
+	//		 LED1GREEN();
+	//	 }
 
 		LPC_GPIO_OFF FIOCLR = OFF; 			//SD(shutdown) =OFF button set low to keep on, set high to turn off.
 		LPC_GPIO_OFF FIODIR |= OFF; 		//SD(shutdown) =OFF. //1K pull-down prevents turning on during power up. (3.3mA is OK)
@@ -286,6 +298,7 @@ PRIVATE void powerupHEX(void) {
 
 
 	case 04:					//TEST 4MHz LED flash
+		LPC_SC->PCONP     = Peripherals ;       // Enable Power for Peripherals      */
 		CPU4MHz();
 		us(100000);
 		LED2OFF();
@@ -311,15 +324,16 @@ PRIVATE void powerupHEX(void) {
 		}
 		break;
 	case 05:				//TEST 12MHz LED flash
-		CPU12MHz();
-		us(100000);
-		LED2OFF();
+		 LPC_SC->PCONP     = Peripherals ;       // Enable Power for Peripherals      */
+			CPU12MHz();
+			LED2OFF();
 		while(1)
 		{
-
 			if(5!=HEX())break;
 			LED1GREEN();
 			us(300000);
+
+
 				a=inputChange();
 				if (~a&(1<<4))
 				{
@@ -383,15 +397,13 @@ PRIVATE void powerupHEX(void) {
 
 
 	case 0x08:				//TEST turn off after 2 seconds.
-		CPU4MHz();
-		us(100000);
-		LED2OFF();
+		CPU12MHz();
 		LED1GREEN();
-		us(2000000);
-		a=3;
-		a=4;
+		 IRsynthesis('P',3,0x2);
+			playIR();
 		LPC_GPIO_OFF FIOSET =OFF; //OFF button set high to turn off.
-		while(1);
+		us(1000000);
+		LED1YELLOW();
 		break;
 
 

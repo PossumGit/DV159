@@ -107,17 +107,17 @@ static word IRcode;				//IR sequence used in ProcessBT.
 #if PCBissue==4
     byte I[] =
  	{
-	"QWAYO firmware version USB B, HC8500 PCB version 4. Copyright Possum 2012."
+	"QWAYO firmware version USB C, HC8500 PCB version 4. Copyright Possum 2012."
  	};
 #elif PCBissue==3
     byte I[] =
  	{
-	"QWAYO firmware version USB B, HC8500 PCB version 3. Copyright Possum 2012."
+	"QWAYO firmware version USB C, HC8500 PCB version 3. Copyright Possum 2012."
  	};
 #elif PCBissue==2						//issue 2 PCB
     byte I[] =
  	{
-	"QWAYO firmware version USB B, HC8500 PCB version 2. Copyright Possum 2012."
+	"QWAYO firmware version USB C, HC8500 PCB version 2. Copyright Possum 2012."
  	};
 #endif
 

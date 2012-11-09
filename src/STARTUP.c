@@ -349,56 +349,63 @@ __attribute__ ((section(".after_vectors")))
 void NMI_Handler(void)
 {
     while(1)
-    {
-    	 NVIC_SystemReset();
-    }
+   {
+  //  	LED2YELLOW();
+    	NVIC_SystemReset();
+   }
 }
 __attribute__ ((section(".after_vectors")))
 void HardFault_Handler(void)
 {
     while(1)
-    {
-    	 NVIC_SystemReset();
+   {
+//	LED2YELLOW();
+   	 NVIC_SystemReset();
     }
 }
 __attribute__ ((section(".after_vectors")))
 void MemManage_Handler(void)
 {
     while(1)
-    {
+   {
+//	LED2YELLOW();
     	 NVIC_SystemReset();
-    }
+   }
 }
 __attribute__ ((section(".after_vectors")))
 void BusFault_Handler(void)
 {
-    while(1)
-    {
+   while(1)
+   {
+	//LED2YELLOW();
     	 NVIC_SystemReset();
-    }
+   }
 }
 __attribute__ ((section(".after_vectors")))
 void UsageFault_Handler(void)
 {
-    while(1)
-    {
+   while(1)
+   {
+//	LED2YELLOW();
     	 NVIC_SystemReset();
-    }
+   }
 }
 __attribute__ ((section(".after_vectors")))
 void SVCall_Handler(void)
 {
-    while(1)
-    {
+   while(1)
+   {
+//	LED2YELLOW();
     	 NVIC_SystemReset();
-    }
+   }
 }
 __attribute__ ((section(".after_vectors")))
 void DebugMon_Handler(void)
 {
-    while(1)
-    {
-    	 NVIC_SystemReset();
+   while(1)
+   {
+//		LED2YELLOW();
+	      	 NVIC_SystemReset();
     }
 }
 __attribute__ ((section(".after_vectors")))
@@ -406,16 +413,18 @@ void PendSV_Handler(void)
 {
     while(1)
     {
-    	 NVIC_SystemReset();
-    }
+  //  	LED2YELLOW();
+     	 NVIC_SystemReset();
+   }
 }
 __attribute__ ((section(".after_vectors")))
 void SysTick_Handler(void)
 {
     while(1)
     {
-    	 NVIC_SystemReset();
-    }
+   // 	LED2YELLOW();
+    	   	 NVIC_SystemReset();
+   }
 }
 
 //*****************************************************************************
@@ -429,6 +438,8 @@ void IntDefaultHandler(void)
 {
     while(1)
     {
+  //  	LED2YELLOW();
+
     	 NVIC_SystemReset();
-    }
+   }
 }
