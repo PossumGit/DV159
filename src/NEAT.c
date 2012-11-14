@@ -4,7 +4,6 @@
 ///@version     	test
 ///@copyright  		Possum UK 23 April 2012
 
-
 //Defines
 
 //Includes
@@ -18,23 +17,26 @@
 //Private global variables
 
 //External variables
-
+EXTERNAL volatile word SWNEAT;	///<NEAT flag indicates NEAT interrupt.
 
 
 //Public functions
-PUBLIC void NEATWR(byte r, byte d);
-PUBLIC byte NEATRD(byte r);
-PUBLIC void NEATRESET();
-PUBLIC void NEATTX(byte battery, byte alarm, word ID);
+PUBLIC void NEATWR(byte , byte );
+PUBLIC byte NEATRD(byte );
+PUBLIC void NEATRESET(void);
+PUBLIC void NEATTX(byte , byte , word);
 PUBLIC void NEATINIT(void);
+PUBLIC void	NEATOFF(void);
 //External functions
 
 EXTERNAL void initSSP0(void);
-EXTERNAL void writeSSP0Byte(byte b);
+EXTERNAL void writeSSP0Byte(byte );
 EXTERNAL byte readSSP0Byte(void);
-EXTERNAL word SWNEAT;
-EXTERNAL void sendBT(byte* , unsigned int );
-EXTERNAL void	us(unsigned int time_us);
+
+EXTERNAL void sendBT(byte in[] , unsigned int );
+EXTERNAL void	us(unsigned int );
+EXTERNAL void disableInputInterrupt(void);
+EXTERNAL void enableInputInterrupt(void);
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -93,7 +95,7 @@ PUBLIC int readNEAT(void)
 	byte a;
 	byte NEAT[0x28];
 	byte NEATASCII[0x10];
-	unsigned int NEATlength=0x21;
+
 //	if ((SWNEAT==1)||((LPC_GPIO_NEATINT FIOPIN) &(NEATINT))==0)
 				{
 				SWNEAT=0;
@@ -156,8 +158,23 @@ PUBLIC int readNEAT(void)
 	return r;
 }
 
-
-
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief NEATOFF turns NEAT off to minimise power consumption if not used.
+///@param void
+///@return void
+/////////////////////////////////////////////////////////////////////////////////////////////////
+void	NEATOFF()
+{
+initSSP0();
+LPC_GPIO_NEATCS FIOSET = NEATCS; //NEAT disable
+LPC_GPIO_NEATCS FIODIR |=NEATCS; //CHIPEN on NEAT.
+LPC_GPIO_NEATINT FIODIR &= ~(NEATINT); //NEAT INt is input.
+us(10000);			//10ms
+NEATWR(1,1);				//reset NEAT/as power up reset.
+us(200000);
+NEATWR(2,0x00);			//reset receiver
+us(1000);
+}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 ///@brief NEATRESET resets NEAT board, needed after read/write for reliability.

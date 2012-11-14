@@ -16,8 +16,8 @@
 //NVIC_SystemReset() to reset system.
 //
 //
-#define PCBissue 3		//pcb issue, options 2, 3
-
+#define PCBissue 3		//pcb issue, options 3, 4
+//note issue 2 is now obsolete and no boards are now in use.
 
 typedef unsigned char byte;		//8 bit on LPC17**
 typedef unsigned int word;		//32 bit on LPC17**

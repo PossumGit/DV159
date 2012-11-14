@@ -10,7 +10,6 @@
 #include "lpc17xx_pinsel.h"
 #include "lpc17xx_i2s.h"
 
-
 ///Private Defines
 // Max buffer length
 #define BUFFER_SIZE				0x400

@@ -96,6 +96,8 @@ void	BTbaudCPU100()
 ///@param void
 ///@return void
 ///12MHz CPU clock version
+///
+///note 4MHz variant does not work as outside working range.
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
 void	BTbaudCPU12()

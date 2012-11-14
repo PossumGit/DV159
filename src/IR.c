@@ -22,15 +22,15 @@ PRIVATE word IRAddress = 0; ///< Count IR pulses during capture/replay
 PRIVATE word PulseWidth = 100; ///< 100 system clocks=1uS.
 PRIVATE word IRData = 1; ///< Used to communicate end from interrupt routines.
 PRIVATE word IRTimeMatch = 1;///< Last time set into match regsister.
-PRIVATE word Period = 2632; //38KHz default.
-PRIVATE word Mark = 0x10000; //Mark burst in IR compression processing. Initial is bigger than max mark.
-PRIVATE word Space = 0; //Space gap between bursts in IR compression.
-PRIVATE word SymbolBank = 0; //location of first symbol (skip) in SYMBOL BANK
-PRIVATE word SymbolWord = 0;
-PRIVATE word DataStep = 0; //used in compression timer1 ISR
-PRIVATE word Pulse = 1; //1=pulse, 0=no pulse.
-PRIVATE word Delay = 0;//delay in compress routine.
-PRIVATE int COUNT[] = { 0, 0, 0, 0, 0, 0, 0, 0 };
+PRIVATE word Period = 2632; ///<38KHz default.
+PRIVATE word Mark = 0x10000; ///<Mark burst in IR compression processing. Initial is bigger than max mark.
+PRIVATE word Space = 0; ///<Space gap between bursts in IR compression.
+PRIVATE word SymbolBank = 0; ///<location of first symbol (skip) in SYMBOL BANK
+PRIVATE word SymbolWord = 0;	///< a word out of the symbol bank.
+PRIVATE word DataStep = 0; ///<used in compression timer1 ISR
+PRIVATE word Pulse = 1; ///<1=pulse, 0=no pulse.
+PRIVATE word Delay = 0;///<delay in compress routine.
+PRIVATE int COUNT[] = { 0, 0, 0, 0, 0, 0, 0, 0 };///< used for loops in compress.
 
 //external variables
 EXTERNAL volatile int Buffer[]; ///< Whole of RAM2 is Buffer, reused for NEAT, Bluetooth, audio and IR replay and capture
@@ -52,7 +52,7 @@ EXTERNAL void CPU12MHz(void);
 EXTERNAL int repeatInput(void);
 EXTERNAL void txBT(void);
 EXTERNAL byte	inputChange(void);
-EXTERNAL word	inputTime(void);
+//EXTERNAL word	inputTime(void);
 // PUBLIC functions
 
 PUBLIC int captureIR(void);
@@ -72,8 +72,6 @@ PUBLIC void playIR(void);
 PUBLIC int captureIR(void) {
 
 
-
-
 	IRAddress = CaptureFirst;
 	LED1YELLOW();
 	CPU100MHz();		//also disables ext interrupts.
@@ -82,7 +80,7 @@ PUBLIC int captureIR(void) {
 	LPC_WDT->WDFEED=0x55;			//watchdog feed
 	LPC_WDT->WDTC = 5000000;	//set timeout 5s watchdog timer
 
-#if PCBissue==3
+#if PCBissue==3||PCBissue==4
 
 	LPC_GPIO1-> FIOSET |=1<<29			;//IR capture on.
 #elif PCBissue==2
@@ -105,7 +103,7 @@ PUBLIC int captureIR(void) {
 	correctIR();
 	CPU12MHz();
 	LED1OFF();
-#if PCBissue==3
+#if PCBissue==3||PCBissue==4
 
 	LPC_GPIO1->FIOCLR |=1<<29			;//IR capture off.
 #elif PCBissue==2
@@ -152,8 +150,6 @@ PUBLIC void playIR(void) {
 		}
 		LED1OFF();
 		endPlayIR();
-
-
 	}
 }
 
@@ -251,7 +247,7 @@ PRIVATE void compress(void) {
 		{
 			//first symbol in buffer is dummy.
 			//space is always first, followed by mark.
-			//code is structured to speed up mark at expense of space. Space ia longer so less time critical.
+			//code is structured to speed up mark at expense of space. Space is longer so less time critical.
 			//mark can have 0 in it. Then you get 1 pulse.
 			if (Mark < (SymbolWord & 0xFF)) {
 				Mark++;

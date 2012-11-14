@@ -4,14 +4,16 @@
 ///@copyright  		Possum UK 23 April 2012
 
 
-///Private Defines
+//Private Defines
 #define rxlen   2000				//length of rx buffer
 #define txlen   2000				//length of rx buffer
-///Includes
+
+
+//Includes
 #include "HUB.h"
 #include "lpc17xx_pinsel.h"
 
-///local variables
+//local variables
 //needs to be accessible from functions in this file only and to be persistent, but can change in interrupt.
 
 PRIVATE volatile byte rx[rxlen];		// BT RX buffer.
@@ -21,24 +23,24 @@ PRIVATE volatile int txoverflow = 0;	// DEBUG detect overflow BT TX.
 PRIVATE volatile unsigned int maxtime;			//DEBUG only, measure BT response time.
 
 
-///Public variables
+//Public variables
 PUBLIC volatile unsigned int rxstart = 0;		// BT RX.
 PUBLIC volatile unsigned int rxend = 0;		// BT RX.
 PUBLIC volatile unsigned int txstart = 0;		// BT TX.
 PUBLIC volatile unsigned int txend = 0;		// BT TX.
-///External variables
+//External variables
 EXTERNAL volatile word Buffer[]; ///< Whole of RAM2 is Buffer, reused for audio and IR replay and capture
-EXTERNAL byte I2CSlaveBuffer[];
-EXTERNAL volatile word SWBT;
-EXTERNAL volatile byte PENDALARM;
+EXTERNAL volatile byte I2CSlaveBuffer[];///<transfer DS2745 battery state, modified in interrupt.
+EXTERNAL volatile word SWBT;				///<Bluetooth interrupt flag, modified in interrupt
+EXTERNAL volatile byte PENDALARM;			///<Emergency alarm flag, cancelled by Bluetooth input, modified in interrupt
 
-///local functions
+//local functions
 PRIVATE void sendBTbuffer(void);
 PRIVATE void receiveBTbuffer(void);
 PRIVATE int waitBTRX( word);	///<wait for data ready in BT receive channel, timeout after word us.
 
-/// public functions
-PUBLIC void sendBT(byte* , unsigned int );
+// public functions
+PUBLIC void sendBT(byte a[] , unsigned int );
 PUBLIC int processBT(void);
 PUBLIC word rxtxBT(void);
 PUBLIC void resetBT();
@@ -46,28 +48,29 @@ PUBLIC void setupBT(void);
 PUBLIC void initBT(void);
 PUBLIC void factoryBT(void);
 PUBLIC void txBT(void);
+PUBLIC void discoverBT(void);
 
 
-///External functions
+//External functions
 EXTERNAL void NEATTX(byte battery, byte alarm, word ID);
-EXTERNAL void IRsynthesis(byte IRtype, byte IRrep, word IRcode);
-EXTERNAL void	LED1GREEN(void);
-EXTERNAL void	LED1YELLOW(void);
-EXTERNAL void	LED1OFF(void);
+EXTERNAL void IRsynthesis(byte IRtype, byte IRrep, int IRcode);
+EXTERNAL void LED1GREEN(void);
+EXTERNAL void LED1YELLOW(void);
+EXTERNAL void LED1OFF(void);
 EXTERNAL void I2CREAD(void);
 EXTERNAL int captureIR(void);
 EXTERNAL void playIR(void);
 EXTERNAL byte HEX(void);
-EXTERNAL void	us(unsigned int time_us);
-EXTERNAL void	BTbaudCPU100();
-EXTERNAL void	BTbaudCPU12();
-EXTERNAL void ErrorTimeOut(word timeout);
-EXTERNAL void ErrorReset(int error);
+EXTERNAL void us(unsigned int time_us);
+EXTERNAL void CPU12MHz(void);
+EXTERNAL void BTbaudCPU100();
+EXTERNAL void BTbaudCPU12();
 
 
-///local functions(code)
 
-///
+//local functions(code)
+
+//
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -92,7 +95,7 @@ static  byte alarm=0;			//NEAT sequence used in ProcessBT.
 static  byte battery=0xFF;		//NEAT sequence used in ProcessBT.
 
 static byte IRtype,IRrep;		//IR sequence used in ProcessBT.
-static word IRcode;				//IR sequence used in ProcessBT.
+static int IRcode;				//IR sequence used in ProcessBT.
 
 
     byte ACK[] =
@@ -101,23 +104,22 @@ static word IRcode;				//IR sequence used in ProcessBT.
 	};
     byte NACK[] =
 	{
-	'N'
+	'n'
 	};
-
 #if PCBissue==4
     byte I[] =
  	{
-	"QWAYO firmware version USB C, HC8500 PCB version 4. Copyright Possum 2012."
+	"QWAYO firmware version USB D, HC8500 PCB version 4. Copyright Possum 2012. "
  	};
 #elif PCBissue==3
     byte I[] =
  	{
-	"QWAYO firmware version USB C, HC8500 PCB version 3. Copyright Possum 2012."
+	"QWAYO firmware version USB D, HC8500 PCB version 3. Copyright Possum 2012. "
  	};
 #elif PCBissue==2						//issue 2 PCB
     byte I[] =
  	{
-	"QWAYO firmware version USB C, HC8500 PCB version 2. Copyright Possum 2012."
+	"QWAYO firmware version USB D, HC8500 PCB version 2. Copyright Possum 2012. "
  	};
 #endif
 
@@ -203,9 +205,6 @@ static word IRcode;				//IR sequence used in ProcessBT.
 	    }
 
 
-
-
-
 	case 'b':
 	case 'B':
 	{
@@ -238,6 +237,12 @@ static word IRcode;				//IR sequence used in ProcessBT.
 	case 'i':
 	case 'I':
 	    {
+	    	if (3==PCB())
+	    	{I[49]='3';}
+	    	else if (4==PCB())
+	    	I[49]='4';
+	       	else
+	    	I[49]='?';
 	    sendBT(I, sizeof(I)-1);
 	    break;
 	    }
@@ -288,7 +293,6 @@ static word IRcode;				//IR sequence used in ProcessBT.
 	    }
 
 
-
 	case 's': //synthesise IR
 	case 'S':
 	    {
@@ -332,8 +336,8 @@ static word IRcode;				//IR sequence used in ProcessBT.
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 ///@brief BT wait until RX char is ready
-///@param void
-///@return 1 if char, 0 if timeout.
+///@param word time in us to wait in routine
+///@return int 1 if char, 0 if timeout.
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PRIVATE int waitBTRX(word us)
     {
@@ -552,6 +556,7 @@ PUBLIC word rxtxBT(void)
 ///@brief BT comms with BT module RN42/RN41 Receiver data. Transmit only
 ///@param void
 ///@return void
+///
 ///for use in IR capture and replay.
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC void txBT(void)
@@ -576,25 +581,10 @@ PUBLIC void BTWAKE(void)
 	if (SWBT) {
 	SWBT=0;
 	sendBT(WAKE, sizeof(WAKE));
-//	txshortBT(WAKE, 1);
+
 }
 }
 
-
-
-////////////////////////////////////////////////////////////////////////////////////////////////
-///@brief BTState returns 0 if busy, else returns 1
-///@param void.
-///@return 0 if busy, 1 if free.
-///
-////////////////////////////////////////////////////////////////////////////////////////////////
-PUBLIC int BTState(int a)
-    {
-    if ((LPC_UART1->LSR & (0x1 << 6 | 0x1 << 0)) ^ 0x1 << 0)
-	return a + 1; //if TXempty(bit 6) and RXempty(~bit 0) return 1.
-    else
-	return 0;
-    }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 ///@brief initialise ports for BT module RN42/RN41
@@ -638,8 +628,6 @@ PUBLIC void initBT(void)
 
 
 
-  //  SysTick->CTRL = 1 << 0 | 1 << 2; //enabled| use processor clock
-    //	clearBT();
     }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -696,17 +684,19 @@ PUBLIC void factoryBT(void)
 ///@param void.
 ///@return void.
 ///
-///exit when HEX!=0x0F
+///exit when HEX!=0x0E
 ////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC void discoverBT(void)
     {
     initBT();
     LPC_GPIO_BTDISCOVERY FIOSET = BTDISCOVERY; //DISCOVERY PIO3. OUT HIGH=auto-discovery.
-    while (HEX() == 0x0F)
+    LED1YELLOW();
+    while (HEX() == 0x0E)
 	{
 
 	}
     LPC_GPIO_BTDISCOVERY FIOCLR = BTDISCOVERY; //DISCOVERY PIO3. OUT LOW=disable auto-discovery.
+    LED1OFF();
     }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////

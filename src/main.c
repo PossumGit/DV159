@@ -18,10 +18,10 @@
 
 //Public variables
 //PUBLIC__CRP const unsigned int CRP_WORD = CRP_NO_CRP;///< code protection word
-
+PUBLIC int	PCBiss;		//=3 for PCHB issue 3, =4 for PCB issue 4.
 //Private variables local to this file
 
-PRIVATE int watchCount=0;
+
 
 
 //External variables
@@ -53,16 +53,18 @@ EXTERNAL void CPU4MHz(void);
 EXTERNAL void CPU12MHz(void);
 EXTERNAL void CPU100MHz (void);
 EXTERNAL void enableInputInterrupt(void);
+EXTERNAL void disableInputInterrupt(void);
 EXTERNAL int powerDown(void);
-
+EXTERNAL void discoverBT(void);
 EXTERNAL void IRsynthesis(byte IRtype, byte IRrep, int IRcode);
 EXTERNAL int captureIR(void);
 EXTERNAL void playIR(void);
 
-EXTERNAL void NEATTX(byte battery, byte alarm, int ID);
-EXTERNAL void NEATRESET();
-EXTERNAL byte NEATRD(byte r);
-EXTERNAL void NEATWR(byte r, byte d);
+EXTERNAL void NEATTX(byte battery, byte alarm, word ID);
+EXTERNAL void NEATRESET(void);
+EXTERNAL byte NEATRD(byte );
+EXTERNAL void NEATWR(byte , byte );
+EXTERNAL void	NEATOFF(void);
 
 
 EXTERNAL void	LED1GREEN(void);
@@ -74,8 +76,9 @@ EXTERNAL void	LED2OFF(void);
 EXTERNAL byte 	HEX(void);
 EXTERNAL void	us(unsigned int time_us);
 EXTERNAL byte	inputChange(void);
-
+EXTERNAL void I2CREAD(void);
 EXTERNAL void I2CINIT(void);
+EXTERNAL void I2CSHUTDOWN(void);
 EXTERNAL void EnableWDT10s(void);
 EXTERNAL void EnableWDT2s(void);
 
@@ -131,7 +134,7 @@ PUBLIC int main(void) {
 
 		LPC_GPIO_BTRESET FIOSET	= BTRESET;	//Bluetooth reset.
 		LPC_GPIO_BTRESET FIODIR |= BTRESET;	//
-
+		PCBiss=PCB();								//read PCB, place ports in pulldown to save power.
 
 #if PCBissue==3||PCBissue==4
 	LPC_GPIO1->FIOCLR |=1<<29			;//IR capture state=0.
@@ -185,9 +188,9 @@ PRIVATE void powerupHEX(void) {
 
 
 	unsigned int time;
-	int e,f,g,h,i,j,k,l;
-	static volatile byte InputState=0;
-		byte	a,b,c,d;
+	int h,i,j,k,l;
+
+		byte	a;
 
 	while(1)
 	{
@@ -397,13 +400,28 @@ PRIVATE void powerupHEX(void) {
 
 
 	case 0x08:				//TEST turn off after 2 seconds.
+		LED2OFF();
 		CPU12MHz();
-		LED1GREEN();
-		 IRsynthesis('P',3,0x2);
+		I2CINIT();
+		 I2CSHUTDOWN();
+		 IRsynthesis('P',2,0x2);
 			playIR();
+			LED1OFF();
+			LED2OFF();
+
 		LPC_GPIO_OFF FIOSET =OFF; //OFF button set high to turn off.
-		us(1000000);
-		LED1YELLOW();
+			NEATOFF();
+			LPC_GPIO_BTRESET FIOCLR	= BTRESET;	//Bluetooth reset.	RESET BT
+		CPU4MHz();
+
+		while(1)
+			{
+			disableInputInterrupt();
+			SCB->SCR = 0x4;			//sleepdeep bit
+			LPC_SC->PCON = 0x03;	//combined with sleepdeep bit gives power down mode. IRC is disabled, so WDT disabled.
+			__WFI();
+			}
+
 		break;
 
 
@@ -471,11 +489,35 @@ PRIVATE void powerupHEX(void) {
 
 		while (1)
 		{
+			 I2CSHUTDOWN();
 		I2CREAD();
 //		a=I2CBATTERY();
 		}
 
 
+		break;
+
+	case 0x0E:				//factory reset Blue Tooth.
+
+		CPU12MHz();
+		LPC_TIM2->TC = 0;
+		LED1GREEN();
+		CPU12MHz();
+		LPC_GPIO_BTRESET FIOCLR	= BTRESET;	//Bluetooth reset.	RESET BT
+		us(50000);
+		LPC_GPIO_BTRESET FIOSET	= BTRESET;	//Bluetooth reset.
+		LED1YELLOW();
+		us(50000);
+
+	//	enableInputInterrupt();
+		initUART();
+		initBT();
+		resetBT();
+		setupBT();
+
+		discoverBT();
+
+		while(1);
 		break;
 
 	case 0x0F:				//factory reset Blue Tooth.

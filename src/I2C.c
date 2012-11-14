@@ -27,23 +27,22 @@
 #include "lpc17xx_i2s.h"
 
 //Public variables
-PUBLIC byte I2CSlaveBuffer[32];
+PUBLIC  byte I2CSlaveBuffer[32];
 //Private variables
+PRIVATE volatile byte I2CSlaveTempBuffer[32];
+PRIVATE volatile word I2CMasterState = I2CSTATE_IDLE;
+PRIVATE volatile word I2CSlaveState = I2CSTATE_IDLE;
 
-volatile word I2CMasterState = I2CSTATE_IDLE;
-volatile word I2CSlaveState = I2CSTATE_IDLE;
-
-volatile byte I2CMasterBuffer[32];
+PRIVATE volatile byte I2CMasterBuffer[32];
 
 
-volatile word I2CReadLength;
-volatile word I2CWriteLength;
+PRIVATE volatile word I2CReadLength;
+PRIVATE volatile word I2CWriteLength;
 
-volatile word RdIndex = 0;
-volatile word WrIndex = 0;
-word COUNT=0;
-word L4=3;
-word L5=0xD2;
+PRIVATE volatile word RdIndex = 0;
+PRIVATE volatile word WrIndex = 0;
+PRIVATE word COUNT=0;
+
 //External variables
 
 //Private functions
@@ -56,19 +55,12 @@ PRIVATE void I2CGO(void);
 
 
 
-void ISTART(void);
-void ITXA(char s);
-void IREPSTART(void);
-char IREADA(void);
-char IREADN(void);
-void ISTOP(void);
-
 //External functions
-
 
 //public functions
 PUBLIC void I2CINIT(void);
 PUBLIC void I2CREAD(void);
+PUBLIC void I2CSHUTDOWN(void);
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -109,20 +101,25 @@ PUBLIC void I2CINIT(void)
 ///@brief get regs 0x0A-0x11 I2C
 ///@param void
 ///@return void
+///
 /// Descriptions:	The routine to complete a I2C transaction
 ///					from start to stop. All the intermediate
 ///					steps are handled in the interrupt handler.
 ///
 ///					The read length, write length and I2C master buffer
 ///					need to be filled.
-//I2CSlaveBuffer[0]	Temperature MSB
-//I2CSlaveBuffer[1]	Temperature LSB
-//I2CSlaveBuffer[2]	Voltage MSB
-//I2CSlaveBuffer[3]	Voltage LSB
-//I2CSlaveBuffer[4]	Current MSB
-//I2CSlaveBuffer[5]	Current LSB
-//I2CSlaveBuffer[6]	Acc current MSB
-//I2CSlaveBuffer[7]	Acc current LSB
+///
+/// battery monitor:
+
+///I2CSlaveBuffer[0]	Temperature MSB
+///I2CSlaveBuffer[1]	Temperature LSB
+///I2CSlaveBuffer[2]	Voltage MSB
+///I2CSlaveBuffer[3]	Voltage LSB
+///I2CSlaveBuffer[4]	Current MSB
+///I2CSlaveBuffer[5]	Current LSB
+///I2CSlaveBuffer[6]	Acc current MSB
+///I2CSlaveBuffer[7]	Acc current LSB
+///I2CSlaveBuffer[7]	Status.
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC void I2CREAD(void)
 {
@@ -136,49 +133,49 @@ PUBLIC void I2CREAD(void)
 	I2CReadLength=1;
 	I2CWriteLength=2;
 	I2CGO();
-	I2CSlaveBuffer[9]=I2CSlaveBuffer[0];
+	I2CSlaveBuffer[0]=I2CSlaveTempBuffer[0];
 	I2CMasterBuffer[0]=0x90;
 	I2CMasterBuffer[1]=0x0B;		//1 for status.
 	I2CMasterBuffer[2]=0x91;
 	I2CReadLength=1;
 	I2CWriteLength=2;
 	I2CGO();
-	I2CSlaveBuffer[1]=I2CSlaveBuffer[0];
+	I2CSlaveBuffer[1]=I2CSlaveTempBuffer[0];
 	I2CMasterBuffer[0]=0x90;
 	I2CMasterBuffer[1]=0x0C;		//1 for status.
 	I2CMasterBuffer[2]=0x91;
 	I2CReadLength=1;
 	I2CWriteLength=2;
 	I2CGO();
-	I2CSlaveBuffer[2]=I2CSlaveBuffer[0];
+	I2CSlaveBuffer[2]=I2CSlaveTempBuffer[0];
 	I2CMasterBuffer[0]=0x90;
 	I2CMasterBuffer[1]=0x0D;		//1 for status.
 	I2CMasterBuffer[2]=0x91;
 	I2CReadLength=1;
 	I2CWriteLength=2;
 	I2CGO();
-	I2CSlaveBuffer[3]=I2CSlaveBuffer[0];
+	I2CSlaveBuffer[3]=I2CSlaveTempBuffer[0];
 	I2CMasterBuffer[0]=0x90;
 	I2CMasterBuffer[1]=0x0E;		//1 for status.
 	I2CMasterBuffer[2]=0x91;
 	I2CReadLength=1;
 	I2CWriteLength=2;
 	I2CGO();
-	I2CSlaveBuffer[4]=I2CSlaveBuffer[0];
+	I2CSlaveBuffer[4]=I2CSlaveTempBuffer[0];
 	I2CMasterBuffer[0]=0x90;
 	I2CMasterBuffer[1]=0x0F;		//1 for status.
 	I2CMasterBuffer[2]=0x91;
 	I2CReadLength=1;
 	I2CWriteLength=2;
 	I2CGO();
-	I2CSlaveBuffer[5]=I2CSlaveBuffer[0];
+	I2CSlaveBuffer[5]=I2CSlaveTempBuffer[0];
 	I2CMasterBuffer[0]=0x90;
 	I2CMasterBuffer[1]=0x10;		//1 for status.
 	I2CMasterBuffer[2]=0x91;
 	I2CReadLength=1;
 	I2CWriteLength=2;
 	I2CGO();
-	I2CSlaveBuffer[6]=I2CSlaveBuffer[0];
+	I2CSlaveBuffer[6]=I2CSlaveTempBuffer[0];
 
 	I2CMasterBuffer[0]=0x90;
 	I2CMasterBuffer[1]=0x11;		//1 for status.
@@ -186,7 +183,7 @@ PUBLIC void I2CREAD(void)
 	I2CReadLength=1;
 	I2CWriteLength=2;
 	I2CGO();
-	I2CSlaveBuffer[7]=I2CSlaveBuffer[0];
+	I2CSlaveBuffer[7]=I2CSlaveTempBuffer[0];
 
 	I2CMasterBuffer[0]=0x90;
 	I2CMasterBuffer[1]=0x1;		//1 for status.
@@ -194,8 +191,8 @@ PUBLIC void I2CREAD(void)
 	I2CReadLength=1;
 	I2CWriteLength=2;
 	I2CGO();
-	I2CSlaveBuffer[8]=I2CSlaveBuffer[0];
-	I2CSlaveBuffer[0]=I2CSlaveBuffer[9];
+	I2CSlaveBuffer[8]=I2CSlaveTempBuffer[0];
+//	I2CSlaveBuffer[0]=I2CSlaveBuffer[9];
 
 
 
@@ -231,7 +228,8 @@ PUBLIC void I2CREAD(void)
 /////////////////////////////////////////////////////////////////////////////////////////////////
 ///@brief read battery voltage I2C DS2745
 ///@param void
-///@return battery voltage in mV
+///@return int battery voltage in mV
+///
 /// Descriptions:	The routine to complete a I2C transaction
 ///					from start to stop. All the intermediate
 ///					steps are handled in the interrupt handler.
@@ -262,6 +260,7 @@ PUBLIC int I2CBATTERY(void)
 ///@brief set full charge state
 ///@param void
 ///@return void
+///
 ///Descriptions:	The charge accumulate is set to 0xFFFF
 ///					It is capped at 0xFFFF, so any further charge does not accumulate.
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -304,6 +303,32 @@ PUBLIC void I2CFullCharge(void)
 
 
 
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief set shutdown, also set PIO to high (open drain.)
+///@param void
+///@return void
+///
+///Descriptions:	The charge accumulate is set to 0xFFFF
+///					It is capped at 0xFFFF, so any further charge does not accumulate.
+/////////////////////////////////////////////////////////////////////////////////////////////////
+PUBLIC void I2CSHUTDOWN(void)
+{
+
+
+
+	I2CMasterBuffer[0]=0x90;
+	I2CMasterBuffer[1]=0x1;
+	I2CMasterBuffer[2]=0x38;
+	I2CReadLength=0;
+	I2CWriteLength=3;
+	I2CGO();
+
+
+
+
+	}
+
+
 
 
 
@@ -335,7 +360,7 @@ PRIVATE void I2CGO(void)
 	  while ((I2CMasterState !=I2CSTATE_END)&&(I2CMasterState !=I2CSTATE_SLA_NACK))
 
 	  {
-		  ///todo check if never finishes
+
 	  }
 		  ;
 
@@ -529,7 +554,7 @@ void I2C1_IRQHandler(void)
 		// Read the byte and check for more bytes to read.
 		// Send a NOT ACK after the last byte is received
 		 //
-		I2CSlaveBuffer[RdIndex++] = LPC_I2C1->I2DAT;
+		I2CSlaveTempBuffer[RdIndex++] = LPC_I2C1->I2DAT;
 		if ( RdIndex < (I2CReadLength-1) )
 		{
 			// lmore bytes to follow: send an ACK after data is received */
@@ -552,7 +577,7 @@ void I2C1_IRQHandler(void)
 		 //Generate a STOP condition and flag the I2CEngine that the
 		 //transaction is finished.
 		 //
-		I2CSlaveBuffer[RdIndex++] = LPC_I2C1->I2DAT;
+		I2CSlaveTempBuffer[RdIndex++] = LPC_I2C1->I2DAT;
 		I2CMasterState = I2CSTATE_END;
 		LPC_I2C1->I2CONSET = STO;	// Set Stop flag
 		LPC_I2C1->I2CONCLR = SI;	// Clear SI flag

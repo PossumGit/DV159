@@ -57,6 +57,7 @@ PUBLIC void eraseFlash(void)
 	while (1 & readStatus());//wait for not busy.
 }
 
+
 /////////////////////////////////////////////////////////////////////////////////////////////////
 ///@brief Write first half (4096 words) of Buffer[] to flash memory little endian 16384 bytes.
 ///@param void
