@@ -28,11 +28,13 @@ PUBLIC volatile unsigned int rxstart = 0;		// BT RX.
 PUBLIC volatile unsigned int rxend = 0;		// BT RX.
 PUBLIC volatile unsigned int txstart = 0;		// BT TX.
 PUBLIC volatile unsigned int txend = 0;		// BT TX.
+PUBLIC int BTACC=0;
 //External variables
 EXTERNAL volatile word Buffer[]; ///< Whole of RAM2 is Buffer, reused for audio and IR replay and capture
 EXTERNAL volatile byte I2CSlaveBuffer[];///<transfer DS2745 battery state, modified in interrupt.
 EXTERNAL volatile word SWBT;				///<Bluetooth interrupt flag, modified in interrupt
-EXTERNAL volatile byte PENDALARM;			///<Emergency alarm flag, cancelled by Bluetooth input, modified in interrupt
+//EXTERNAL volatile byte PENDALARM;			///<Emergency alarm flag, cancelled by Bluetooth input, modified in interrupt
+EXTERNAL int ALARMtime;
 
 //local functions
 PRIVATE void sendBTbuffer(void);
@@ -109,17 +111,17 @@ static int IRcode;				//IR sequence used in ProcessBT.
 #if PCBissue==4
     byte I[] =
  	{
-	"QWAYO firmware version USB D, HC8500 PCB version 4. Copyright Possum 2012. "
+	"QWAYO firmware version USB 1, HC8500 PCB version 4. Copyright Possum 2012. "
  	};
 #elif PCBissue==3
     byte I[] =
  	{
-	"QWAYO firmware version USB D, HC8500 PCB version 3. Copyright Possum 2012. "
+	"QWAYO firmware version USB 1, HC8500 PCB version 3. Copyright Possum 2012. "
  	};
 #elif PCBissue==2						//issue 2 PCB
     byte I[] =
  	{
-	"QWAYO firmware version USB D, HC8500 PCB version 2. Copyright Possum 2012. "
+	"QWAYO firmware version USB 1, HC8500 PCB version 2. Copyright Possum 2012. "
  	};
 #endif
 
@@ -132,7 +134,7 @@ static int IRcode;				//IR sequence used in ProcessBT.
     if (rxstart != rxend)
 	{
 	a = rx[rxstart++];
-	PENDALARM=0;
+	BTACC=1;
 	switch (SEQUENCE)//a sequence of N,alarm, battery, IDMSB, IDLSB.
 	{
 	case 1:
@@ -192,6 +194,20 @@ static int IRcode;				//IR sequence used in ProcessBT.
 		SEQUENCE=0;
 		break;
 	}
+	case 0x200:
+	{
+	//	NEATWR(0x1F,0x00);
+	//	NEATWR(0x1F,a);			//alarm time into 0x1D and 0x1F on NEAT module.
+	//	NEATWR(0x1f,00);
+	//	NEATWR(0x1D,a);			//alarm time into 0x1D and 0x1F.
+	//	ALARMtime=a;
+		SEQUENCE=0x0;
+		sendBT(ACK, sizeof(ACK));
+		break;
+	}
+
+
+
 
 	case 0:
 	{
@@ -301,6 +317,17 @@ static int IRcode;				//IR sequence used in ProcessBT.
 
 	    break;
 	    }
+
+	case 't': //synthesise IR
+	case 'T':
+	    {
+	    	SEQUENCE=0x200;		//set alarm time.
+
+
+	    break;
+	    }
+
+
 	    //w is acknowledged with A, then send buffer, ending with 4 bytes of 0. transfer must be multiple of 4 bytes.
 	case 'w':
 	case 'W':

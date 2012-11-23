@@ -247,7 +247,7 @@ PUBLIC int I2CBATTERY(void)
 	I2CWriteLength=2;
 	I2CGO();
 
-	a=I2CSlaveBuffer[0];
+	a=I2CSlaveTempBuffer[0];
 	return a;
 }
 

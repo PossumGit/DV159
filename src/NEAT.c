@@ -27,6 +27,7 @@ PUBLIC void NEATRESET(void);
 PUBLIC void NEATTX(byte , byte , word);
 PUBLIC void NEATINIT(void);
 PUBLIC void	NEATOFF(void);
+PUBLIC void NEATALARM(void);
 //External functions
 
 EXTERNAL void initSSP0(void);
@@ -202,6 +203,38 @@ void NEATRESET()
 	us(1000);
 
 }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief NEATTX transmits an alarm from position 0x10 preset by NEAT.
+///@return void
+/////////////////////////////////////////////////////////////////////////////////////////////////
+void NEATALARM()
+{	int a,b,c,d;
+
+	NEATRESET();
+
+	while (0x80&NEATRD(3));		//wait for ready
+	NEATWR(0x08,03);		//number of short preamble packages sent
+	NEATWR(0x09,03);		//number of long preamble packages sent.
+	NEATWR(0x42,0x01);		//select 10,11 as address
+//	NEATWR(0x40,ID>>8);		//MSB of transmit ID
+//	NEATWR(0x41,ID);		//LSB of transmit ID
+//	NEATWR(0x45,0);		//alarm type
+//	NEATWR(0x46,0xFF);	//battery state
+
+	NEATWR(0x03,0x80);		//transmit code.
+
+	disableInputInterrupt();
+	LPC_WDT->WDTC = 10000000;	//set timeout 10s watchdog timer
+	LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
+	LPC_WDT->WDFEED=0x55;			//watchdog feed
+	LPC_WDT->WDTC = 5000000;	//set timeout 5s watchdog timer
+	enableInputInterrupt();
+	while (0x80&NEATRD(3));
+
+}
+
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 ///@brief NEATTX transmits an alarm.

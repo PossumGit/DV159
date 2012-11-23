@@ -42,7 +42,7 @@ PUBLIC void timer2CPU100(void);
 PUBLIC void EnableWDT10s(void);
 PUBLIC void EnableWDT2s(void);
 PUBLIC int PCB(void);
-
+PUBLIC void BatteryState(void);
 /////////////////////////////////////////////////////////////////////////////////////////////////
 ///@brief return PCB number
 ///@param void
@@ -173,6 +173,11 @@ PUBLIC void	LED2OFF(void)
 ///0    F   BT factory reset.
 ///
 ///note with 0's at top of HEX switches, H1 is on right and is LSNibble.
+///
+///0 is all inputs open=high=1
+///
+///F is all inputs shorted to 0V=0
+///missing HEX input reads as 0.
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC byte HEX(void)
 {

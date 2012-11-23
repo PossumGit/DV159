@@ -45,6 +45,8 @@ EXTERNAL int txstart;
 EXTERNAL int txend;
 EXTERNAL int rxstart;
 EXTERNAL int rxend;
+EXTERNAL int ALARMtime;
+EXTERNAL int BTACC;
 
 
 
@@ -74,6 +76,8 @@ EXTERNAL void SSPNEATCPU12(void);
 EXTERNAL void SSPNEATCPU100(void);
 EXTERNAL void  DisableWDT(void);
 EXTERNAL void  EnableWDT10s(void);
+EXTERNAL void BatteryState(void);
+EXTERNAL void NEATALARM(void);
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -267,7 +271,7 @@ void EINT3_IRQHandler(void)				//GPIO interrupt.
 	byte a=1;
 
 	int s,t,u,v,w;
-	int b,c,d,e,f,g,h,i,j,k;
+	//int b,c,d,e,f,g,h,i,j,k;
 
 
 
@@ -346,7 +350,8 @@ void EINT3_IRQHandler(void)				//GPIO interrupt.
 			CPU12MHz();
 			repeatInput(); //check if change of input, send via BT to android if change.
 			LPC_TIM2->TC = 0;
-			PENDALARM=0x30^(inputChange()&0x30);	//NZ if EXT and/or INT pressed.
+			PENDALARM=0x30^(inputChange()&0x30);	//NZ if EXT and/or INT pressed.//else 0.
+
 		}
 
 	else if (SWBT)
@@ -498,18 +503,30 @@ PUBLIC int powerDown(void)
 	b=LPC_SSP0->SR;			//bit 7=1 is SPI transfers complete
 	b=LPC_UART1->LSR;
 	s=LPC_TIM2->TC;
-	if(PENDALARM)
-	{a=LPC_TIM2->TC/500000;
-		if (a==2||a==4)
+
+
+	if (PENDALARM && (ALARMtime)) {
+		if ((LPC_TIM2->TC / 500000) % 2) {
+			LED1YELLOW();
+		} else {
+			LED1GREEN();
+		}
+		if (BTACC && ((ALARMtime & 0xF0) * 500000 / 16 < LPC_TIM2->TC)) {
+			LED1YELLOW();
+			NEATALARM();
+			PENDALARM = 0;
+			LED1GREEN();
+		} else if (!BTACC && ((ALARMtime & 0x0F) * 500000 < LPC_TIM2->TC)) {
+			LED1YELLOW();
+			NEATALARM();
+			PENDALARM = 0;
+			LED1GREEN();
+		}
+
+	}
+	else
+
 	{
-		LED1YELLOW();
-	}
-	else
-		LED1GREEN();
-
-
-	}
-	else
 		LED1GREEN();
 
 	if(0x40==((LPC_UART1->LSR)&(0x41)))	//bit 1=0 RX FIFO empty, bit 6=1 TX FIFO empty.
@@ -518,11 +535,7 @@ PUBLIC int powerDown(void)
 	if (3000000 < LPC_TIM2->TC)
 	{
 
-		if (PENDALARM)
-		{
-			LED1YELLOW();
-			NEATTX(0xFF,0x00,0xDEAF);			//means cannot hear ANDROID.
-		}
+
 
 
 		disableInputInterrupt();
@@ -561,9 +574,10 @@ PUBLIC int powerDown(void)
 	LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
 	LPC_WDT->WDFEED=0x55;			//watchdog feed
 	BatteryState();			//LED Orange/yellow depending on battery state.
+	BTACC=0;
 //	 WatchFeed();
 	}
-
+	}
 	 return r;
 }
 

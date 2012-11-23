@@ -19,6 +19,7 @@
 //Public variables
 //PUBLIC__CRP const unsigned int CRP_WORD = CRP_NO_CRP;///< code protection word
 PUBLIC int	PCBiss;		//=3 for PCHB issue 3, =4 for PCB issue 4.
+PUBLIC int ALARMtime=0x53;
 //Private variables local to this file
 
 
@@ -40,6 +41,8 @@ PRIVATE void powerupHEX(void);
 PRIVATE void LOOP(void);
 
 //External functions
+extern void asm_vivo(void);			//asm vivo burst
+extern void asm_holtek(void);
 EXTERNAL void initUART(void);
 EXTERNAL void setupBT(void);
 EXTERNAL word rxtxBT(void);
@@ -81,7 +84,8 @@ EXTERNAL void I2CINIT(void);
 EXTERNAL void I2CSHUTDOWN(void);
 EXTERNAL void EnableWDT10s(void);
 EXTERNAL void EnableWDT2s(void);
-
+EXTERNAL void BatteryState(void);
+EXTERNAL void NEATALARM(void);
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -484,40 +488,63 @@ PRIVATE void powerupHEX(void) {
 		; //wait for ever for debug.
 		break;
 	case  0x0D:
-		CPU12MHz();
-		I2CINIT();
 
-		while (1)
-		{
-			 I2CSHUTDOWN();
-		I2CREAD();
-//		a=I2CBATTERY();
-		}
+		CPU4MHz();
+	//	LED1GREEN();
+		I2CINIT();
+//		I2CREAD();		//first read is not valid, so throw it away.
+//		us(2000000);
+
+		BatteryState();			//LED Orange/yellow depending on battery state.
+		LED2OFF();
+		asm_vivo(); //vivo code, never return.
+//should not return.
+//
+//
+		LED1OFF();
+		LPC_GPIO_OFF FIOSET =OFF; //OFF button set high to turn off.
+		NEATOFF();
+		LPC_GPIO_BTRESET FIOCLR	= BTRESET;	//Bluetooth reset.	RESET BT
+		while(1)
+			{
+			disableInputInterrupt();
+			SCB->SCR = 0x4;			//sleepdeep bit
+			LPC_SC->PCON = 0x03;	//combined with sleepdeep bit gives power down mode. IRC is disabled, so WDT disabled.
+			__WFI();
+			}
+
 
 
 		break;
 
 	case 0x0E:				//factory reset Blue Tooth.
+		CPU4MHz();
+	//		LED1GREEN();
+		I2CINIT();
+//		I2CREAD();		//first read is not valid, so throw it away.
 
-		CPU12MHz();
-		LPC_TIM2->TC = 0;
-		LED1GREEN();
-		CPU12MHz();
-		LPC_GPIO_BTRESET FIOCLR	= BTRESET;	//Bluetooth reset.	RESET BT
-		us(50000);
-		LPC_GPIO_BTRESET FIOSET	= BTRESET;	//Bluetooth reset.
-		LED1YELLOW();
-		us(50000);
 
-	//	enableInputInterrupt();
-		initUART();
-		initBT();
-		resetBT();
-		setupBT();
+		BatteryState();			//LED Orange/yellow depending on battery state.
+			LED2OFF();
+			while (1)
+			{
+			asm_holtek();
+	//		BatteryState();
+			}
 
-		discoverBT();
+//
+//
+//
+			LED1OFF();
+			LPC_GPIO_OFF FIOSET =OFF; //OFF button set high to turn off.
+			while(1)
+			{
+			disableInputInterrupt();
+			SCB->SCR = 0x4;			//sleepdeep bit
+			LPC_SC->PCON = 0x03;	//combined with sleepdeep bit gives power down mode. IRC is disabled, so WDT disabled.
+			__WFI();
+			}
 
-		while(1);
 		break;
 
 	case 0x0F:				//factory reset Blue Tooth.
@@ -528,16 +555,35 @@ PRIVATE void powerupHEX(void) {
 
 	case 0x10:
 		LED2OFF();
+		NEATRESET();
 
-		while(1)
-		{
-		a=0xf0&inputChange();
-		if (a==0x90||a==0xa0)
-		{
-			IRsynthesis('P',4,0x2);		//Plessey  2 repeats, code 3 for HC603c
-			playIR();
+		byte z[0x80];
+for	(i=0;i<0x80;i++)
+{
+			z[i]=NEATRD(i);
+}
+//		NEATWR(0x1D,00);
+//		NEATWR(0x1F,00);
+//		NEATWR(0x1D,0xAF);
+//		NEATWR(0x1F,0xB0);
+			i=NEATRD(0x11);
+			j=NEATRD(0x1D);
+			k=NEATRD(0x1F);
+			 NEATALARM();
+
+	//		NEATWR(0x1F,00);		//number of short preamble packages sent
+	//		j=NEATRD(0x1E);
+	//		k=NEATRD(0x1F);
+	//		NEATWR(0x1F,0xAA);
+	//		l=NEATRD(0x1F);
+			while(1)
+			{
 		}
-		}
+
+
+
+
+
 
 		break;
 	case 0x20:
@@ -581,6 +627,17 @@ PRIVATE void powerupHEX(void) {
 		I2CREAD();		//first read is not valid, so throw it away.
 		CPU12MHz();
 		NEATRESET();
+//		j=NEATRD(0x1D);
+//		k=NEATRD(0x1F);
+//		if(j!=k)
+//		{
+//		NEATWR(0x1D,0x00);
+//		NEATWR(0x1D,0xC6);			//6/2 =3s is how long if no bluetooth.
+//		NEATWR(0x1D,0x00);
+//		NEATWR(0x1F,0xC6);			//C/2=6s is how long even if BT acc.
+//		}
+//		ALARMtime=NEATRD(0x1F);
+		ALARMtime=0x06;
 		inputChange();
 		LED1OFF();
 		LED2OFF();
