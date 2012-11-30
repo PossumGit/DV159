@@ -97,6 +97,7 @@ PUBLIC int readNEAT(void)
 	byte NEAT[0x28];
 	byte NEATASCII[0x10];
 
+
 //	if ((SWNEAT==1)||((LPC_GPIO_NEATINT FIOPIN) &(NEATINT))==0)
 				{
 				SWNEAT=0;
@@ -225,7 +226,7 @@ void NEATALARM()
 	NEATWR(0x03,0x80);		//transmit code.
 
 	disableInputInterrupt();
-	LPC_WDT->WDTC = 10000000;	//set timeout 10s watchdog timer
+	LPC_WDT->WDTC = 18000000;	//set timeout 10s watchdog timer
 	LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
 	LPC_WDT->WDFEED=0x55;			//watchdog feed
 	LPC_WDT->WDTC = 5000000;	//set timeout 5s watchdog timer

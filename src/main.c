@@ -497,6 +497,10 @@ PRIVATE void powerupHEX(void) {
 
 		BatteryState();			//LED Orange/yellow depending on battery state.
 		LED2OFF();
+		EnableWDT10s();		//10s watchdog until LOOP.
+		LPC_WDT->WDTC = 60000000;	//set timeout 10s watchdog timer
+		LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
+		LPC_WDT->WDFEED=0x55;			//watchdog feed
 		asm_vivo(); //vivo code, never return.
 //should not return.
 //
@@ -526,6 +530,10 @@ PRIVATE void powerupHEX(void) {
 
 		BatteryState();			//LED Orange/yellow depending on battery state.
 			LED2OFF();
+			EnableWDT10s();		//10s watchdog until LOOP.
+			LPC_WDT->WDTC = 60000000;	//set timeout 10s watchdog timer
+			LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
+			LPC_WDT->WDFEED=0x55;			//watchdog feed
 			while (1)
 			{
 			asm_holtek();

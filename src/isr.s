@@ -15,6 +15,7 @@ asm_holtek:
 	ldr		r10,=0x2009C018				//FIO0SET
  	ldr		r11,=0x2009C01C				//FIO0CLR
  	ldr 	r12,=1<<11					//OFF pin set for OFF.
+ 	ldr		r13,=0x40000008					//WDT FEED.
 
  	ldr 	r5,=0x2009C038				//@GPIO 1 FIOSET
  	ldr		r6,=0x2009C03C				//@GPIO 1 FIOCLR
@@ -55,6 +56,8 @@ holtek1:
 	bl		H32off
 	bl		H16
 	bl		Hsync
+
+
 
 holtek2:
 	ldr	r8,	[r2]	//FIO0PIN
@@ -374,6 +377,7 @@ vivo1:
 	bl	vivoSync
 	bl	vivoSync		//double sync.
 	//check input if pressed, repeat, else OFF
+
 vivo2:
 	ldr	r8,	[r2]	//FIO0PIN
 	ldr	r9,	[r3]	//FIO2PIN

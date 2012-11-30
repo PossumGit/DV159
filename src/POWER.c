@@ -39,6 +39,7 @@ PUBLIC volatile int CPUSPEED=0;
 
 //Private variables
 
+	int debounce=0;
 //External variables
 
 EXTERNAL int txstart;
@@ -346,11 +347,18 @@ void EINT3_IRQHandler(void)				//GPIO interrupt.
 	else if (SW1|SW2|SW3|SWF1|SWF2|SWF3)
 		{
 
-
+		if (debounce==0)
+		{
 			CPU12MHz();
 			repeatInput(); //check if change of input, send via BT to android if change.
 			LPC_TIM2->TC = 0;
 			PENDALARM=0x30^(inputChange()&0x30);	//NZ if EXT and/or INT pressed.//else 0.
+			debounce=1;
+		}
+		else
+		{
+			debounce=debounce;
+		}
 
 		}
 
@@ -470,6 +478,19 @@ PUBLIC int powerDown(void)
 	int b,s;
 	int c,d,e,f,g,h,i,j,k;
 	//FEED watchdog.
+
+
+	if((debounce==1)&&(100000 < LPC_TIM2->TC))
+	{
+		debounce=0;
+		repeatInput(); //check if change of input, send via BT to android if change.
+		PENDALARM=0x30^(inputChange()&0x30);	//NZ if EXT and/or INT pressed.//else 0.
+	}
+
+
+
+
+
 
 	b=LPC_WDT->WDTV;
 	c=LPC_WDT->WDTV;

@@ -27,6 +27,12 @@
 // CODE RED TECHNOLOGIES LTD.
 //
 //*****************************************************************************
+
+
+
+
+
+
 #if defined (__cplusplus)
 #ifdef __REDLIB__
 #error Redlib does not support C++
@@ -152,22 +158,22 @@ extern void (* const g_pfnVectors[])(void);
 __attribute__ ((section(".isr_vector")))
 void (* const g_pfnVectors[])(void) = {
 	// Core Level - CM3
-	&_vStackTop, // The initial stack pointer
-	ResetISR,								// The reset handler
-	NMI_Handler,							// The NMI handler
-	HardFault_Handler,						// The hard fault handler
-	MemManage_Handler,						// The MPU fault handler
-	BusFault_Handler,						// The bus fault handler
-	UsageFault_Handler,						// The usage fault handler
-	0,										// Reserved
-	0,										// Reserved
-	0,										// Reserved
-	0,										// Reserved
-	SVCall_Handler,							// SVCall handler
-	DebugMon_Handler,						// Debug monitor handler
-	0,										// Reserved
-	PendSV_Handler,							// The PendSV handler
-	SysTick_Handler,						// The SysTick handler
+	&_vStackTop, // The initial stack pointer	//00
+	ResetISR,								// 0x04 The reset handler
+	NMI_Handler,							// 0x08 The NMI handler
+	HardFault_Handler,						// 0x0C The hard fault handler
+	MemManage_Handler,						// 0x10 The MPU fault handler
+	BusFault_Handler,						// 0x14 The bus fault handler
+	UsageFault_Handler,						// 0x18 The usage fault handler
+	0,										// 0x1C Reserved
+	0,										// 0x20 Reserved
+	0,										// 0x24 Reserved
+	0,										// 0x28 Reserved
+	SVCall_Handler,							// 0x2C SVCall handler
+	DebugMon_Handler,						// 0x30 Debug monitor handler
+	0,										// 0x34 Reserved
+	PendSV_Handler,							// 0x38 The PendSV handler
+	SysTick_Handler,						// 0x3C The SysTick handler
 
 	// Chip Level - LPC17
 	WDT_IRQHandler,							// 16, 0x40 - WDT
@@ -205,7 +211,14 @@ void (* const g_pfnVectors[])(void) = {
 	PLL1_IRQHandler,						// 48, 0xc0 - PLL1 (USB PLL)
 	USBActivity_IRQHandler,					// 49, 0xc4 - USB Activity interrupt to wakeup
 	CANActivity_IRQHandler, 				// 50, 0xc8 - CAN Activity interrupt to wakeup
+	0x59415751,								// YAWQ file name reverse order first 4 bytes.(8.3 format)
+	0x2020204F,								// 1  O
+	0x20315F31,								//    1		//gives QWAYO  1.1
+
 };
+
+
+
 
 //*****************************************************************************
 // Functions to carry out the initialization of RW and BSS data sections. These
@@ -214,6 +227,7 @@ void (* const g_pfnVectors[])(void) = {
 // memory.
 //*****************************************************************************
 __attribute__ ((section(".after_vectors")))
+
 void data_init(unsigned int romstart, unsigned int start, unsigned int len) {
 	unsigned int *pulDest = (unsigned int*) start;
 	unsigned int *pulSrc = (unsigned int*) romstart;
