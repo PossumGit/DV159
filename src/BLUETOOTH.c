@@ -35,6 +35,7 @@ EXTERNAL volatile byte I2CSlaveBuffer[];///<transfer DS2745 battery state, modif
 EXTERNAL volatile word SWBT;				///<Bluetooth interrupt flag, modified in interrupt
 //EXTERNAL volatile byte PENDALARM;			///<Emergency alarm flag, cancelled by Bluetooth input, modified in interrupt
 EXTERNAL int ALARMtime;
+EXTERNAL char STATE;
 
 //local functions
 PRIVATE void sendBTbuffer(void);
@@ -67,6 +68,7 @@ EXTERNAL void us(unsigned int time_us);
 EXTERNAL void CPU12MHz(void);
 EXTERNAL void BTbaudCPU100();
 EXTERNAL void BTbaudCPU12();
+EXTERNAL void BatteryState();
 
 
 
@@ -323,7 +325,8 @@ static int IRcode;				//IR sequence used in ProcessBT.
 	case 'T':
 	    {
 	    	SEQUENCE=0x200;		//set alarm time.
-
+	    	STATE='H';
+	    	BatteryState();
 
 	    break;
 	    }

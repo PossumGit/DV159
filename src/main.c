@@ -19,7 +19,7 @@
 //Public variables
 //PUBLIC__CRP const unsigned int CRP_WORD = CRP_NO_CRP;///< code protection word
 PUBLIC int	PCBiss;		//=3 for PCHB issue 3, =4 for PCB issue 4.
-PUBLIC int ALARMtime=0x53;
+PUBLIC int ALARMtime=30;//=3s
 //Private variables local to this file
 
 
@@ -36,6 +36,7 @@ EXTERNAL volatile word SWF2;
 EXTERNAL volatile word SWF3;
 EXTERNAL volatile word SWBT;
 EXTERNAL volatile word SWNEAT;
+EXTERNAL char STATE;
 //Local functions
 PRIVATE void powerupHEX(void);
 PRIVATE void LOOP(void);
@@ -109,8 +110,10 @@ PUBLIC int main(void) {
 		NVIC->ICER[0]=0xFFFFFFFF;		//disable all interrupts.
 		NVIC->ICER[1]=0xFFFFFFFF;
 		LPC_TIM2->TC=0;
-		CPU12MHz();
+	//	CPU12MHz();
 		LED2YELLOW();
+		STATE='P';
+		ALARMtime=30;			//3s
 
 	//	 us(1000);
 	//	 while(1)
@@ -645,7 +648,7 @@ for	(i=0;i<0x80;i++)
 //		NEATWR(0x1F,0xC6);			//C/2=6s is how long even if BT acc.
 //		}
 //		ALARMtime=NEATRD(0x1F);
-		ALARMtime=0x06;
+//		ALARMtime=0x06;
 		inputChange();
 		LED1OFF();
 		LED2OFF();

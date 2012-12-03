@@ -10,7 +10,7 @@
 #include "lpc17xx.h"
 
 //Public variables
-
+PUBLIC char STATE='P';
 //PUBLIC volatile word LastInputTime=0;
 
 //Private variables
@@ -22,7 +22,7 @@ PRIVATE void WDT_IRQHandler(void);
 
 //External functions
 EXTERNAL void sendBT(byte in[] , unsigned int);
-EXTERNAL int I2CBATTERY(void);
+//EXTERNAL int I2CBATTERY(void);
 
 //public functions
 
@@ -323,25 +323,6 @@ PUBLIC void	us(unsigned int time_us)
 
 
 
-/////////////////////////////////////////////////////////////////////////////////////////////////
-///@brief Battery state indicator, LED is yellow for low battery, or green for battery good..
-///@param void
-///@return void
-///
-///battery low if volt below 3.591V
-/////////////////////////////////////////////////////////////////////////////////////////////////
-PUBLIC void BatteryState()
-{
-if(I2CBATTERY() >=95)//92=92*8*4.88mV =3.591V, 93=3.63V, 95=3.708V
-{
-
-	LED1GREEN();//battery good active
-}
-else
-{
-	 LED1YELLOW();//battery low active.
-}
-}
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -355,7 +336,7 @@ else
 	if (in[1] & 0x80) //bit 7 high indicates change
 	{
 
-		in[0] = 'H' | (in[1] & 0x01);
+		in[0] = STATE;//'H' | (in[1] & 0x01);
 		in[1] = (in[1] & 0x7f) | 0x01; //clear bit 7, set bit 1.
 
 		//		in[1]=((in[1]&0x2)<<4)|((in[1]&0x1)<<4);	//TECLA, bit 5 is ext, bit 4 is int, bit 3 is plugged in.

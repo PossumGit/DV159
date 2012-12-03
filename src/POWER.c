@@ -48,6 +48,7 @@ EXTERNAL int rxstart;
 EXTERNAL int rxend;
 EXTERNAL int ALARMtime;
 EXTERNAL int BTACC;
+EXTERNAL char STATE;
 
 
 
@@ -60,6 +61,7 @@ PUBLIC void CPU100MHz (void);
 PUBLIC void disableInputInterrupt(void);
 PUBLIC void enableInputInterrupt(void);
 PUBLIC int powerDown(void);
+PUBLIC void BatteryState();
 //External functions
 EXTERNAL byte I2CSlaveBuffer[];
 EXTERNAL void timer2CPU4(void);
@@ -77,8 +79,9 @@ EXTERNAL void SSPNEATCPU12(void);
 EXTERNAL void SSPNEATCPU100(void);
 EXTERNAL void  DisableWDT(void);
 EXTERNAL void  EnableWDT10s(void);
-EXTERNAL void BatteryState(void);
+//EXTERNAL void BatteryState(void);
 EXTERNAL void NEATALARM(void);
+EXTERNAL int I2CBATTERY(void);
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -480,7 +483,7 @@ PUBLIC int powerDown(void)
 	//FEED watchdog.
 
 
-	if((debounce==1)&&(100000 < LPC_TIM2->TC))
+	if((debounce==1)&&(20000 < LPC_TIM2->TC))
 	{
 		debounce=0;
 		repeatInput(); //check if change of input, send via BT to android if change.
@@ -532,12 +535,13 @@ PUBLIC int powerDown(void)
 		} else {
 			LED1GREEN();
 		}
-		if (BTACC && ((ALARMtime & 0xF0) * 500000 / 16 < LPC_TIM2->TC)) {
-			LED1YELLOW();
-			NEATALARM();
-			PENDALARM = 0;
-			LED1GREEN();
-		} else if (!BTACC && ((ALARMtime & 0x0F) * 500000 < LPC_TIM2->TC)) {
+//		if (BTACC && ((ALARMtime & 0xF0) * 1000000 / 16 < LPC_TIM2->TC)) {
+//			LED1YELLOW();
+//			NEATALARM();
+//			PENDALARM = 0;
+//			LED1GREEN();
+//		} else
+			if (!BTACC && ((ALARMtime) * 100000 < LPC_TIM2->TC)) {
 			LED1YELLOW();
 			NEATALARM();
 			PENDALARM = 0;
@@ -601,5 +605,36 @@ PUBLIC int powerDown(void)
 	}
 	 return r;
 }
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief Battery state indicator, LED is yellow for low battery, or green for battery good..
+///@param void
+///@return void
+///
+///battery low if volt below 3.591V
+/////////////////////////////////////////////////////////////////////////////////////////////////
+PUBLIC void BatteryState()
+{
+if(I2CBATTERY() >=95)//92=92*8*4.88mV =3.591V, 93=3.63V, 95=3.708V
+{
+	LED1GREEN();//battery good active
+
+	if (STATE!='P')
+	{
+	STATE='H';
+	}
+}
+else
+{
+	 LED1YELLOW();//battery low active.
+		if (STATE!='P')
+		{
+		STATE='L';
+		}
+}
+}
+
 
 
