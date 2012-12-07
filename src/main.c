@@ -86,6 +86,7 @@ EXTERNAL void I2CSHUTDOWN(void);
 EXTERNAL void EnableWDT10s(void);
 EXTERNAL void EnableWDT2s(void);
 EXTERNAL void BatteryState(void);
+EXTERNAL char READPIO(void);
 EXTERNAL void NEATALARM(void);
 
 
@@ -104,14 +105,24 @@ PUBLIC int main(void) {
 
 	{
 
-
+		char a;
 		 CPU12MHz();
 //ext interrupt 2 causes problems after USB. ICER0 bit 20.
 		NVIC->ICER[0]=0xFFFFFFFF;		//disable all interrupts.
 		NVIC->ICER[1]=0xFFFFFFFF;
 		LPC_TIM2->TC=0;
 	//	CPU12MHz();
-		LED2YELLOW();
+		I2CINIT();
+		a= READPIO();
+		if (a&0x08)
+		{
+			LED2YELLOW();
+		}
+		else
+		{
+			LED2GREEN();
+		}
+//		LED2YELLOW();
 		STATE='P';
 		ALARMtime=30;			//3s
 
@@ -143,13 +154,12 @@ PUBLIC int main(void) {
 		LPC_GPIO_BTRESET FIODIR |= BTRESET;	//
 		PCBiss=PCB();								//read PCB, place ports in pulldown to save power.
 
-#if PCBissue==3||PCBissue==4
+if (PCBiss==3||PCBiss==4)
+{
 	LPC_GPIO1->FIOCLR |=1<<29			;//IR capture state=0.
 	LPC_GPIO1->FIODIR |=1<<29			;//IR capture =output. SET for capture IR, clear for low power.
+}
 
-#elif PCBissue==2
-
-#endif
 
 			powerupHEX(); //HEX options like factory reset on power up.
 

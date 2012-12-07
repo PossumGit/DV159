@@ -12,6 +12,8 @@
 //Includes
 #include "HUB.h"
 #include "lpc17xx_pinsel.h"
+#include <stdio.h>
+#include <string.h>
 
 //local variables
 //needs to be accessible from functions in this file only and to be persistent, but can change in interrupt.
@@ -36,6 +38,7 @@ EXTERNAL volatile word SWBT;				///<Bluetooth interrupt flag, modified in interr
 //EXTERNAL volatile byte PENDALARM;			///<Emergency alarm flag, cancelled by Bluetooth input, modified in interrupt
 EXTERNAL int ALARMtime;
 EXTERNAL char STATE;
+EXTERNAL int	PCBiss;		//=3 for PCHB issue 3, =4 for PCB issue 4.
 
 //local functions
 PRIVATE void sendBTbuffer(void);
@@ -100,7 +103,10 @@ static  byte battery=0xFF;		//NEAT sequence used in ProcessBT.
 
 static byte IRtype,IRrep;		//IR sequence used in ProcessBT.
 static int IRcode;				//IR sequence used in ProcessBT.
-
+char I[] =
+	{
+	"QWAYO firmware version   1_B, HC8500 PCB version 5. Copyright Possum 2012. \0\0\0\0"
+	};
 
     byte ACK[] =
 	{
@@ -110,22 +116,19 @@ static int IRcode;				//IR sequence used in ProcessBT.
 	{
 	'n'
 	};
-#if PCBissue==4
-    byte I[] =
- 	{
-	"QWAYO firmware version   1_2, HC8500 PCB version 4. Copyright Possum 2012. "
- 	};
-#elif PCBissue==3
-    byte I[] =
- 	{
-	"QWAYO firmware version   1_2, HC8500 PCB version 3. Copyright Possum 2012. "
- 	};
-#elif PCBissue==2						//issue 2 PCB
-    byte I[] =
- 	{
-	"QWAYO firmware version   1_2, HC8500 PCB version 2. Copyright Possum 2012. "
- 	};
-#endif
+if (PCBiss==4)
+    {
+	strcpy(I,"QWAYO firmware version   1_B, HC8500 PCB version 4. Copyright Possum 2012. \0\0\0\0");//strcpy copies to first \0 only.
+    }
+    else if (PCBiss==3)
+    {
+    strcpy(I,"QWAYO firmware version   1_B, HC8500 PCB version 3. Copyright Possum 2012. \0\0\0\0");
+ 	}
+    else if( PCBiss==2)						//issue 2 PCB
+    {
+    strcpy(I,"QWAYO firmware version   1_B, HC8500 PCB version 2. Copyright Possum 2012. \0\0\0\0");
+    }
+
 
 
 
@@ -256,12 +259,7 @@ static int IRcode;				//IR sequence used in ProcessBT.
 	case 'i':
 	case 'I':
 	    {
-	    	if (3==PCB())
-	    	{I[49]='3';}
-	    	else if (4==PCB())
-	    	I[49]='4';
-	       	else
-	    	I[49]='?';
+
 	    sendBT(I, sizeof(I)-1);
 	    break;
 	    }

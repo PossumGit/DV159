@@ -213,7 +213,7 @@ void (* const g_pfnVectors[])(void) = {
 	CANActivity_IRQHandler, 				// 50, 0xc8 - CAN Activity interrupt to wakeup
 	0x59415751,								// YAWQ file name reverse order first 4 bytes.(8.3 format)
 	0x2020204F,								// 1  O
-	0x20415F31,								//    1_A		//gives QWAYO  1_2
+	0x20425F31,								//    1_A		//gives QWAYO  1_2
 
 };
 

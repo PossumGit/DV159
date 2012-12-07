@@ -49,7 +49,7 @@ EXTERNAL int rxend;
 EXTERNAL int ALARMtime;
 EXTERNAL int BTACC;
 EXTERNAL char STATE;
-
+EXTERNAL int	PCBiss;		//=3 for PCHB issue 3, =4 for PCB issue 4.
 
 
 //Private functions
@@ -292,7 +292,8 @@ void EINT3_IRQHandler(void)				//GPIO interrupt.
 	v=LPC_GPIOINT->IO2IntStatR;
 
 
-#if PCBissue==3||PCBissue==4
+if (PCBiss==3||PCBiss==4)
+{
 	//get interrupt status.
 	if((SW2=(LPC_GPIOINT->IO2IntStatR&(0x1<<12)))>>11)
 		LPC_GPIOINT->IO2IntClr=0x1<<12;					//SW2 bit 1	EXT
@@ -310,9 +311,10 @@ void EINT3_IRQHandler(void)				//GPIO interrupt.
 		LPC_GPIOINT->IO0IntClr=0x1<<16;					//BT Interrupt
 	if ((SWNEAT=(LPC_GPIOINT->IO2IntStatF&(0x1<<4)))>>4)
 		LPC_GPIOINT->IO2IntClr=0x1<<4;					//NEAT Interrupt MOD, wire NEAT INTERRUPt to P2.4 pin 69.
+}
 
-
-#elif PCBissue==2
+else if (PCBiss==2)
+{
 	//get interrupt status.
 
 	a=LPC_GPIOINT->IO2IntStatF;
@@ -327,8 +329,8 @@ void EINT3_IRQHandler(void)				//GPIO interrupt.
 	//clear interrupts.
 	LPC_GPIOINT->IO0IntClr=0x1<<1|0x1<<16;
 	LPC_GPIOINT->IO2IntClr=0x1<<0|0x1<<11|0x1<<13;		//NEAT|INT|MID
+}
 
-#endif
 
 
 
@@ -404,7 +406,9 @@ void EINT3_IRQHandler(void)				//GPIO interrupt.
 PUBLIC void enableInputInterrupt(void)
 {
 	int a,b;
-#if PCBissue==3||PCBissue==4
+
+if (PCBiss==3||PCBiss==4)
+{
 	NVIC->ISER[0]|=0x1<<21;					//enable eint3/GPIO  interrupt.(SHARED on bit 21.)
 
 	a=LPC_GPIOINT->IO0IntEnR;
@@ -432,9 +436,10 @@ PUBLIC void enableInputInterrupt(void)
 	LPC_GPIOINT->IO2IntEnF|=0x1<<4;			//NEAT falling
 
 
+}
 
-
-#elif PCBissue==2
+else if (PCBiss==2)
+{
 	NVIC->ISER[0]|=0x1<<21;		//enable eint3/GPIO 0/GPIO2 interrupt.
 	LPC_GPIOINT->IO0IntEnR|=0x1<<1;				//EXT input rising
 	LPC_GPIOINT->IO2IntEnR|=0x1<<11;			//INT input	rising
@@ -445,7 +450,7 @@ PUBLIC void enableInputInterrupt(void)
 	LPC_GPIOINT->IO2IntEnF|=0x1<<0;				//NEAT falling
 	LPC_GPIOINT->IO2IntEnF|=0x1<<11;			//INT input falling
 	LPC_GPIOINT->IO2IntEnF|=0x1<<13;			//MID input falling
-#endif
+}
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -455,12 +460,15 @@ PUBLIC void enableInputInterrupt(void)
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC void disableInputInterrupt(void)
 {
-#if PCBissue==3||PCBissue==4
-	NVIC->ISER[0]&=~(0x1<<21);					//disable eint3/GPIO  interrupt.(SHARED on bit 21.)
 
-#elif PCBissue==2
+if (PCBiss==3||PCBiss==4)
+{
+	NVIC->ISER[0]&=~(0x1<<21);					//disable eint3/GPIO  interrupt.(SHARED on bit 21.)
+}
+else if (PCBiss==2)
+{
 	NVIC->ISER[0]&=~(0x1<<21);		//disable eint3/GPIO 0/GPIO2 interrupt.
-#endif
+}
 }
 
 
@@ -528,13 +536,17 @@ PUBLIC int powerDown(void)
 	b=LPC_UART1->LSR;
 	s=LPC_TIM2->TC;
 
-
-	if (PENDALARM && (ALARMtime)) {
-		if ((LPC_TIM2->TC / 500000) % 2) {
+	if (!BTACC&&(LPC_TIM2->TC / 500000) % 2)
+	{
 			LED1YELLOW();
 		} else {
 			LED1GREEN();
 		}
+
+
+
+	if (PENDALARM && (ALARMtime)) {
+
 //		if (BTACC && ((ALARMtime & 0xF0) * 1000000 / 16 < LPC_TIM2->TC)) {
 //			LED1YELLOW();
 //			NEATALARM();
@@ -552,7 +564,7 @@ PUBLIC int powerDown(void)
 	else
 
 	{
-		LED1GREEN();
+//		LED1GREEN();
 
 	if(0x40==((LPC_UART1->LSR)&(0x41)))	//bit 1=0 RX FIFO empty, bit 6=1 TX FIFO empty.
 	if(rxstart==rxend)					//nothing waiting in bluetooth rx buffer

@@ -112,35 +112,35 @@ PUBLIC int readNEAT(void)
 				}
 
 				NEATWR(2,0xA0);			//reset read
-	//			NEATWR(1,0x01);			//reset NEAT module.
+
 
 				NEATASCII[0]='N';
-				a=0x30+(NEAT[1]>>4);
-				(a>0x39)?(a+=0x07):a;
+				a=0x40+(NEAT[1]>>4);
+
 				NEATASCII[1]=a;
-				a=0x30+(NEAT[1]&0xF);
-				(a>0x39)?(a+=0x07):a;
+				a=0x40+(NEAT[1]&0xF);
+
 				NEATASCII[2]=a;
-				a=0x30+(NEAT[2]>>4);
-				(a>0x39)?(a+=0x07):a;
+				a=0x40+(NEAT[2]>>4);
+
 				NEATASCII[3]=a;
-				a=0x30+(NEAT[2]&0x0F);
-				(a>0x39)?(a+=0x07):a;
+				a=0x40+(NEAT[2]&0x0F);
+
 				NEATASCII[4]=a;
 
-				a=0x30+(NEAT[5]>>4);
-				(a>0x39)?(a+=0x07):a;
+				a=0x40+(NEAT[5]>>4);
+
 				NEATASCII[5]=a;
-				a=0x30+(NEAT[5]&0xF);
-				(a>0x39)?(a+=0x07):a;
+				a=0x40+(NEAT[5]&0xF);
+
 				NEATASCII[6]=a;
-				a=0x30+(NEAT[6]>>4);
-				(a>0x39)?(a+=0x07):a;
+				a=0x40+(NEAT[6]>>4);
+
 				NEATASCII[7]=a;
-				a=0x30+(NEAT[6]&0x0F);
-				(a>0x39)?(a+=0x07):a;
+				a=0x40+(NEAT[6]&0x0F);
+
 				NEATASCII[8]=a;
-				NEATASCII[9]=' ';
+				NEATASCII[9]=0x7C;
 
 
 

@@ -16,7 +16,7 @@ PUBLIC char STATE='P';
 //Private variables
 
 //External variables
-
+EXTERNAL int	PCBiss;		//=3 for PCHB issue 3, =4 for PCB issue 4.
 //Private functions
 PRIVATE void WDT_IRQHandler(void);
 
@@ -183,8 +183,8 @@ PUBLIC byte HEX(void)
 {
 	byte a,b,c,d,r,s;
 
-#if PCBissue==3||PCBissue==4
-	a=(LPC_GPIO0->FIOPIN &(1<<1))>>1;
+if (PCBiss==3||PCBiss==4)
+{	a=(LPC_GPIO0->FIOPIN &(1<<1))>>1;
 	b=(LPC_GPIO0->FIOPIN &(1<<18))>>17;
 	c=(LPC_GPIO2->FIOPIN &(1<<13))>>11;
 	d=(LPC_GPIO1->FIOPIN &(1<<19))>>16;
@@ -194,8 +194,9 @@ PUBLIC byte HEX(void)
 	c=(LPC_GPIO1->FIOPIN &(1<<18))>>16;
 	d=(LPC_GPIO3->FIOPIN &(1<<26))>>23;
 	s= 15-(a+b+c+d);			//
-#elif PCBissue==2
-	a=(LPC_GPIO0->FIOPIN &(1<<18))>>18;
+}
+	else if (PCBiss==2)
+	{	a=(LPC_GPIO0->FIOPIN &(1<<18))>>18;
 	b=(LPC_GPIO4->FIOPIN &(1<<29))>>28;
 	c=(LPC_GPIO1->FIOPIN &(1<<25))>>23;
 	d=(LPC_GPIO1->FIOPIN &(1<<27))>>24;
@@ -205,8 +206,8 @@ PUBLIC byte HEX(void)
 	c=(LPC_GPIO0->FIOPIN &(1<<27))>>25;
 	d=(LPC_GPIO0->FIOPIN &(1<<26))>>23;
 	s= 15-(1+b+4+d);			//a,b fixed as high.
-	s=0;
-#endif
+	s=0;}
+
 	return s|r<<4;
 }
 
@@ -222,21 +223,25 @@ PUBLIC byte	inputChange(void)
 	static volatile byte InputState=0;
 	byte	a,b,c,d;
 
-#if PCBissue==3||PCBissue==4
+if (PCBiss==3||PCBiss==4)
+{
 	LPC_GPIO2->FIODIR&=~(1<<11);			//internal
 	LPC_GPIO0->FIODIR&=~(1<<21);			//external tip
 	LPC_GPIO2->FIODIR&=~(1<<12);			//external mid
 	a=(LPC_GPIO2->FIOPIN &(1<<11))>>6;	//bit 5	//bit 0=>>11;		//INTERNAL
 	b=(~LPC_GPIO0->FIOPIN &(1<<21))>>17; 	//bit 4	//bit 1=>>0;		//EXTERNAL
 	c=(~LPC_GPIO2->FIOPIN &(1<<12))>>12;	//bit 0	//bit 2=>>11;		//EXTERNAL MID/connected
-#elif PCBissue==2
+}
+else if (PCBiss==2)
+{
 	LPC_GPIO2->FIODIR&=~(1<<11);
 	LPC_GPIO0->FIODIR&=~(1<<1);
 	LPC_GPIO2->FIODIR&=~(1<<13);
 	a=(LPC_GPIO2->FIOPIN &(1<<11))>>6;	//bit 5	//bit 0=>>11;		//INTERNAL
 	b=(~LPC_GPIO0->FIOPIN &(1<<1))<<3; 	//bit 4	//bit 1=>>0;		//EXTERNAL
 	c=(~LPC_GPIO2->FIOPIN &(1<<13))>>13;	//bit 0	//bit 2=>>11;		//EXTERNAL MID/connected
-#endif
+}
+
 	d=a|b|c|0xe;						//0xe sets bits 1,2,3 for TECLA spec.
 	if (d!=InputState){
 		InputState=d;
@@ -337,7 +342,7 @@ PUBLIC void	us(unsigned int time_us)
 	{
 
 		in[0] = STATE;//'H' | (in[1] & 0x01);
-		in[1] = (in[1] & 0x7f) | 0x01; //clear bit 7, set bit 1.
+		in[1] = ((in[1] & 0x3f)) | 0x0F; //clear bit 7, set bit 1.
 
 		//		in[1]=((in[1]&0x2)<<4)|((in[1]&0x1)<<4);	//TECLA, bit 5 is ext, bit 4 is int, bit 3 is plugged in.
 		sendBT(in, sizeof(in));

@@ -52,6 +52,7 @@ EXTERNAL void CPU12MHz(void);
 EXTERNAL int repeatInput(void);
 EXTERNAL void txBT(void);
 EXTERNAL byte	inputChange(void);
+EXTERNAL int	PCBiss;		//=3 for PCHB issue 3, =4 for PCB issue 4.
 //EXTERNAL word	inputTime(void);
 // PUBLIC functions
 
@@ -80,12 +81,11 @@ PUBLIC int captureIR(void) {
 	LPC_WDT->WDFEED=0x55;			//watchdog feed
 	LPC_WDT->WDTC = 5000000;	//set timeout 5s watchdog timer
 
-#if PCBissue==3||PCBissue==4
+if (PCBiss==3||PCBiss==4)
+{
 
 	LPC_GPIO1-> FIOSET |=1<<29			;//IR capture on.
-#elif PCBissue==2
-
-#endif
+}
 
 	//CPU100MHz disables interrupts except TIMER 0 and TIMER 1
 
@@ -103,12 +103,12 @@ PUBLIC int captureIR(void) {
 	correctIR();
 	CPU12MHz();
 	LED1OFF();
-#if PCBissue==3||PCBissue==4
+if (PCBiss==3||PCBiss==4)
+{
 
 	LPC_GPIO1->FIOCLR |=1<<29			;//IR capture off.
-#elif PCBissue==2
+}
 
-#endif
 
 	if (IRAddress > CaptureFirst)
 		return 1;
