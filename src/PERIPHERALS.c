@@ -12,7 +12,7 @@
 //Public variables
 PUBLIC char STATE='P';
 //PUBLIC volatile word LastInputTime=0;
-
+PRIVATE  volatile byte InputState=0;
 //Private variables
 
 //External variables
@@ -220,7 +220,7 @@ if (PCBiss==3||PCBiss==4)
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC byte	inputChange(void)
 {
-	static volatile byte InputState=0;
+
 	byte	a,b,c,d;
 
 if (PCBiss==3||PCBiss==4)

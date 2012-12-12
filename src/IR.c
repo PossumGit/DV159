@@ -99,9 +99,13 @@ if (PCBiss==3||PCBiss==4)
 		txBT();		//send any available data from change of input to BT.
 
 	}
+
 	endCaptureIR();
+
 	correctIR();
+
 	CPU12MHz();
+
 	LED1OFF();
 if (PCBiss==3||PCBiss==4)
 {
@@ -132,7 +136,7 @@ PUBLIC void playIR(void) {
 
 
 
-
+	LED2GREEN();
 	if (Buffer[2] != 0) {
 		LED1GREEN();
 		CPU100MHz();	//CPU100MHz disables interrupts except TIMER 0 and TIMER 1
@@ -475,6 +479,7 @@ PRIVATE void compress(void) {
 ///@return void
 /////////////////////////////////////////////////////////////////////////////////////////////////
 void TIMER0_IRQHandler(void) {
+
 
 	if (IRAddress < CaptureMax) {
 		Buffer[IRAddress++] = LPC_TIM0->CR0;

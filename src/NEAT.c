@@ -38,6 +38,9 @@ EXTERNAL void sendBT(byte in[] , unsigned int );
 EXTERNAL void	us(unsigned int );
 EXTERNAL void disableInputInterrupt(void);
 EXTERNAL void enableInputInterrupt(void);
+EXTERNAL void	LED1GREEN(void);
+EXTERNAL void	LED1YELLOW(void);
+EXTERNAL void	LED1OFF(void);
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -197,7 +200,7 @@ void NEATRESET()
 
 
 	{
-		us(200000);
+		us(300000);
 	}
 	NEATWR(2,0xA0);			//reset receiver
 
@@ -211,10 +214,22 @@ void NEATRESET()
 /////////////////////////////////////////////////////////////////////////////////////////////////
 void NEATALARM()
 {	int a,b,c,d;
+	a=400000+LPC_TIM2->TC;
+	disableInputInterrupt();
+NEATWR(1,1);				//reset NEAT/as power up reset.
 
-	NEATRESET();
+	while(a>LPC_TIM2->TC)
+	{
+		if ((LPC_TIM2->TC / 200000) % 2)
+			{LED1YELLOW();}
+		else
+			{LED1GREEN();}
+	}
+NEATWR(2,0xA0);			//reset receiver
 
-	while (0x80&NEATRD(3));		//wait for ready
+	us(10000);
+
+	while (0x80&NEATRD(3));		//wait for ready		//should be instant.
 	NEATWR(0x08,03);		//number of short preamble packages sent
 	NEATWR(0x09,03);		//number of long preamble packages sent.
 	NEATWR(0x42,0x01);		//select 10,11 as address
@@ -225,15 +240,35 @@ void NEATALARM()
 
 	NEATWR(0x03,0x80);		//transmit code.
 
-	disableInputInterrupt();
+
 	LPC_WDT->WDTC = 18000000;	//set timeout 10s watchdog timer
 	LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
 	LPC_WDT->WDFEED=0x55;			//watchdog feed
 	LPC_WDT->WDTC = 5000000;	//set timeout 5s watchdog timer
-	enableInputInterrupt();
-	while (0x80&NEATRD(3));
+	while (0x80&NEATRD(3))
+		{
+		if ((LPC_TIM2->TC / 200000) % 2)
+				{LED1YELLOW();}
+			else
+				{LED1GREEN();}
+			};
 
+
+
+		LPC_GPIOINT->IO2IntClr=0x1<<12;					//SW2 bit 1	EXT
+		LPC_GPIOINT->IO2IntClr=0x1<<11;					//SW1 bit 0 INT
+		LPC_GPIOINT->IO0IntClr=0x1<<21;					//SW3 bit 2 MID
+		LPC_GPIOINT->IO2IntClr=0x1<<12;					//SW2 bit 1	EXT
+		LPC_GPIOINT->IO2IntClr=0x1<<11;					//SW1 bit 0 INT
+		LPC_GPIOINT->IO0IntClr=0x1<<21;					//SW3 bit 2 MID
+		LPC_GPIOINT->IO0IntClr=0x1<<16;					//BT Interrupt
+		LPC_GPIOINT->IO2IntClr=0x1<<4;					//NEAT Interrupt MOD, wire NEAT INTERRUPt to P2.4 pin 69.
+		NVIC->ICPR[0]=(0x1<<21);		//clear pending GPIO interrupt
+
+		enableInputInterrupt();
+	LED1OFF();
 }
+
 
 
 
@@ -247,32 +282,28 @@ void NEATALARM()
 void NEATTX(byte battery, byte alarm, word ID)
 {	int a,b,c,d;
 
-//	NEATRESET();
-	a=NEATRD(3);
+	NEATRESET();
 	while (0x80&NEATRD(3));
-	b=NEATRD(3);
-	NEATWR(0x08,03);		//number of short preamble packages sent
-	NEATWR(0x09,03);		//number of long preamble packages sent.
-	NEATWR(0x42,0x00);		//select 40,41 as address
-	NEATWR(0x40,ID>>8);		//MSB of transmit ID
-	NEATWR(0x41,ID);		//LSB of transmit ID
-	NEATWR(0x45,alarm);		//alarm type
-	NEATWR(0x46,battery);	//battery state
+		NEATWR(0x45,alarm);		//alarm type
+		NEATWR(0x42,0x00);		//select 40,41 as address
+		NEATWR(0x08,03);		//number of short preamble packages sent
+		NEATWR(0x09,03);		//number of long preamble packages sent.
+		NEATWR(0x46,battery);	//battery state
+		NEATWR(0x40,ID>>8);		//MSB of transmit ID
+		NEATWR(0x41,ID);		//LSB of transmit ID
 
 
-
-	c=NEATRD(3);
+	while (0x80&NEATRD(3));
 	NEATWR(0x03,0x80);		//transmit code.
-
 	disableInputInterrupt();
-	LPC_WDT->WDTC = 10000000;	//set timeout 10s watchdog timer
+	LPC_WDT->WDTC = 18000000;	//set timeout 10s watchdog timer
 	LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
 	LPC_WDT->WDFEED=0x55;			//watchdog feed
 	LPC_WDT->WDTC = 5000000;	//set timeout 5s watchdog timer
 	enableInputInterrupt();
 	while (0x80&NEATRD(3));
 
-	d=NEATRD(3);
+
 }
 
 
@@ -297,7 +328,7 @@ PUBLIC void NEATWR(byte address, byte data)
 			b=readSSP0Byte();
 			us(200);
 			LPC_GPIO_NEATCS FIOSET = NEATCS; //NEAT disable
-			us(20000);
+			us(200);
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 ///@brief NEATRD read NEAT board register.
@@ -321,7 +352,9 @@ PUBLIC byte NEATRD(byte address)
 			us(200);
 			writeSSP0Byte(0xFF); //transmit
 			a = readSSP0Byte();
+			us(200);
 			LPC_GPIO_NEATCS FIOSET = NEATCS; //NEAT disable
+			us(200);
 	return data;
 }
 

@@ -118,15 +118,15 @@ char I[] =
 	};
 if (PCBiss==4)
     {
-	strcpy(I,"QWAYO firmware version   1_B, HC8500 PCB version 4. Copyright Possum 2012. \0\0\0\0");//strcpy copies to first \0 only.
+	strcpy(I,"QWAYO firmware version   1_D, HC8500 PCB version 4. Copyright Possum 2012. \0\0\0\0");//strcpy copies to first \0 only.
     }
     else if (PCBiss==3)
     {
-    strcpy(I,"QWAYO firmware version   1_B, HC8500 PCB version 3. Copyright Possum 2012. \0\0\0\0");
+    strcpy(I,"QWAYO firmware version   1_D, HC8500 PCB version 3. Copyright Possum 2012. \0\0\0\0");
  	}
     else if( PCBiss==2)						//issue 2 PCB
     {
-    strcpy(I,"QWAYO firmware version   1_B, HC8500 PCB version 2. Copyright Possum 2012. \0\0\0\0");
+    strcpy(I,"QWAYO firmware version   1_D, HC8500 PCB version 2. Copyright Possum 2012. \0\0\0\0");
     }
 
 
@@ -352,7 +352,27 @@ if (PCBiss==4)
 		}
 	    break;
 	    }
+	    //go to sleep
+	case 'Z':
+	{
+			LED1OFF();
+			LED2OFF();
+			disableInputInterrupt();
+		LPC_GPIO_OFF FIOSET =OFF; //OFF button set high to turn off.
+			NEATOFF();
+			LPC_GPIO_BTRESET FIOCLR	= BTRESET;	//Bluetooth reset.	RESET BT
+		CPU4MHz();
 
+		while(1)
+			{
+
+			SCB->SCR = 0x4;			//sleepdeep bit
+			LPC_SC->PCON = 0x03;	//combined with sleepdeep bit gives power down mode. IRC is disabled, so WDT disabled.
+			__WFI();
+			}
+		//never gets here because turns off first.
+		break;
+	    }
 	    }
 	}
 	}

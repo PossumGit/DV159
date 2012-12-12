@@ -34,12 +34,15 @@ PUBLIC volatile word SWF2;
 PUBLIC volatile word SWF3;
 PUBLIC volatile word SWBT;
 PUBLIC volatile word SWNEAT;
-PUBLIC volatile byte PENDALARM;
+PUBLIC volatile byte PENDALARM=0;
 PUBLIC volatile int CPUSPEED=0;
+PUBLIC int batterygood=1;
+PUBLIC int debounce=0;
 
 //Private variables
 
-	int debounce=0;
+
+
 //External variables
 
 EXTERNAL int txstart;
@@ -53,7 +56,7 @@ EXTERNAL int	PCBiss;		//=3 for PCHB issue 3, =4 for PCB issue 4.
 
 
 //Private functions
-
+void LEDFLASH(void);
 //public functions
 PUBLIC void CPU4MHz(void);
 PUBLIC void CPU12MHz(void);
@@ -71,6 +74,9 @@ EXTERNAL int repeatInput(void);
 EXTERNAL void	LED1GREEN(void);
 EXTERNAL void	LED1YELLOW(void);
 EXTERNAL void	LED1OFF(void);
+EXTERNAL void	LED2GREEN(void);
+EXTERNAL void	LED2YELLOW(void);
+EXTERNAL void	LED2OFF(void);
 EXTERNAL void timer2CPU4(void);
 EXTERNAL void timer2CPU12(void);
 EXTERNAL void timer2CPU100(void);
@@ -82,6 +88,7 @@ EXTERNAL void  EnableWDT10s(void);
 //EXTERNAL void BatteryState(void);
 EXTERNAL void NEATALARM(void);
 EXTERNAL int I2CBATTERY(void);
+EXTERNAL byte	inputChange(void);
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -150,12 +157,15 @@ PUBLIC void CPU12MHz(void)
 
 	  if (((LPC_SC->PLL0STAT >> 24) & 3) == 3)		//PLL  connected and enabled.
 	  {
+
 //if already at 12MHz, do nothing.
 			disableInputInterrupt();
+
 	LPC_SC->PLL0CON = 0x1; // disconnect PLL0
 	LPC_SC->PLL0FEED = 0xAA;
 	LPC_SC->PLL0FEED = 0x55;
 	while (LPC_SC->PLL0STAT&(1<<25));
+
 	LPC_SC->PLL0CON = 0x0;    // power down
 	LPC_SC->PLL0FEED = 0xAA;
 	LPC_SC->PLL0FEED = 0x55;
@@ -166,6 +176,7 @@ PUBLIC void CPU12MHz(void)
 	LPC_SC->PLL1FEED = 0xAA;
 	LPC_SC->PLL1FEED = 0x55;
 	while (LPC_SC->PLL1STAT&(1<<25));
+
 	LPC_SC->PLL1CON = 0x0;    // power down
 	LPC_SC->PLL1FEED = 0xAA;
 	LPC_SC->PLL1FEED = 0x55;
@@ -183,6 +194,7 @@ PUBLIC void CPU12MHz(void)
 
 //	LPC_SC->PCONP=0;	//saves 39uA
 	enableInputInterrupt();
+
 	  }
 
 	  if(((1<<5)&(LPC_SC->SCS))==0)
@@ -369,7 +381,7 @@ else if (PCBiss==2)
 
 	else if (SWBT)
 	{
-
+		BTACC=1;
 		if (CPUSPEED==0)		//has been asleep
 		{
 
@@ -409,7 +421,8 @@ PUBLIC void enableInputInterrupt(void)
 
 if (PCBiss==3||PCBiss==4)
 {
-	NVIC->ISER[0]|=0x1<<21;					//enable eint3/GPIO  interrupt.(SHARED on bit 21.)
+
+	NVIC->ISER[0]=0x1<<21;					//enable eint3/GPIO  interrupt.(SHARED on bit 21.)
 
 	a=LPC_GPIOINT->IO0IntEnR;
 	b=LPC_GPIOINT->IO0IntEnF;
@@ -440,7 +453,7 @@ if (PCBiss==3||PCBiss==4)
 
 else if (PCBiss==2)
 {
-	NVIC->ISER[0]|=0x1<<21;		//enable eint3/GPIO 0/GPIO2 interrupt.
+	NVIC->ISER[0]=0x1<<21;		//enable eint3/GPIO 0/GPIO2 interrupt.
 	LPC_GPIOINT->IO0IntEnR|=0x1<<1;				//EXT input rising
 	LPC_GPIOINT->IO2IntEnR|=0x1<<11;			//INT input	rising
 	LPC_GPIOINT->IO2IntEnR|=0x1<<13;			//MID input rising
@@ -463,11 +476,11 @@ PUBLIC void disableInputInterrupt(void)
 
 if (PCBiss==3||PCBiss==4)
 {
-	NVIC->ISER[0]&=~(0x1<<21);					//disable eint3/GPIO  interrupt.(SHARED on bit 21.)
+	NVIC->ICER[0]=(0x1<<21);					//disable eint3/GPIO  interrupt.(SHARED on bit 21.)
 }
 else if (PCBiss==2)
 {
-	NVIC->ISER[0]&=~(0x1<<21);		//disable eint3/GPIO 0/GPIO2 interrupt.
+	NVIC->ICER[0]=(0x1<<21);		//disable eint3/GPIO 0/GPIO2 interrupt.
 }
 }
 
@@ -488,8 +501,9 @@ PUBLIC int powerDown(void)
 	byte a;
 	int b,s;
 	int c,d,e,f,g,h,i,j,k;
+	static int t=0;
 	//FEED watchdog.
-
+	s=LPC_TIM2->TC;
 
 	if((debounce==1)&&(20000 < LPC_TIM2->TC))
 	{
@@ -500,64 +514,64 @@ PUBLIC int powerDown(void)
 
 
 
-
-
-
-	b=LPC_WDT->WDTV;
-	c=LPC_WDT->WDTV;
-
-
-	if(b<100000)
-	{
-	d=LPC_WDT->WDTV;
-	e=LPC_WDT->WDTV;
-	}
-	f=LPC_WDT->WDTV;
-	g=LPC_WDT->WDTV;
-	h=LPC_WDT->WDTV;
-	i=LPC_WDT->WDTV;
-
 	LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
 	LPC_WDT->WDFEED=0x55;			//watchdog feed
 
-	b=LPC_WDT->WDTV;
-	c=LPC_WDT->WDTV;
-	d=LPC_WDT->WDTV;
-	e=LPC_WDT->WDTV;
-	f=LPC_WDT->WDTV;
-	g=LPC_WDT->WDTV;
-	h=LPC_WDT->WDTV;
-	i=LPC_WDT->WDTV;
-	j=LPC_WDT->WDTV;
-//first check if any serial process is active:
+
 
 
 	b=LPC_SSP0->SR;			//bit 7=1 is SPI transfers complete
 	b=LPC_UART1->LSR;
+
+
+	if  (  s -t > 10000 ) {
+
+		LPC_TIM2->TC= t;
+	}
+
+
+
+	LEDFLASH();
 	s=LPC_TIM2->TC;
+	if (PENDALARM && ALARMtime&&!BTACC) {
 
-	if (!BTACC&&(LPC_TIM2->TC / 500000) % 2)
-	{
-			LED1YELLOW();
-		} else {
-			LED1GREEN();
-		}
+			if  (ALARMtime * 100000 < LPC_TIM2->TC) {
 
+	//			LED2GREEN();
 
-
-	if (PENDALARM && (ALARMtime)) {
-
-//		if (BTACC && ((ALARMtime & 0xF0) * 1000000 / 16 < LPC_TIM2->TC)) {
-//			LED1YELLOW();
-//			NEATALARM();
-//			PENDALARM = 0;
-//			LED1GREEN();
-//		} else
-			if (!BTACC && ((ALARMtime) * 100000 < LPC_TIM2->TC)) {
-			LED1YELLOW();
 			NEATALARM();
 			PENDALARM = 0;
-			LED1GREEN();
+			a=0x30&inputChange();
+			if	(a!=0x30)	//input still pressed after NEAT alarm.
+			{
+				disableInputInterrupt();
+			LPC_GPIOINT->IO2IntClr=0x1<<12;					//SW2 bit 1	EXT
+			LPC_GPIOINT->IO2IntClr=0x1<<11;					//SW1 bit 0 INT
+			LPC_GPIOINT->IO0IntClr=0x1<<21;					//SW3 bit 2 MID
+			LPC_GPIOINT->IO2IntClr=0x1<<12;					//SW2 bit 1	EXT
+			LPC_GPIOINT->IO2IntClr=0x1<<11;					//SW1 bit 0 INT
+			LPC_GPIOINT->IO0IntClr=0x1<<21;					//SW3 bit 2 MID
+			LPC_GPIOINT->IO0IntClr=0x1<<16;					//BT Interrupt
+			LPC_GPIOINT->IO2IntClr=0x1<<4;					//NEAT Interrupt MOD, wire NEAT INTERRUPt to P2.4 pin 69.
+			NVIC->ICPR[0]=(0x1<<21);		//clear pending GPIO interrupt
+
+			while(0x30!=0x30&inputChange());
+				//turn off when input released.
+			while(1)
+			{
+				LPC_GPIO_OFF FIOSET =OFF; //OFF button set high to turn off.
+				NEATOFF();
+				LPC_GPIO_BTRESET FIOCLR	= BTRESET;	//Bluetooth reset.	RESET BT
+				CPU4MHz();
+			}
+			}
+
+
+	//	if input still pressed, then go into power down sequence.
+
+
+
+			LED1OFF();
 		}
 
 	}
@@ -571,7 +585,7 @@ PUBLIC int powerDown(void)
 	if(txstart==txend)					//nothing waiting in bluetooth tx buffer
 	if (3000000 < LPC_TIM2->TC)
 	{
-
+//		s=LPC_TIM2->TC;
 
 
 
@@ -580,6 +594,7 @@ PUBLIC int powerDown(void)
 
 
 	LED1OFF();
+	LED2OFF();
 	CPUSPEED=0;		//0 means asleep, 12=12MHz, 100=100MHz.
 
     // Deep-Sleep Mode, set SLEEPDEEP bit
@@ -588,8 +603,8 @@ PUBLIC int powerDown(void)
 	// Deep Sleep Mode wake up from EINT/GPIO Does not recover from sleep.
 
     //Power down mode.
-	//SCB->SCR = 0x4;
-	//LPC_SC->PCON = 0x01;
+	SCB->SCR = 0x4;
+	LPC_SC->PCON = 0x01;
 	//Power Down Mode wake up from EINT/GPIO Works but not on debug.
 	CPU4MHz();						//reduce power.
 	LPC_SC->PCONP=1<<15;		//only GPIO needed during power down.
@@ -602,6 +617,7 @@ PUBLIC int powerDown(void)
 		SCB->SCR = 0x4;			//sleepdeep bit
 		LPC_SC->PCON = 0x01;	//combined with sleepdeep bit gives power down mode. IRC is disabled, so WDT disabled.
 		enableInputInterrupt();
+
 	__WFI(); //go to power down.
 
 
@@ -611,10 +627,11 @@ PUBLIC int powerDown(void)
 	LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
 	LPC_WDT->WDFEED=0x55;			//watchdog feed
 	BatteryState();			//LED Orange/yellow depending on battery state.
-	BTACC=0;
+//	BTACC=0;
 //	 WatchFeed();
 	}
 	}
+	t=LPC_TIM2->TC;
 	 return r;
 }
 
@@ -632,7 +649,7 @@ PUBLIC void BatteryState()
 if(I2CBATTERY() >=95)//92=92*8*4.88mV =3.591V, 93=3.63V, 95=3.708V
 {
 	LED1GREEN();//battery good active
-
+	batterygood=1;
 	if (STATE!='P')
 	{
 	STATE='H';
@@ -641,12 +658,53 @@ if(I2CBATTERY() >=95)//92=92*8*4.88mV =3.591V, 93=3.63V, 95=3.708V
 else
 {
 	 LED1YELLOW();//battery low active.
+	 batterygood=0;
 		if (STATE!='P')
 		{
 		STATE='L';
 		}
 }
 }
+
+
+void LEDFLASH()
+{
+	if(batterygood)
+	{
+		if (100000 > LPC_TIM2->TC)
+	{LED1GREEN();}
+	else if (1000000 > LPC_TIM2->TC)
+	{LED1OFF();}
+
+	else 	if (!BTACC&&((LPC_TIM2->TC -1100000) / 200000) % 2)
+		{LED1GREEN();}
+	else
+		{LED1OFF();}
+	}
+
+
+
+
+	else
+	{
+		if (100000 > LPC_TIM2->TC)
+		{LED1YELLOW();}
+		else if  (1000000 > LPC_TIM2->TC)
+		{LED1OFF();}
+
+		else if (!BTACC&&((LPC_TIM2->TC -1100000) / 200000) % 2)
+			{LED1YELLOW();}
+		else
+			{LED1OFF();}
+		}
+
+	}
+
+
+
+
+
+
 
 
 
