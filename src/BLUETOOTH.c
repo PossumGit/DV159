@@ -5,8 +5,8 @@
 
 
 //Private Defines
-#define rxlen   2000				//length of rx buffer
-#define txlen   2000				//length of rx buffer
+#define rxlen   2000				//was 2000 length of rx buffer
+#define txlen   2000				//was 2000 length of rx buffer
 
 
 //Includes
@@ -105,7 +105,7 @@ static byte IRtype,IRrep;		//IR sequence used in ProcessBT.
 static int IRcode;				//IR sequence used in ProcessBT.
 char I[] =
 	{
-	"QWAYO firmware version   1_B, HC8500 PCB version 5. Copyright Possum 2012. \0\0\0\0"
+	"QWAYO firmware version   1_E, HC8500 PCB version 5. Copyright Possum 2012. \0\0\0\0"
 	};
 
     byte ACK[] =
@@ -118,15 +118,15 @@ char I[] =
 	};
 if (PCBiss==4)
     {
-	strcpy(I,"QWAYO firmware version   1_D, HC8500 PCB version 4. Copyright Possum 2012. \0\0\0\0");//strcpy copies to first \0 only.
+	strcpy(I,"QWAYO firmware version   1_E, HC8500 PCB version 4. Copyright Possum 2012. \0\0\0\0");//strcpy copies to first \0 only.
     }
     else if (PCBiss==3)
     {
-    strcpy(I,"QWAYO firmware version   1_D, HC8500 PCB version 3. Copyright Possum 2012. \0\0\0\0");
+    strcpy(I,"QWAYO firmware version   1_E, HC8500 PCB version 3. Copyright Possum 2012. \0\0\0\0");
  	}
     else if( PCBiss==2)						//issue 2 PCB
     {
-    strcpy(I,"QWAYO firmware version   1_D, HC8500 PCB version 2. Copyright Possum 2012. \0\0\0\0");
+    strcpy(I,"QWAYO firmware version   1_E, HC8500 PCB version 2. Copyright Possum 2012. \0\0\0\0");
     }
 
 
@@ -138,7 +138,15 @@ if (PCBiss==4)
 	};
     if (rxstart != rxend)
 	{
-	a = rx[rxstart++];
+	a = rx[rxstart];
+
+	rxstart=(rxstart+1)%rxlen;	//mod does  work.
+//	rxstart=(rxstart++)%rxlen;	//mod does not work.
+
+//	rxstart=rxstart%rxlen;	//mod does work
+
+	if(rxstart>=rxlen)rxstart=0;
+
 	BTACC=1;
 	switch (SEQUENCE)//a sequence of N,alarm, battery, IDMSB, IDLSB.
 	{
@@ -560,10 +568,15 @@ PUBLIC void sendBT(byte istat[], unsigned int ilength)
     int i;
     for (i = 0; i < ilength; i++)
 	{
-	tx[(txend++) % txlen] = istat[i];
+	tx[(txend++)] = istat[i];
+	if(txend>=txlen)txend=0;
+
+
 	if (txend == txstart)
 	    {
-	    txstart = (txstart + 1) % txlen;		//overflow, lose old data
+	txstart=txstart+1;
+	if(txstart>=txlen)txstart=0;
+//	    txstart = (txstart + 1) % txlen;		//overflow, lose old data
 	    txoverflow = 1;							//record that overflow occurred.
 	    }
 	}
@@ -583,10 +596,17 @@ PUBLIC word rxtxBT(void)
     s = LPC_UART1->LSR;
     while (1 & LPC_UART1->LSR)
 	{
-	rx[(rxend++) % rxlen] = LPC_UART1->RBR;
+	rx[rxend++] = LPC_UART1->RBR;
+//	rxend=(rxend++)%rxlen;			//inc works, mod does not work
+
+	if(rxend>=rxlen)rxend=0;
+
 	if (rxend == rxstart)
 	    {
-	    rxstart = (rxstart + 1) % rxlen;			//overflow, lose old data
+//	    rxstart = (rxstart + 1) % rxlen;			//overflow, lose old data
+		rxstart=rxstart=1;
+		if(rxstart>=rxlen)rxstart=0;
+
 	    rxoverflow = 1;								//record that overflow occurred.
 	    }
 	r = 1;
@@ -594,7 +614,10 @@ PUBLIC word rxtxBT(void)
     a=LPC_UART1->LSR;
     while ((txstart != txend) && (0 != (1 << 5 & LPC_UART1->LSR)))//data available and buffer available
 	{
-	LPC_UART1->THR = tx[(txstart++) % txlen];
+	LPC_UART1->THR = tx[(txstart++)];
+	if (txstart>=txlen)txstart=0;
+
+
 	r = 1;
 	}
     return r;
@@ -613,7 +636,9 @@ PUBLIC void txBT(void)
 
     while ((txstart != txend) && (0 != (1 << 5 & LPC_UART1->LSR)))//data available and buffer available
 	{
-	LPC_UART1->THR = tx[(txstart++) % txlen];
+	LPC_UART1->THR = tx[(txstart++)];
+	if (txstart>=txlen)txstart=0;
+
 	}
     }
 
@@ -785,6 +810,8 @@ PUBLIC void setupBT(void)
 	; //1s delay
 
     rxstart = rxend;
+
+
     sendBT(CMD, sizeof(CMD));
     for (i = 0; i < 3000; i++)
 	{

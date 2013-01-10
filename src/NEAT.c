@@ -240,11 +240,12 @@ NEATWR(2,0xA0);			//reset receiver
 
 	NEATWR(0x03,0x80);		//transmit code.
 
-
+#if release==1
 	LPC_WDT->WDTC = 18000000;	//set timeout 10s watchdog timer
 	LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
 	LPC_WDT->WDFEED=0x55;			//watchdog feed
 	LPC_WDT->WDTC = 5000000;	//set timeout 5s watchdog timer
+#endif
 	while (0x80&NEATRD(3))
 		{
 		if ((LPC_TIM2->TC / 200000) % 2)
@@ -296,10 +297,12 @@ void NEATTX(byte battery, byte alarm, word ID)
 	while (0x80&NEATRD(3));
 	NEATWR(0x03,0x80);		//transmit code.
 	disableInputInterrupt();
+#if release==1
 	LPC_WDT->WDTC = 18000000;	//set timeout 10s watchdog timer
 	LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
 	LPC_WDT->WDFEED=0x55;			//watchdog feed
 	LPC_WDT->WDTC = 5000000;	//set timeout 5s watchdog timer
+#endif
 	enableInputInterrupt();
 	while (0x80&NEATRD(3));
 

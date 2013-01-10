@@ -183,7 +183,7 @@ PUBLIC void CPU12MHz(void)
 	while (LPC_SC->PLL1STAT&(1<<24));
 
 	LPC_SC->FLASHCFG &= 0x0fff;  // This is the default flash read/write setting for IRC
-	LPC_SC->FLASHCFG |= 0x5000;
+	LPC_SC->FLASHCFG |= 0x5000;	//0 for up to 20MHz.
 
 	//LPC_SC->CLKSRCSEL = 0x00;
 //		LPC_SC->CCLKCFG = 0x0;     //  Select the IRC as clk
@@ -244,22 +244,24 @@ PUBLIC void CPU4MHz(void)
 	while (LPC_SC->PLL1STAT&(1<<24));
 
 	LPC_SC->FLASHCFG &= 0x0fff;  // This is the default flash read/write setting for IRC
-	LPC_SC->FLASHCFG |= 0x5000;
+	LPC_SC->FLASHCFG |= 0x5000;  // 0 for up to 20MHz. But 5 is always safe. cycles to access flash memory.
 
 	//LPC_SC->CLKSRCSEL = 0x00;
 //		LPC_SC->CCLKCFG = 0x0;     //  Select the IRC as clk
 //	LPC_SC->SCS = 0x00;		    // not using XTAL anymore
-	LPC_SC->CCLKCFG = 0x0;     //  12MHz main clock.
 
-
+	LPC_SC->CCLKCFG = 0x0;     // PLL clock divided by.
 
 //	LPC_SC->PCONP=0;	//saves 39uA
 	enableInputInterrupt();
 	  }
 	  //clock now at 12MHz main clock or 4MHz IRC.
 	  //clock to 4MHz.
-	  		LPC_SC->CLKSRCSEL = 0x00; //IRC 4MHzmain oscillator.
+	  		LPC_SC->CLKSRCSEL = 0x00; //Select IRC 4MHzmain oscillator.
 	  		LPC_SC->SCS = 0; //disable main oscillator
+
+
+
 //clock now at 4MHz IRC.
 	  timer2CPU4();		//12MHz clock, generate 1MHz system clock for sleep and delays from 12MHz CPU clock.
 	  SSPNEATCPU4();	//SSP 1MHz derived from 4MHz for NEAT SSP.
@@ -302,7 +304,6 @@ void EINT3_IRQHandler(void)				//GPIO interrupt.
 	t=LPC_GPIOINT->IO2IntStatF;
 	u=LPC_GPIOINT->IO0IntStatR;
 	v=LPC_GPIOINT->IO2IntStatR;
-
 
 if (PCBiss==3||PCBiss==4)
 {
@@ -513,11 +514,11 @@ PUBLIC int powerDown(void)
 	}
 
 
-
+#if release==1
 	LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
 	LPC_WDT->WDFEED=0x55;			//watchdog feed
 
-
+#endif
 
 
 	b=LPC_SSP0->SR;			//bit 7=1 is SPI transfers complete
@@ -612,20 +613,24 @@ PUBLIC int powerDown(void)
 
 	LPC_GPIOINT->IO0IntEnR|=0x1<<16;			//Bluetooth rising interrupt
 
-//	DisableWDT();
+
 	 //Power down mode.
+#if release==1
 		SCB->SCR = 0x4;			//sleepdeep bit
 		LPC_SC->PCON = 0x01;	//combined with sleepdeep bit gives power down mode. IRC is disabled, so WDT disabled.
+#endif
 		enableInputInterrupt();
-
+#if release==1
 	__WFI(); //go to power down.
-
+#endif
 
 
 	 LPC_SC->PCONP     = Peripherals ;       // Enable Power for Peripherals      */
 //	 EnableWDT();
+#if release==1
 	LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
 	LPC_WDT->WDFEED=0x55;			//watchdog feed
+#endif
 	BatteryState();			//LED Orange/yellow depending on battery state.
 //	BTACC=0;
 //	 WatchFeed();
@@ -646,7 +651,9 @@ PUBLIC int powerDown(void)
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC void BatteryState()
 {
-if(I2CBATTERY() >=95)//92=92*8*4.88mV =3.591V, 93=3.63V, 95=3.708V
+	byte a;
+	a=I2CBATTERY();
+if(a >=95)//92=92*8*4.88mV =3.591V, 93=3.63V, 95=3.708V
 {
 	LED1GREEN();//battery good active
 	batterygood=1;

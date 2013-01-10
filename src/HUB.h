@@ -17,6 +17,7 @@
 //
 //
 #define PCBissue 3		//pcb issue, options 3, 4
+#define release 1		//0 means debug, 1 means release.
 //note issue 2 is now obsolete and no boards are now in use.
 
 typedef unsigned char byte;		//8 bit on LPC17**

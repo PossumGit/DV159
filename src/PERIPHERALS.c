@@ -91,10 +91,10 @@ PUBLIC int PCB()
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC void	LED1GREEN(void)
 	{
-	LPC_GPIO1->FIODIR |= LED1G; 		//IR defined as an output.
-	LPC_GPIO1->FIODIR |= LED1Y; 		//IR defined as an output.
-	LPC_GPIO1->FIOCLR = LED1Y; 		//
-	LPC_GPIO1->FIOSET = LED1G; 		//LED3	GREEN
+	LPC_GPIO1->FIODIR |= LED1G; 		//output
+	LPC_GPIO1->FIODIR |= LED1Y; 		//output
+	LPC_GPIO1->FIOCLR = LED1G; 		//
+	LPC_GPIO1->FIOSET = LED1Y; 		//LED3	GREEN
 	}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -104,10 +104,10 @@ PUBLIC void	LED1GREEN(void)
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC void	LED1YELLOW(void)
 	{
-	LPC_GPIO1->FIODIR |= LED1G; 		//IR defined as an output.
-	LPC_GPIO1->FIODIR |= LED1Y; 		//IR defined as an output.
-	LPC_GPIO1->FIOSET = LED1Y; 		//
-	LPC_GPIO1->FIOCLR = LED1G; 		//LED3 YELLOW
+	LPC_GPIO1->FIODIR |= LED1G; 		//output
+	LPC_GPIO1->FIODIR |= LED1Y; 		//output
+	LPC_GPIO1->FIOSET = LED1G; 		//
+	LPC_GPIO1->FIOCLR = LED1Y; 		//LED3 YELLOW
 	}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -129,8 +129,8 @@ PUBLIC void	LED2GREEN(void)
 	{
 	LPC_GPIO1->FIODIR |= LED2G; 		//IR defined as an output.
 	LPC_GPIO1->FIODIR |= LED2Y; 		//IR defined as an output.
-	LPC_GPIO1->FIOCLR = LED2Y; 		//
-	LPC_GPIO1->FIOSET = LED2G; 		//LED3	GREEN
+	LPC_GPIO1->FIOCLR = LED2G; 		//
+	LPC_GPIO1->FIOSET = LED2Y; 		//LED3	GREEN
 	}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -142,8 +142,8 @@ PUBLIC void	LED2YELLOW(void)
 	{
 	LPC_GPIO1->FIODIR |= LED2G; 		//IR defined as an output.
 	LPC_GPIO1->FIODIR |= LED2Y; 		//IR defined as an output.
-	LPC_GPIO1->FIOSET = LED2Y; 		//
-	LPC_GPIO1->FIOCLR = LED2G; 		//LED3 YELLOW
+	LPC_GPIO1->FIOSET = LED2G; 		//
+	LPC_GPIO1->FIOCLR = LED2Y; 		//LED3 YELLOW
 	}
 
 /////////////////////////////////////////////////////////////////////////////////////////////////

@@ -56,6 +56,8 @@ extern "C" {
 #if defined (__USE_CMSIS)
 #include "system_LPC17xx.h"
 #include "lpc17xx.h"
+
+#include "HUB.h"
 #endif
 
 //*****************************************************************************
@@ -213,7 +215,7 @@ void (* const g_pfnVectors[])(void) = {
 	CANActivity_IRQHandler, 				// 50, 0xc8 - CAN Activity interrupt to wakeup
 	0x59415751,								// YAWQ file name reverse order first 4 bytes.(8.3 format)
 	0x2020204F,								// 1  O
-	0x20445F31,								//    1_A		//gives QWAYO  1_2
+	0x20455F31,								//    1_E 5F=_, 45=E		//gives QWAYO  1_E
 
 };
 
@@ -284,7 +286,20 @@ extern unsigned int _ebss;
 __attribute__ ((section(".after_vectors")))
 void
 ResetISR(void) {
+//About 0.8ms to get here from power up at 3.3V
+//About 2.6ms from power on to here.
+	NVIC->ICER[0]=0xFFFFFFFF;		//disable all interrupts.
+	NVIC->ICER[1]=0xFFFFFFFF;
 
+	LPC_GPIO_OFF FIOCLR = OFF; 			//SD(shutdown) =OFF button set low to keep on, set high to turn off.
+	LPC_GPIO_OFF FIODIR |= OFF; 		//SD(shutdown) =OFF. //1K pull-down prevents turning on during power up. (3.3mA is OK)
+										//set GPIO0_11 to turn off device.
+
+	LPC_GPIO_IROUT FIOCLR = IROUT; 		//clear IR output (IR off).
+	LPC_GPIO_IROUT FIODIR |= IROUT; 	//IR defined as an output.
+
+	  LPC_GPIO_BTRESET FIOCLR = BTRESET;
+	LPC_GPIO_BTRESET FIODIR |= BTRESET;	//
 
 #ifndef USE_OLD_STYLE_DATA_BSS_INIT
     //
@@ -297,19 +312,23 @@ ResetISR(void) {
 	SectionTableAddr = &__data_section_table;
 
     // Copy the data sections from flash to SRAM.
+//while loop takes 17.9ms
 	while (SectionTableAddr < &__data_section_table_end) {
 		LoadAddr = *SectionTableAddr++;
 		ExeAddr = *SectionTableAddr++;
 		SectionLen = *SectionTableAddr++;
-		data_init(LoadAddr, ExeAddr, SectionLen);
+		data_init(LoadAddr, ExeAddr, SectionLen);		//copy data for each block.
 	}
+
 	// At this point, SectionTableAddr = &__bss_section_table;
 	// Zero fill the bss segment
+//while loop takes 1.9ms
 	while (SectionTableAddr < &__bss_section_table_end) {
 		ExeAddr = *SectionTableAddr++;
 		SectionLen = *SectionTableAddr++;
-		bss_init(ExeAddr, SectionLen);
+		bss_init(ExeAddr, SectionLen);		//zero data for each block.
 	}
+
 #else
 	// Use Old Style Data and BSS section initialization.
 	// This will only initialize a single RAM bank.

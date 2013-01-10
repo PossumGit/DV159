@@ -20,9 +20,10 @@
 //PUBLIC__CRP const unsigned int CRP_WORD = CRP_NO_CRP;///< code protection word
 PUBLIC int	PCBiss;		//=3 for PCHB issue 3, =4 for PCB issue 4.
 PUBLIC int ALARMtime=30;//=3s
+
 //Private variables local to this file
 
-
+PRIVATE unsigned *p;	//0 if loaded at 0, 0x10000 if loaded over USB.
 
 
 //External variables
@@ -103,6 +104,12 @@ EXTERNAL void NEATALARM(void);
 /// ResetISR address comes from vector table.
 ///@param void
 ///@return never returns
+///
+///powerup to main takes about 22.4ms.
+///2.6ms to power up
+///17.9ms to copy data to RAM
+///1.9ms to zero unused dataspace in RAM
+///3.3V on to main takes 19.8ms
 ////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC int main(void) {
 	while (1)
@@ -110,23 +117,28 @@ PUBLIC int main(void) {
 	{
 
 		char a;
-		 CPU12MHz();
+//		 CPU12MHz();
 //ext interrupt 2 causes problems after USB. ICER0 bit 20.
-		NVIC->ICER[0]=0xFFFFFFFF;		//disable all interrupts.
-		NVIC->ICER[1]=0xFFFFFFFF;
+		 LPC_GPIO_BTRESET FIOSET = BTRESET; //BLUETOOTH NRESET OUT High, Low to reset.
+		p=SCB->VTOR;		//vector=0 if loaded at 0, 0x10000 if loaded at 0x10000, ie over USB driver.
+		if (p!=0)	//loaded over usb driver.
+		{
+			CPU12MHz();
+		}
 	//	LPC_TIM2->TC=0;
 	//	CPU12MHz();
 		I2CINIT();
-		a= READPIO();
+		a= READPIO();		//takes about 5ms
 		if (a&0x08)
 		{
-			LED2YELLOW();
+			LED2YELLOW();	//lithium battery
 		}
 		else
 		{
-			LED2GREEN();
+			LED2GREEN();	//nimh battery.
 		}
-//		LED2YELLOW();
+	//main +5ms
+		LED1OFF();
 		STATE='P';
 		ALARMtime=30;			//3s
 
@@ -137,12 +149,6 @@ PUBLIC int main(void) {
 	//		 LED1GREEN();
 	//	 }
 
-		LPC_GPIO_OFF FIOCLR = OFF; 			//SD(shutdown) =OFF button set low to keep on, set high to turn off.
-		LPC_GPIO_OFF FIODIR |= OFF; 		//SD(shutdown) =OFF. //1K pull-down prevents turning on during power up. (3.3mA is OK)
-											//set GPIO0_11 to turn off device.
-
-		LPC_GPIO_IROUT FIOCLR = IROUT; 		//clear IR output (IR off).
-		LPC_GPIO_IROUT FIODIR |= IROUT; 	//IR defined as an output.
 
 
 		LPC_GPIO_MICCE FIOCLR = MICCE; 		//MIC CHIPEN=0=disabled.
@@ -151,12 +157,10 @@ PUBLIC int main(void) {
 		LPC_GPIO_FLASHCS FIOSET = FLASHCS; 	//CHIPEN=1=disabled.
 		LPC_GPIO_FLASHCS FIODIR |= FLASHCS; //CHIPEN 1 disabled on FLASH.
 
-		LPC_GPIO_T2G FIOSET = T2G; 			//T2g=1=disabled.
+		LPC_GPIO_T2G FIOSET = T2G; 			//T2g=1=disabled. (USB related)
 		LPC_GPIO_T2G FIODIR |= T2G; 		//T2Vgs=0, 3v3 on pin.
 
-		LPC_GPIO_BTRESET FIOSET	= BTRESET;	//Bluetooth reset.
-		LPC_GPIO_BTRESET FIODIR |= BTRESET;	//
-		PCBiss=PCB();								//read PCB, place ports in pulldown to save power.
+			PCBiss=PCB();								//read PCB, place ports in pulldown to save power.
 
 if (PCBiss==3||PCBiss==4)
 {
@@ -262,7 +266,7 @@ PRIVATE void powerupHEX(void) {
 
 
 		while (LPC_TIM2->TC<time);
-		time=10000000;			//
+		time=20000000;			//
 		LED1GREEN();
 
 		NEATTX(0xFF,0x00,h);		//battery state, ALARM type, ID(16 bits)
@@ -523,20 +527,21 @@ PRIVATE void powerupHEX(void) {
 		}
 		; //wait for ever for debug.
 		break;
-	case  0x0D:
-
+	case  0x0D:		//VIVO remote code.
+//from starting code to first IR is 5.8ms
 		CPU4MHz();
-	//	LED1GREEN();
 		I2CINIT();
 //		I2CREAD();		//first read is not valid, so throw it away.
 //		us(2000000);
 
-		BatteryState();			//LED Orange/yellow depending on battery state.
-		LED2OFF();
+		BatteryState();			//LED Orange/yellow depending on battery state.//takes about 5.8ms
+//main+10.8ms
+
 		EnableWDT10s();		//10s watchdog until LOOP.
 		LPC_WDT->WDTC = 60000000;	//set timeout 10s watchdog timer
 		LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
 		LPC_WDT->WDFEED=0x55;			//watchdog feed
+
 		asm_vivo(); //vivo code, never return.
 //should not return.
 //
@@ -557,14 +562,16 @@ PRIVATE void powerupHEX(void) {
 
 		break;
 
-	case 0x0E:				//factory reset Blue Tooth.
+	case 0x0E:				//FREEWAY REMOTE code
+		//from starting code to first IR is 5.8ms
 		CPU4MHz();
+
 	//		LED1GREEN();
 		I2CINIT();
 //		I2CREAD();		//first read is not valid, so throw it away.
 
 
-		BatteryState();			//LED Orange/yellow depending on battery state.
+		BatteryState();			//LED Orange/yellow depending on battery state. //takes about 5.8ms
 			LED2OFF();
 			EnableWDT10s();		//10s watchdog until LOOP.
 			LPC_WDT->WDTC = 60000000;	//set timeout 10s watchdog timer
@@ -592,6 +599,7 @@ PRIVATE void powerupHEX(void) {
 		break;
 
 	case 0x0F:				//factory reset Blue Tooth.
+		 CPU12MHz();
 		factoryBT(); //HEX2=0, HEX1=E Factory reset BT.
 		LED2OFF();
 		while(1);
@@ -606,15 +614,17 @@ PRIVATE void powerupHEX(void) {
 
 	case 0x00:		//main startup and execute for QWAYO
 	default:
+#if release==1
+
 		EnableWDT10s();		//10s watchdog until LOOP.
 		LPC_WDT->WDTC = 5000000;	//5s after next FEED(in powerDown in LOOP). set timeout 5s watchdog timer
 
-
+#endif
 		CPU12MHz();
 		LPC_TIM2->TC = 0;
 	//	LED1GREEN();
-		CPU12MHz();
-		resetBT();
+	//	CPU12MHz();
+	//	resetBT();
 
 
 	//	LPC_GPIO_BTRESET FIOCLR	= BTRESET;	//Bluetooth reset.	RESET BT
@@ -629,7 +639,8 @@ PRIVATE void powerupHEX(void) {
 	//	LED1YELLOW();
 		I2CINIT();
 		I2CREAD();		//first read is not valid, so throw it away.
-		CPU12MHz();
+
+	//	CPU12MHz();
 //		NEATRESET();
 		initSSP0();
 		LPC_GPIO_NEATCS FIOSET = NEATCS; //NEAT disable
@@ -643,7 +654,7 @@ PRIVATE void powerupHEX(void) {
 
 
 
-	//send codes for down up if input not pressed, or imnput state if pressed.
+	//send codes for down up if input not pressed, or input state if pressed.
 		a=0x30&inputChange();
 		PENDALARM=0x30^a;	//NZ if EXT and/or INT pressed.//else 0.
 		debounce=0;
