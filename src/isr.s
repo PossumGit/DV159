@@ -1,13 +1,43 @@
- 	.syntax unified
+  	.syntax unified
  	.cpu cortex-m3
  	.thumb
  	.align	8
  	.global	asm_vivo
  	.global asm_holtek
+ 	.global D
+ 	.global Delay
  	.thumb
  	.thumb_func
 
 
+D:
+	push	{lr}
+ 	ldr 	r5,=0x2009C038				//@GPIO 1 FIOSET
+ 	ldr		r6,=0x2009C03C				//@GPIO 1 FIOCLR
+	ldr		r4,=1<<28					//IROUT
+
+
+	str		r4,[r5]				//set IR bit IR ON.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	bl		Delay
+	str		r4,[r5]				//set IR bit IR ON.
+	str		r4,[r6]			//clr IR bit IR OFF.
+		pop		{lr}
+	bx		lr
+
+///////////////////////////
+//
+//Delay(N) where N>=2 delay in us at 4MHz.
+//from C delay = N+1.25us where N>=2.
+////////////////////////////////////////////////////////////////
+Delay:			//delay N us at 4MHz. Minimum value N=2;
+	.align 4
+	sub		r0,#1
+Delay1:
+	subs	r0,r0,1
+	cmp	r0,#0
+	bne	Delay1
+	bx lr
 
 
 asm_holtek:
@@ -85,6 +115,8 @@ H16:
 	ldr		r8,=16
 		.align 4
 H16a:
+
+
 	str		r4,[r5]				//set IR bit IR ON.
 	str		r4,[r5]				//set IR bit IR ON.
 	str		r4,[r5]				//set IR bit IR ON.
@@ -100,31 +132,41 @@ H16a:
 	str		r4,[r5]				//set IR bit IR ON.
 	str		r4,[r5]				//set IR bit IR ON.
 	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
+
+
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+
+
+
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
@@ -206,31 +248,38 @@ H32a:
 	str		r4,[r5]				//set IR bit IR ON.
 	str		r4,[r5]				//set IR bit IR ON.
 	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
+
+
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
+	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
@@ -296,7 +345,7 @@ H32a:
 
 H32off:
 .align 4
-	ldr	r7,=1110
+	ldr	r7,=1111
 	.align 4
 H32offa:
 	subs	r7,r7,1
@@ -305,7 +354,7 @@ H32offa:
 
 H16off:
 
-	ldr	r7,=551
+	ldr	r7,=552
 	.align 4
 H16offa:
 	subs	r7,r7,1
@@ -315,7 +364,7 @@ H16offa:
 
 Hsync:
 
-	ldr	r7,=19100
+	ldr	r7,=19596
 	.align 4
 Hsynca:
 	subs	r7,r7,1
@@ -343,7 +392,7 @@ Hsynca:
 
  asm_vivo:
  	push	{lr}
-
+//r0=0,1,2,3
  	ldr	r10,=0x2009C018				//FIO0SET
  	ldr	r11,=0x2009C01C				//FIO0CLR
  	ldr r12,=1<<11					//OFF pin set for OFF.
@@ -353,10 +402,13 @@ Hsynca:
  	ldr	r2,=0x2009C014				//FIO0PIN
  	ldr	r3,=0x2009C054				//FIO2PIN
 	ldr	r4,=1<<28					//IROUT
-vivo1:
 
+
+vivo1:
 	str	r12,[r11]					//enable power
 
+	cmp	r0,#0
+	bne	try1
  	bl	twelve455KHz		//1
 	bl	vivoSync		//1
 	bl	twelve455KHz		//1
@@ -376,6 +428,78 @@ vivo1:
 	bl	twelve455KHz
 	bl	vivoSync
 	bl	vivoSync		//double sync.
+	bl	vivo2
+try1:
+	cmp	r0,#1
+	bne	try2
+ 	bl	twelve455KHz		//1
+	bl	vivoSync		//1
+	bl	twelve455KHz		//1
+	bl	vivoOne			//input A pressed
+	bl	twelve455KHz
+	bl	vivoZero		//input B not pressed.
+	bl	twelve455KHz
+	bl	vivoOne		//channel bit 0
+	bl	twelve455KHz
+	bl	vivoZero		//channel bit 1
+	bl	twelve455KHz
+	bl	vivoZero		//battery OK
+	bl	twelve455KHz
+	bl	vivoZero			//xor of first 5 bits
+	bl	twelve455KHz
+	bl	vivoOne		//xnor of first 5 bits.
+	bl	twelve455KHz
+	bl	vivoSync
+	bl	vivoSync		//double sync.
+	bl	vivo2
+try2:
+	cmp	r0,#2
+	bne	try3
+ 	bl	twelve455KHz		//1
+	bl	vivoSync		//1
+	bl	twelve455KHz		//1
+	bl	vivoOne			//input A pressed
+	bl	twelve455KHz
+	bl	vivoZero		//input B not pressed.
+	bl	twelve455KHz
+	bl	vivoZero		//channel bit 0
+	bl	twelve455KHz
+	bl	vivoOne		//channel bit 1
+	bl	twelve455KHz
+	bl	vivoZero		//battery OK
+	bl	twelve455KHz
+	bl	vivoZero			//xor of first 5 bits
+	bl	twelve455KHz
+	bl	vivoOne		//xnor of first 5 bits.
+	bl	twelve455KHz
+	bl	vivoSync
+	bl	vivoSync		//double sync.
+	bl	vivo2
+try3:
+ 	bl	twelve455KHz		//1
+	bl	vivoSync		//1
+	bl	twelve455KHz		//1
+	bl	vivoOne			//input A pressed
+	bl	twelve455KHz
+	bl	vivoZero		//input B not pressed.
+	bl	twelve455KHz
+	bl	vivoOne		//channel bit 0
+	bl	twelve455KHz
+	bl	vivoOne		//channel bit 1
+	bl	twelve455KHz
+	bl	vivoZero		//battery OK
+	bl	twelve455KHz
+	bl	vivoOne			//xor of first 5 bits
+	bl	twelve455KHz
+	bl	vivoZero		//xnor of first 5 bits.
+	bl	twelve455KHz
+	bl	vivoSync
+	bl	vivoSync		//double sync.
+
+
+
+
+
 	//check input if pressed, repeat, else OFF
 
 vivo2:
@@ -396,7 +520,7 @@ vivo2:
 
 vivoZero:		//==0
 //delay of 256 full cycles of 455KHz. (includes call+return)
-	ldr	r7,=585			//2
+	ldr	r7,=446		//was 585			//2
 d256l:
 	sub	r7,r7,#1		//1	//branch prediction should work, so no pipline flush delays. But it doesn't work??
 	cmp	r7,#0			//1
@@ -405,7 +529,7 @@ d256l:
 
 vivoOne:		//==1
 //delay of 512 full cycles of 455KHz. (includes call+return)
-	ldr	r7,=1112		//2
+	ldr	r7,=895			//was 1112		//2
 d512l:
 	sub	r7,r7,#1		//1	//branch prediction should work, so no pipline flush delays. But it doesn't work??
 	cmp	r7,#0			//1
@@ -415,7 +539,7 @@ d512l:
 
 vivoSync:		//==sync
 //delay of 768 full cycles of 455KHz. (includes call+return)
-	ldr	r7,=1674			//2
+	ldr	r7,=1343			//was 1674			//2
 	d768l:
 	sub	r7,r7,#1		//1	//branch prediction should work, so no pipline flush delays. But it doesn't work??
 	cmp	r7,#0			//1

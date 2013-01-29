@@ -105,7 +105,7 @@ static byte IRtype,IRrep;		//IR sequence used in ProcessBT.
 static int IRcode;				//IR sequence used in ProcessBT.
 char I[] =
 	{
-	"QWAYO firmware version   1_E, HC8500 PCB version 5. Copyright Possum 2012. \0\0\0\0"
+			"QWAYO firmware xxx, PCB x. Copyright Possum 2012-13. \0\0\0\0"
 	};
 
     byte ACK[] =
@@ -116,18 +116,24 @@ char I[] =
 	{
 	'n'
 	};
-if (PCBiss==4)
-    {
-	strcpy(I,"QWAYO firmware version   1_E, HC8500 PCB version 4. Copyright Possum 2012. \0\0\0\0");//strcpy copies to first \0 only.
-    }
-    else if (PCBiss==3)
-    {
-    strcpy(I,"QWAYO firmware version   1_E, HC8500 PCB version 3. Copyright Possum 2012. \0\0\0\0");
- 	}
-    else if( PCBiss==2)						//issue 2 PCB
-    {
-    strcpy(I,"QWAYO firmware version   1_E, HC8500 PCB version 2. Copyright Possum 2012. \0\0\0\0");
-    }
+//if (PCBiss==4)
+ //   {
+//	strcpy(I,"QWAYO firmware xxx, PCB x. Copyright Possum 2012-13. \0\0\0\0");//strcpy copies to first \0 only.
+	I[15]=Version&0xFF;
+	I[16]=(Version>>8)&0xFF;
+	I[17]=(Version>>16)&0xFF;
+	I[24]=0x30+PCBiss&0xFF;		//fails if PCBiss>9.
+
+ //   }
+ //   else if (PCBiss==3)
+ //   {
+//    strcpy(I,"QWAYO firmware xxx, PCB x. Copyright Possum 2012-13. \0\0\0\0");
+//	I[15]=Version&0xFF;
+//	I[16]=(Version>>8)&0xFF;
+//	I[17]=(Version>>16)&0xFF;
+//	I[24]=0x30+PCBiss$0xFF;
+// 	}
+
 
 
 
@@ -239,16 +245,24 @@ if (PCBiss==4)
 	case 'B':
 	{
 		I2CREAD();
-		sendBT(I2CSlaveBuffer,8);  //register 0x0a to register 0x11 of DS2745.
+		sendBT(I2CSlaveBuffer,16);  //register 0x0a to register 0x11 of DS2745.
 
-		//0A(10): Temperature MSB
-		//0B(11): Temperature LSB
-		//0C(12): Voltage MSB
-		//0D(13): Voltage LSB
-		//0E(14): Current MSB
-		//0F(15): Current LSB
-		//10(16): Accumulated charge MSB
-		//11(17): Accumulated charge LSB
+		//0A(0): Temperature MSB
+		//0B(1): Temperature LSB
+		//0C(2): Voltage MSB
+		//0D(3): Voltage LSB
+		//0E(4): Current MSB
+		//0F(5): Current LSB
+		//10(6): Accumulated charge MSB
+		//11(7): Accumulated charge LSB
+		//1(8); status
+		//xx(9); 1= charging
+		//xx(10);	charge confidence 1= new battery, 5= very confident.
+		//xx(11); corrected charge MSB
+		//xx(12); corrected charge LSB
+		//DISCHARGE =(0x800A-correctedcharge)/20
+		//
+
 		break;
 	}
 	case 'c':
@@ -565,7 +579,14 @@ PRIVATE void sendBTbuffer(void)
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC void sendBT(byte istat[], unsigned int ilength)
     {
-    int i;
+    int i,a;
+	a=LPC_GPIO0->FIOPIN&(1<<26);		//is bluetooth connected? P0_26 = 1 if connected, = 0 if not connected.
+	if (a)
+		{
+	//only send if BT is connected.
+	//note that it takes around 20s for disconnected to be detected.
+
+
     for (i = 0; i < ilength; i++)
 	{
 	tx[(txend++)] = istat[i];
@@ -579,6 +600,12 @@ PUBLIC void sendBT(byte istat[], unsigned int ilength)
 //	    txstart = (txstart + 1) % txlen;		//overflow, lose old data
 	    txoverflow = 1;							//record that overflow occurred.
 	    }
+	}
+    }
+	else		//disconnected.	Clear TX buffer.
+	{
+		txstart=0;
+		txend=0;
 	}
     }
 

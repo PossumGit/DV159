@@ -27,7 +27,7 @@
 #include "lpc17xx_i2s.h"
 
 //Public variables
-PUBLIC  byte I2CSlaveBuffer[32];
+PUBLIC  volatile byte I2CSlaveBuffer[32];
 //Private variables
 PRIVATE volatile byte I2CSlaveTempBuffer[32];
 PRIVATE volatile word I2CMasterState = I2CSTATE_IDLE;
@@ -41,14 +41,21 @@ PRIVATE volatile word I2CWriteLength;
 
 PRIVATE volatile word RdIndex = 0;
 PRIVATE volatile word WrIndex = 0;
-PRIVATE word COUNT=0;
+PRIVATE volatile word COUNT=0;
+PRIVATE volatile byte Batt=100;
 
 //External variables
-
+EXTERNAL int storedcharge;
+EXTERNAL int charge;
+EXTERNAL int ChargeConfidence;
+EXTERNAL int NIMH;
+EXTERNAL int LITHIUM;
 //Private functions
 //public functions
 PUBLIC int I2CBATTERY(void);
-
+PUBLIC void I2CChargeWR(int);
+PUBLIC char I2CSTATUS(void);
+PUBLIC void I2CNewBattery(void);
 //PRIVATE void I2CSTART(void);
 
 PRIVATE void I2CGO(void);
@@ -67,6 +74,11 @@ PUBLIC char READPIO(void);
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
+
+
+
+
+
 /////////////////////////////////////////////////////////////////////////////////////////////////
 ///@brief initialise I2C
 ///@param void
@@ -74,30 +86,44 @@ PUBLIC char READPIO(void);
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC void I2CINIT(void)
 {
-//	word	i,j,k,l,q;
-//	char a,b;
 	LPC_SC->PCONP |=1<<19;						// bit 19. enable I2C1
 	LPC_SC->PCLKSEL1 |= 0<<6;					//PCLK_I2C(bit 6,7)=CCLK/4=100MHz/4. Not reliable if /1.
-	LPC_PINCON->PINSEL1 |=(3<<6 |3<<8);			//I2C1 P0.19(SDA1), P0.20(SCL1)
 	LPC_PINCON->PINMODE1&=~(3<<6|3<<8);						//0<<6 and 0<<8 //enable pull ups.
 	LPC_PINCON->PINMODE1|=(0<<6|0<<8);						//0<<6 and 0<<8
-
-
-
-
-	LPC_I2C1->I2SCLH=0x40;						//duty cycle High
-	LPC_I2C1->I2SCLL=0x40;						//Duty cycle low.
-
-
+	LPC_I2C1->I2SCLH=10;						//duty cycle High
+	LPC_I2C1->I2SCLL=10;						//Duty cycle low.
 //Enable I2C
 	LPC_I2C1->I2CONCLR=AA|SI|STO|STA;					//Clear SI|STA
 	NVIC->ISER[0]=1<<11;							//I2C1 interrupt set.
-//	NVIC_EnableIRQ(I2C_IRQn);
-
-////////////////////////////////////////
-
+	LPC_GPIO2->FIODIR&=~1<<20;						//SCL1
+	LPC_GPIO2->FIODIR&=~1<<19;						//SDA1
+	LPC_GPIO2->FIOSET=1<<20;
+	LPC_GPIO2->FIOCLR=1<<19;						//SDA
+	Delay(10);										//10us+1.25us C overhead. at 4MHz
+	LPC_GPIO2->FIOSET=1<<19;						//SDA	==STOP BIT.
+	LPC_PINCON->PINSEL1 |=(3<<6 |3<<8);			//I2C1 P0.19(SDA1), P0.20(SCL1)ENABLE I2C pin function.
+	Delay(10);									//10us+1.25us C overhead at 4MHz.
 }
 
+
+
+
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief get regs 0x01 I2C
+///@param void
+///@return reg 1=status
+///
+///bit 6 is 1 if power on reset, 0 if it has been reset.
+///bit 3 is 0 if Li/ 1 if NiMH
+///
+///
+///
+///
+///
+////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC char READPIO(void)
 {
 
@@ -110,6 +136,13 @@ PUBLIC char READPIO(void)
 	return I2CSlaveTempBuffer[0];
 
 }
+
+
+
+
+
+
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 ///@brief get regs 0x0A-0x11 I2C
@@ -133,109 +166,122 @@ PUBLIC char READPIO(void)
 ///I2CSlaveBuffer[5]	Current LSB
 ///I2CSlaveBuffer[6]	Acc current MSB
 ///I2CSlaveBuffer[7]	Acc current LSB
-///I2CSlaveBuffer[7]	Status.
+
+///I2CSlaveBuffer[9]	Status.
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC void I2CREAD(void)
 {
- //char a;
+
  //word i;
 
 
 	I2CMasterBuffer[0]=0x90;
-	I2CMasterBuffer[1]=0x0A;		//1 for status.
+	I2CMasterBuffer[1]=0x0A;		//
 	I2CMasterBuffer[2]=0x91;
-	I2CReadLength=1;
+	I2CReadLength=2;
 	I2CWriteLength=2;
 	I2CGO();
 	I2CSlaveBuffer[0]=I2CSlaveTempBuffer[0];
+	I2CSlaveBuffer[1]=I2CSlaveTempBuffer[1];
+
 	I2CMasterBuffer[0]=0x90;
-	I2CMasterBuffer[1]=0x0B;		//1 for status.
+	I2CMasterBuffer[1]=0x0C;		//
 	I2CMasterBuffer[2]=0x91;
-	I2CReadLength=1;
-	I2CWriteLength=2;
-	I2CGO();
-	I2CSlaveBuffer[1]=I2CSlaveTempBuffer[0];
-	I2CMasterBuffer[0]=0x90;
-	I2CMasterBuffer[1]=0x0C;		//1 for status.
-	I2CMasterBuffer[2]=0x91;
-	I2CReadLength=1;
+	I2CReadLength=2;
 	I2CWriteLength=2;
 	I2CGO();
 	I2CSlaveBuffer[2]=I2CSlaveTempBuffer[0];
+	I2CSlaveBuffer[3]=I2CSlaveTempBuffer[1];
+
 	I2CMasterBuffer[0]=0x90;
-	I2CMasterBuffer[1]=0x0D;		//1 for status.
+	I2CMasterBuffer[1]=0x0E;		//
 	I2CMasterBuffer[2]=0x91;
-	I2CReadLength=1;
-	I2CWriteLength=2;
-	I2CGO();
-	I2CSlaveBuffer[3]=I2CSlaveTempBuffer[0];
-	I2CMasterBuffer[0]=0x90;
-	I2CMasterBuffer[1]=0x0E;		//1 for status.
-	I2CMasterBuffer[2]=0x91;
-	I2CReadLength=1;
+	I2CReadLength=2;
 	I2CWriteLength=2;
 	I2CGO();
 	I2CSlaveBuffer[4]=I2CSlaveTempBuffer[0];
+	I2CSlaveBuffer[5]=I2CSlaveTempBuffer[1];
+
 	I2CMasterBuffer[0]=0x90;
-	I2CMasterBuffer[1]=0x0F;		//1 for status.
+	I2CMasterBuffer[1]=0x10;		//
 	I2CMasterBuffer[2]=0x91;
-	I2CReadLength=1;
-	I2CWriteLength=2;
-	I2CGO();
-	I2CSlaveBuffer[5]=I2CSlaveTempBuffer[0];
-	I2CMasterBuffer[0]=0x90;
-	I2CMasterBuffer[1]=0x10;		//1 for status.
-	I2CMasterBuffer[2]=0x91;
-	I2CReadLength=1;
+	I2CReadLength=2;
 	I2CWriteLength=2;
 	I2CGO();
 	I2CSlaveBuffer[6]=I2CSlaveTempBuffer[0];
-
-	I2CMasterBuffer[0]=0x90;
-	I2CMasterBuffer[1]=0x11;		//1 for status.
-	I2CMasterBuffer[2]=0x91;
-	I2CReadLength=1;
-	I2CWriteLength=2;
-	I2CGO();
-	I2CSlaveBuffer[7]=I2CSlaveTempBuffer[0];
+	I2CSlaveBuffer[7]=I2CSlaveTempBuffer[1];
 
 	I2CMasterBuffer[0]=0x90;
 	I2CMasterBuffer[1]=0x1;		//1 for status.
 	I2CMasterBuffer[2]=0x91;
 	I2CReadLength=1;
 	I2CWriteLength=2;
-	I2CGO();
-	I2CSlaveBuffer[8]=I2CSlaveTempBuffer[0];
-//	I2CSlaveBuffer[0]=I2CSlaveBuffer[9];
+		I2CGO();
+
+	I2CSlaveBuffer[8]=I2CSlaveTempBuffer[0];		//status byte.
+
+	I2CSlaveBuffer[9]=(LPC_GPIO2->FIOPIN &(1<<8))>>8;//=1 if AC powered;
+	I2CSlaveBuffer[10]=ChargeConfidence;
+	I2CSlaveBuffer[11]=0xAA;
+	I2CSlaveBuffer[12]=0xAA;
+	I2CSlaveBuffer[13]=0xAA;
+	I2CSlaveBuffer[14]=0xAA;
+	I2CSlaveBuffer[15]=0xAA;
+
+	if (!(LPC_GPIO2->FIOPIN&1<<8))			//AC connected
+		{
+			if(0x08& I2CSlaveBuffer[8])			//1=NIMH, 0=LITHIUM
+			{
+					NIMH=1;
+					LITHIUM=0;
+					}
+					else
+					{NIMH=0;
+					LITHIUM=1;
+					}
+		}
+	charge=((I2CSlaveBuffer[6])<<8)+I2CSlaveBuffer[7];
+
+	if (charge>storedcharge)		//charging.
+		//discharge use rate in monitor.
+		//charge, add efficiency factor in.
+	{
 
 
+				if(NIMH) charge=storedcharge+0.70*(charge-storedcharge);		//NIMH
+						else
+							charge=storedcharge+1.05*(charge-storedcharge);		//LI ION to force fully charged state as 0x8000
+				if (charge>0x8000){
+					charge=0x8000;
+					ChargeConfidence=5;
+				}
+				I2CChargeWR(charge);
+				if(0x7FF0>charge)
+					ChargeConfidence=3;
+				storedcharge=charge;
+
+				I2CSlaveBuffer[6]=0xFF&(charge<<8);
+				I2CSlaveBuffer[7]=0xFF&charge;
+	}
+	else 	//charging.
+	{
+		storedcharge=charge;
 
 
-	/*
-	I2CMasterBuffer[0]=0x90;
-	I2CMasterBuffer[1]=0x0A;
-	I2CMasterBuffer[2]=0x91;
-	I2CReadLength=8;
-	I2CWriteLength=2;
-	I2CGO();
-//	if ((I2CSlaveBuffer[4]==0) && (I2CSlaveBuffer[5]==0))
-//	{I2CSlaveBuffer[4]=L4;
-//	 I2CSlaveBuffer[5]=L5;
-//	}
-//	else
-//	{
-//		L4=I2CSlaveBuffer[4];
-//		L5=I2CSlaveBuffer[5];
-//	}
+	}
 
-
-	I2CSlaveBuffer[4]=~I2CSlaveBuffer[4];
-	I2CSlaveBuffer[5]=~I2CSlaveBuffer[5];
-	I2CSlaveBuffer[6]=~I2CSlaveBuffer[6];
-	I2CSlaveBuffer[7]=~I2CSlaveBuffer[7];
-	//a=I2CSlaveBuffer[0];
-	 */
 }
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -251,7 +297,8 @@ PUBLIC void I2CREAD(void)
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC int I2CBATTERY(void)
 {
- char a;
+ char a,c;
+ int b;
 // word i;
 
 	I2CMasterBuffer[0]=0x90;
@@ -262,8 +309,23 @@ PUBLIC int I2CBATTERY(void)
 	I2CGO();
 
 	a=I2CSlaveTempBuffer[0];
+	if (a<60)a=Batt;
+	else Batt=a;
+
+	I2CMasterBuffer[0]=0x90;
+	I2CMasterBuffer[1]=0x10;
+	I2CMasterBuffer[2]=0x91;
+	I2CReadLength=2;
+	I2CWriteLength=2;
+	I2CGO();
+
+	b=(I2CSlaveTempBuffer[0]<<8)| I2CSlaveTempBuffer[1];
+	if ((b<0x79AE)&&(b>0x6000)) a=70;		//low battery if low charge. min charge on current batteries is 0x7840
+	if(!(LPC_GPIO2->FIOPIN &(1<<8)))a=100;
 	return a;
 }
+
+
 
 
 
@@ -278,42 +340,47 @@ PUBLIC int I2CBATTERY(void)
 ///Descriptions:	The charge accumulate is set to 0xFFFF
 ///					It is capped at 0xFFFF, so any further charge does not accumulate.
 /////////////////////////////////////////////////////////////////////////////////////////////////
-PUBLIC void I2CFullCharge(void)
+PUBLIC void I2CChargeWR(int charge)
 {
 
 
-
 	I2CMasterBuffer[0]=0x90;
-	I2CMasterBuffer[1]=0x1;
-	I2CMasterBuffer[2]=0x0;
+	I2CMasterBuffer[1]=0x10;
+	I2CMasterBuffer[2]=0xFF&(charge>>8);
+	I2CMasterBuffer[3]=0xFF&(charge);
 	I2CReadLength=0;
-	I2CWriteLength=3;
+	I2CWriteLength=4;
+
 	I2CGO();
-
-
-
-	I2CMasterBuffer[0]=0x90;
-	I2CMasterBuffer[1]=0x11;
-	I2CMasterBuffer[2]=0x66;
-	I2CReadLength=0;
-	I2CWriteLength=3;
-	I2CGO();
-
-
-
-	//////////////////////////////////////
-	// writing to address 0x11 seems to cause current to read 0 for a few seconds.
-	//unclear why.
-	 I2CMasterBuffer[0]=0x90;
-		I2CMasterBuffer[1]=0x10;
-		I2CMasterBuffer[2]=0x11;
-		I2CReadLength=0;
-		I2CWriteLength=3;
-		I2CGO();
-
 
 
 	}
+
+
+
+
+
+
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief set shutdown, also set PIO to high (open drain.)
+///@param void
+///@return void
+///
+/////////////////////////////////////////////////////////////////////////////////////////////////
+PUBLIC void I2CNewBattery(void)
+{
+	I2CMasterBuffer[0]=0x90;
+	I2CMasterBuffer[1]=0x1;
+	I2CMasterBuffer[2]=0x18;
+	I2CReadLength=0;
+	I2CWriteLength=3;
+	I2CGO();
+	}
+
+
 
 
 
@@ -327,21 +394,32 @@ PUBLIC void I2CFullCharge(void)
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC void I2CSHUTDOWN(void)
 {
-
-
-
 	I2CMasterBuffer[0]=0x90;
 	I2CMasterBuffer[1]=0x1;
 	I2CMasterBuffer[2]=0x38;
 	I2CReadLength=0;
 	I2CWriteLength=3;
 	I2CGO();
-
-
-
-
 	}
 
+
+
+PUBLIC char I2CSTATUS(void)
+
+{
+	 char a;
+	// word i;
+
+		I2CMasterBuffer[0]=0x90;
+		I2CMasterBuffer[1]=0x01;
+		I2CMasterBuffer[2]=0x91;
+		I2CReadLength=1;
+		I2CWriteLength=2;
+		I2CGO();
+
+		a=I2CSlaveTempBuffer[0];
+		return a;
+}
 
 
 

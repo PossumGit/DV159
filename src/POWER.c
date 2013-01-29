@@ -34,10 +34,18 @@ PUBLIC volatile word SWF2;
 PUBLIC volatile word SWF3;
 PUBLIC volatile word SWBT;
 PUBLIC volatile word SWNEAT;
+PUBLIC volatile word ACON;
+PUBLIC volatile word ACOFF;
 PUBLIC volatile byte PENDALARM=0;
 PUBLIC volatile int CPUSPEED=0;
 PUBLIC int batterygood=1;
 PUBLIC int debounce=0;
+PUBLIC int storedcharge=0x8000;
+PUBLIC int charge;
+PUBLIC int ChargeConfidence=3;
+PUBLIC int NIMH=1;
+PUBLIC int LITHIUM=0;
+
 
 //Private variables
 
@@ -56,7 +64,8 @@ EXTERNAL int	PCBiss;		//=3 for PCHB issue 3, =4 for PCB issue 4.
 
 
 //Private functions
-void LEDFLASH(void);
+PRIVATE void LEDFLASH(void);
+PUBLIC void ACSTATE(void);
 //public functions
 PUBLIC void CPU4MHz(void);
 PUBLIC void CPU12MHz(void);
@@ -287,17 +296,17 @@ void EINT3_IRQHandler(void)				//GPIO interrupt.
 {
 //interrupts on input change state and bluetooth character.
 	byte a=1;
-
+	byte charge;
 	int s,t,u,v,w;
 	//int b,c,d,e,f,g,h,i,j,k;
 
 
 
-	s=LPC_GPIOINT->IO0IntEnR;
-	t=LPC_GPIOINT->IO0IntEnF;
-	u=LPC_GPIO2->FIOPIN;
-	v=LPC_GPIO0->FIOPIN;
-	w=LPC_GPIOINT->IO0IntEnF;
+//	s=LPC_GPIOINT->IO0IntEnR;
+//	t=LPC_GPIOINT->IO0IntEnF;
+//	u=LPC_GPIO2->FIOPIN;
+//	v=LPC_GPIO0->FIOPIN;
+//	w=LPC_GPIOINT->IO0IntEnF;
 
 
 	s=LPC_GPIOINT->IO0IntStatF;
@@ -324,25 +333,13 @@ if (PCBiss==3||PCBiss==4)
 		LPC_GPIOINT->IO0IntClr=0x1<<16;					//BT Interrupt
 	if ((SWNEAT=(LPC_GPIOINT->IO2IntStatF&(0x1<<4)))>>4)
 		LPC_GPIOINT->IO2IntClr=0x1<<4;					//NEAT Interrupt MOD, wire NEAT INTERRUPt to P2.4 pin 69.
+
+	ACOFF=(LPC_GPIOINT->IO2IntStatR&(0x1<<8))>>8;
+	if(ACOFF)LPC_GPIOINT->IO2IntClr=0x1<<8;
+	ACON=(LPC_GPIOINT->IO2IntStatF&(0x1<<8))>>8;
+	if(ACON)LPC_GPIOINT->IO2IntClr=0x1<<8;
 }
 
-else if (PCBiss==2)
-{
-	//get interrupt status.
-
-	a=LPC_GPIOINT->IO2IntStatF;
-	SW2=LPC_GPIOINT->IO0IntStatR&0x1<<1;			//SW2 bit 1		EXT
-	SW1=(LPC_GPIOINT->IO2IntStatR&0x1<<11)>>11;		//SW1 bit 0 INT
-	SW3=(LPC_GPIOINT->IO2IntStatR&0x1<<13)>>11;		//SW3 bit 2 MID
-	SWF2=LPC_GPIOINT->IO0IntStatF&0x1<<1;			//SW2 bit 1		EXT
-	SWF1=(LPC_GPIOINT->IO2IntStatF&0x1<<11)>>11;	//SW1 bit 0 INT
-	SWF3=(LPC_GPIOINT->IO2IntStatF&0x1<<13)>>11;	//SW3 bit 2 MID
-	SWBT=(LPC_GPIOINT->IO0IntStatF&0x1<<16)>>16;	//BT
-	SWNEAT=(LPC_GPIOINT->IO2IntStatF&0x1<<0)>>0;	//NEAT
-	//clear interrupts.
-	LPC_GPIOINT->IO0IntClr=0x1<<1|0x1<<16;
-	LPC_GPIOINT->IO2IntClr=0x1<<0|0x1<<11|0x1<<13;		//NEAT|INT|MID
-}
 
 
 
@@ -398,13 +395,6 @@ else if (PCBiss==2)
 			readNEAT();
 			LPC_TIM2->TC = 3000000;
 	}
-	else
-	{
-
-			CPU12MHz();
-	}
-
-
 
 }
 
@@ -438,8 +428,8 @@ if (PCBiss==3||PCBiss==4)
 	b=LPC_GPIOINT->IO0IntEnF;
 
 
-	LPC_GPIOINT->IO2IntEnR|=0x1<<11|0x1<<12;			//INT input	rising
-	LPC_GPIOINT->IO2IntEnF|=0x1<<11|0x1<<12;			//INT input falling
+	LPC_GPIOINT->IO2IntEnR|=0x1<<11|0x1<<12|1<<8;			//INT input	rising SW1|SW2|ACOK
+	LPC_GPIOINT->IO2IntEnF|=0x1<<11|0x1<<12|1<<8;			//INT input falling SW1|SW2|ACOK
 
 
 
@@ -452,19 +442,7 @@ if (PCBiss==3||PCBiss==4)
 
 }
 
-else if (PCBiss==2)
-{
-	NVIC->ISER[0]=0x1<<21;		//enable eint3/GPIO 0/GPIO2 interrupt.
-	LPC_GPIOINT->IO0IntEnR|=0x1<<1;				//EXT input rising
-	LPC_GPIOINT->IO2IntEnR|=0x1<<11;			//INT input	rising
-	LPC_GPIOINT->IO2IntEnR|=0x1<<13;			//MID input rising
 
-	LPC_GPIOINT->IO0IntEnF|=0x1<<1;				//EXT input	falling
-	LPC_GPIOINT->IO0IntEnF|=0x1<<16;			//Bluetooth falling
-	LPC_GPIOINT->IO2IntEnF|=0x1<<0;				//NEAT falling
-	LPC_GPIOINT->IO2IntEnF|=0x1<<11;			//INT input falling
-	LPC_GPIOINT->IO2IntEnF|=0x1<<13;			//MID input falling
-}
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -501,7 +479,7 @@ PUBLIC int powerDown(void)
 	int r=0;		//return value
 	byte a;
 	int b,s;
-	int c,d,e,f,g,h,i,j,k;
+	int c,d,e,f,g,h,i,j,k,x;
 	static int t=0;
 	//FEED watchdog.
 	s=LPC_TIM2->TC;
@@ -626,14 +604,16 @@ PUBLIC int powerDown(void)
 
 
 	 LPC_SC->PCONP     = Peripherals ;       // Enable Power for Peripherals      */
-//	 EnableWDT();
+
 #if release==1
 	LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
 	LPC_WDT->WDFEED=0x55;			//watchdog feed
 #endif
-	BatteryState();			//LED Orange/yellow depending on battery state.
-//	BTACC=0;
-//	 WatchFeed();
+
+//	ACSTATE();
+	BatteryState();
+//	LEDFLASH();
+
 	}
 	}
 	t=LPC_TIM2->TC;
@@ -674,8 +654,40 @@ else
 }
 
 
+
+////////////////////////////////////////////////////////////
+///@brief Charge state from Power on and power off.
+///@param void
+///@return void
+///
+///set batterygood to true or false. always true if power on.
+///set NIMH or lithium if charge is on
+///
+////////////////////////////////////////////////////////////
+void ACSTATE()
+{
+	if(ACON)
+		{
+			ACON=0;
+			batterygood=1;
+				I2CREAD();
+
+		}
+		if(ACOFF)
+		{
+			ACOFF=0;
+			if( I2CBATTERY()>95)batterygood=1;
+			else batterygood=0;
+			I2CREAD();
+		}
+}
+
+
 void LEDFLASH()
 {
+
+	ACSTATE();
+
 	if(batterygood)
 	{
 		if (100000 > LPC_TIM2->TC)

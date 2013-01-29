@@ -41,6 +41,10 @@ EXTERNAL char STATE;
 EXTERNAL volatile byte PENDALARM;
 EXTERNAL volatile int debounce;
 EXTERNAL int BTACC;
+EXTERNAL volatile byte I2CSlaveBuffer[];
+EXTERNAL int NIMH;
+EXTERNAL int LITHIUM;
+
 
 //Local functions
 PRIVATE void powerupHEX(void);
@@ -88,12 +92,15 @@ EXTERNAL byte	inputChange(void);
 EXTERNAL void I2CREAD(void);
 EXTERNAL void I2CINIT(void);
 EXTERNAL void I2CSHUTDOWN(void);
+EXTERNAL void I2CNewBattery(void);
 EXTERNAL void EnableWDT10s(void);
 EXTERNAL void EnableWDT2s(void);
 EXTERNAL void BatteryState(void);
 EXTERNAL char READPIO(void);
 EXTERNAL void NEATALARM(void);
-
+EXTERNAL char I2CSTATUS(void);
+EXTERNAL int storedcharge;
+EXTERNAL int ChargeConfidence;
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -117,7 +124,60 @@ PUBLIC int main(void) {
 	{
 
 		char a;
-//		 CPU12MHz();
+		int charge;
+		I2CINIT();			//at 4MHz.
+//		I2CNewBattery();
+
+//		a= I2CSTATUS();
+//		I2CSHUTDOWN();
+		I2CREAD();
+//				a= I2CSTATUS();
+
+		ChargeConfidence=2;			//not very good confidence.
+		charge=(I2CSlaveBuffer[6]<<8)| I2CSlaveBuffer[7];
+		//charge*0.417 gives charge in mAh.
+		//volts*4.88mV/32 gives volts. =volts*0.1525 in mV
+		//current*0.1042 =current in mA
+		//temperature*0.125/32 gives degrees C = temperature *0.0039
+		//if full charge=0x8000 and capacity =800mAh then full discharge=0x7882.
+		if (I2CSlaveBuffer[8]&0x40)//new battery.
+			{ChargeConfidence=1;
+			charge=0x8000;
+			I2CChargeWR(charge);
+
+			}
+
+		if (charge>0x8300)
+			{ChargeConfidence=4;
+			charge=0x8000;
+			I2CChargeWR(charge);
+			}
+		else if(charge>=0x8000)
+		{
+			ChargeConfidence=3;
+			charge=0x8000;
+			I2CChargeWR(charge);
+
+		}
+		if ((0x08& I2CSlaveBuffer[6])&&(LPC_GPIO2->FIOPIN&1<<8))
+		{
+			NIMH=1;
+			LITHIUM=0;
+		}
+		else
+		{NIMH=0;
+		LITHIUM=1;
+		}
+
+
+
+
+		storedcharge=charge;
+	I2CNewBattery();		//reset new battery, allow PIO to read battery chemistry.
+
+
+	//note bit 3=1 means NIMH, bit 3=0 means Lithium, but only when on charge.
+
 //ext interrupt 2 causes problems after USB. ICER0 bit 20.
 		 LPC_GPIO_BTRESET FIOSET = BTRESET; //BLUETOOTH NRESET OUT High, Low to reset.
 		p=SCB->VTOR;		//vector=0 if loaded at 0, 0x10000 if loaded at 0x10000, ie over USB driver.
@@ -127,16 +187,16 @@ PUBLIC int main(void) {
 		}
 	//	LPC_TIM2->TC=0;
 	//	CPU12MHz();
-		I2CINIT();
-		a= READPIO();		//takes about 5ms
-		if (a&0x08)
-		{
-			LED2YELLOW();	//lithium battery
-		}
-		else
-		{
+
+//		a= READPIO();		//takes about 5ms
+//		if (a&0x08)
+//		{
+//			LED2YELLOW();	//lithium battery
+//		}
+//		else
+//		{
 			LED2GREEN();	//nimh battery.
-		}
+//		}
 	//main +5ms
 		LED1OFF();
 		STATE='P';
@@ -188,7 +248,7 @@ if (PCBiss==3||PCBiss==4)
 ///it wakes up from input, BT or NEAT interrupts.
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PRIVATE void LOOP(void) {
-
+	int 	a;
 	CPU12MHz();
 	LPC_TIM2->TC = 0;
 
@@ -218,8 +278,10 @@ PRIVATE void powerupHEX(void) {
 	unsigned int time;
 	int h,i,j,k,l;
 
-		byte	a;
-
+		byte	a,b;
+		int Charge;
+			int ChargeCalc;
+			int LastCharge;
 	while(1)
 	{
 
@@ -400,26 +462,27 @@ PRIVATE void powerupHEX(void) {
 		CPU100MHz();
 		us(100000);
 		LED2OFF();
+
 		while(1)
 		{
 
 			if(6!=HEX())break;
-			LED1GREEN();
-			us(200000);
-				a=inputChange();
-				if (~a&(1<<4))
+
+			CPU4MHz();
+			I2CREAD();
+			if( I2CBATTERY()>95)
 				{
-					LED1YELLOW();
-				}
-				else if (~a&(1<<5))
-				{	LED1GREEN();
+					LED1GREEN();
 				}
 				else
-				{
-						LED1OFF();
+				{	LED1YELLOW();
 				}
+				CPU100MHz();
 				us(200000);
-		}
+				LED1OFF();
+				us(200000);
+
+			}
 		break;
 	case 07:				//test IR synthesis Transmit code Plessey 3 every 5 seconds.
 		CPU12MHz();
@@ -508,7 +571,6 @@ PRIVATE void powerupHEX(void) {
 		us(2000000);
 		 IRsynthesis('H',1,0x0402);		//HC1820  4 repeats, code  for HC1820 socket 1
 		 playIR();
-
 		 if(0x0A!=HEX())break;
 		}
 
@@ -530,18 +592,38 @@ PRIVATE void powerupHEX(void) {
 	case  0x0D:		//VIVO remote code.
 //from starting code to first IR is 5.8ms
 		CPU4MHz();
-		I2CINIT();
-//		I2CREAD();		//first read is not valid, so throw it away.
-//		us(2000000);
 
-		BatteryState();			//LED Orange/yellow depending on battery state.//takes about 5.8ms
+
+		I2CSTATUS();
+		a=I2CBATTERY();
+		if (a<0x60)
+		{
+		b=0x10&I2CSTATUS();
+			if (b)
+			{a=100;
+			}
+		}
+			if(a >=95)//95=3.708V
+		{
+				b=0x10;
+			LED1GREEN();//battery good active
+		}
+		else
+		{
+			b=0;
+			 LED1YELLOW();//battery low active.
+		}
+
+
+
+//		BatteryState();			//LED Orange/yellow depending on battery state.//takes about 5.8ms
 //main+10.8ms
-
+		 I2CSHUTDOWN();
 		EnableWDT10s();		//10s watchdog until LOOP.
 		LPC_WDT->WDTC = 60000000;	//set timeout 10s watchdog timer
 		LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
 		LPC_WDT->WDFEED=0x55;			//watchdog feed
-
+		  LPC_SC->FLASHCFG  =0;
 		asm_vivo(); //vivo code, never return.
 //should not return.
 //
@@ -572,16 +654,15 @@ PRIVATE void powerupHEX(void) {
 
 
 		BatteryState();			//LED Orange/yellow depending on battery state. //takes about 5.8ms
+		 I2CSHUTDOWN();
 			LED2OFF();
 			EnableWDT10s();		//10s watchdog until LOOP.
 			LPC_WDT->WDTC = 60000000;	//set timeout 10s watchdog timer
 			LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
 			LPC_WDT->WDFEED=0x55;			//watchdog feed
-			while (1)
-			{
+
+			 LPC_SC->FLASHCFG  =0;
 			asm_holtek();
-	//		BatteryState();
-			}
 
 //
 //
@@ -604,10 +685,6 @@ PRIVATE void powerupHEX(void) {
 		LED2OFF();
 		while(1);
 		break;
-
-
-
-
 
 
 
