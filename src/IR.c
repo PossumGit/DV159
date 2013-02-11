@@ -80,7 +80,6 @@ PUBLIC int captureIR(void) {
 	LPC_WDT->WDTC = 40000000;	//set timeout 40s watchdog timer
 	LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
 	LPC_WDT->WDFEED=0x55;			//watchdog feed
-	LPC_WDT->WDTC = 5000000;	//set timeout 5s watchdog timer
 #endif
 if (PCBiss==3||PCBiss==4)
 {
@@ -114,7 +113,11 @@ if (PCBiss==3||PCBiss==4)
 	LPC_GPIO1->FIOCLR |=1<<29			;//IR capture off.
 }
 
-
+#if release==1
+	LPC_WDT->WDTC = 5000000;	//set timeout 40s watchdog timer
+	LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
+	LPC_WDT->WDFEED=0x55;			//watchdog feed
+#endif
 	if (IRAddress > CaptureFirst)
 		return 1;
 	return 0;
@@ -145,7 +148,7 @@ PUBLIC void playIR(void) {
 		LPC_WDT->WDTC = 40000000;	//set timeout 40s watchdog timer
 		LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
 		LPC_WDT->WDFEED=0x55;			//watchdog feed
-		LPC_WDT->WDTC = 5000000;	//set timeout 5s watchdog timer
+
 #endif
 		startPlayIR();
 		while (IRData > 0)//wait here during play IR
@@ -157,6 +160,12 @@ PUBLIC void playIR(void) {
 		}
 		LED1OFF();
 		endPlayIR();
+#if release==1
+		LPC_WDT->WDTC = 5000000;	//set timeout 5s watchdog timer
+		LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
+		LPC_WDT->WDFEED=0x55;			//watchdog feed
+
+#endif
 	}
 }
 

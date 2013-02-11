@@ -76,13 +76,14 @@ EXTERNAL void	LED1OFF(void);
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC void NEATINIT(void) {
 
+
+
 	initSSP0();
-
-	LPC_GPIO_NEATCS FIODIR |= NEATCS; //CHIPEN on NEAT is output.
+	LPC_GPIO_NEATCS FIOSET = NEATCS; //NEAT disable
+	LPC_GPIO_NEATCS FIODIR |=NEATCS; //CHIPEN on NEAT.
 	LPC_GPIO_NEATINT FIODIR &= ~(NEATINT); //NEAT INt is input.
-	//while(LPC_GPIO2->FIOPIN &(NEATINT);		//wait for INT from RX
 
-	NEATRESET();
+
 //	NEATWR(2,0xA0);			//reset read
 //	NEATWR(1,0x01);			//reset NEAT module.
 }
@@ -214,22 +215,35 @@ void NEATRESET()
 /////////////////////////////////////////////////////////////////////////////////////////////////
 void NEATALARM()
 {	int a,b,c,d;
-	a=400000+LPC_TIM2->TC;
+	a=3000000+LPC_TIM2->TC;
 	disableInputInterrupt();
-NEATWR(1,1);				//reset NEAT/as power up reset.
+#if release==1
+	LPC_WDT->WDTC = 18000000;	//set timeout 18s watchdog timer
+	LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
+	LPC_WDT->WDFEED=0x55;			//watchdog feed
+//	LPC_WDT->WDTC = 5000000;	//set timeout 5s watchdog timer
+#endif
 
-	while(a>LPC_TIM2->TC)
-	{
-		if ((LPC_TIM2->TC / 200000) % 2)
-			{LED1YELLOW();}
-		else
-			{LED1GREEN();}
-	}
-NEATWR(2,0xA0);			//reset receiver
 
-	us(10000);
+//NEATWR(1,1);				//reset NEAT/as power up reset.
+//	while(a>LPC_TIM2->TC)
+//	{
+//		if ((LPC_TIM2->TC / 200000) % 2)
+//			{LED1YELLOW();}
+//		else
+//			{LED1GREEN();}
+//	}
+//NEATWR(2,0xA0);			//reset receiver
 
-	while (0x80&NEATRD(3));		//wait for ready		//should be instant.
+
+
+//	us(10000);
+
+//	while (0x80&NEATRD(3));		//wait for ready		//should be instant.
+
+	while ((0x80&NEATRD(3))	&& (a>LPC_TIM2->TC))
+		 if (a<=LPC_TIM2->TC) 	 NVIC_SystemReset();						//system reset;
+
 	NEATWR(0x08,03);		//number of short preamble packages sent
 	NEATWR(0x09,03);		//number of long preamble packages sent.
 	NEATWR(0x42,0x01);		//select 10,11 as address
@@ -240,19 +254,26 @@ NEATWR(2,0xA0);			//reset receiver
 
 	NEATWR(0x03,0x80);		//transmit code.
 
-#if release==1
-	LPC_WDT->WDTC = 18000000;	//set timeout 10s watchdog timer
-	LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
-	LPC_WDT->WDFEED=0x55;			//watchdog feed
-	LPC_WDT->WDTC = 5000000;	//set timeout 5s watchdog timer
-#endif
-	while (0x80&NEATRD(3))
+
+
+	while ((0x80&NEATRD(3))	&&(a>LPC_TIM2->TC))
 		{
 		if ((LPC_TIM2->TC / 200000) % 2)
 				{LED1YELLOW();}
 			else
 				{LED1GREEN();}
 			};
+	 if (a<=LPC_TIM2->TC) 	 NVIC_SystemReset();						//system reset;
+
+	 if (a>LPC_TIM2->TC)
+	 {	if ((LPC_TIM2->TC / 200000) % 2)
+		{LED1YELLOW();}
+	else
+		{LED1GREEN();}
+	}
+
+
+
 
 
 
@@ -268,6 +289,12 @@ NEATWR(2,0xA0);			//reset receiver
 
 		enableInputInterrupt();
 	LED1OFF();
+#if release==1
+	LPC_WDT->WDTC = 5000000;	//set timeout 10s watchdog timer
+	LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
+	LPC_WDT->WDFEED=0x55;			//watchdog feed
+//	LPC_WDT->WDTC = 5000000;	//set timeout 5s watchdog timer
+#endif
 }
 
 
@@ -282,10 +309,20 @@ NEATWR(2,0xA0);			//reset receiver
 /////////////////////////////////////////////////////////////////////////////////////////////////
 void NEATTX(byte battery, byte alarm, word ID)
 {	int a,b,c,d;
+a=3000000+LPC_TIM2->TC;
+#if release==1
 
-	NEATRESET();
-	while (0x80&NEATRD(3));
-		NEATWR(0x45,alarm);		//alarm type
+	LPC_WDT->WDTC = 18000000;	//set timeout 18s watchdog timer
+	LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
+	LPC_WDT->WDFEED=0x55;			//watchdog feed
+#endif
+//	NEATRESET();
+//	while (0x80&NEATRD(3));
+	while ((0x80&NEATRD(3))	&& (a>LPC_TIM2->TC))
+		 if (a<=LPC_TIM2->TC) 	 NVIC_SystemReset();						//system reset;
+
+
+	NEATWR(0x45,alarm);		//alarm type
 		NEATWR(0x42,0x00);		//select 40,41 as address
 		NEATWR(0x08,03);		//number of short preamble packages sent
 		NEATWR(0x09,03);		//number of long preamble packages sent.
@@ -297,15 +334,16 @@ void NEATTX(byte battery, byte alarm, word ID)
 	while (0x80&NEATRD(3));
 	NEATWR(0x03,0x80);		//transmit code.
 	disableInputInterrupt();
+
+	enableInputInterrupt();
+	while ((0x80&NEATRD(3))	&& (a>LPC_TIM2->TC))
+		if (a<=LPC_TIM2->TC) 	 NVIC_SystemReset();						//system reset;
+//	while (0x80&NEATRD(3));
 #if release==1
-	LPC_WDT->WDTC = 18000000;	//set timeout 10s watchdog timer
+	LPC_WDT->WDTC = 5000000;	//set timeout 5s watchdog timer
 	LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
 	LPC_WDT->WDFEED=0x55;			//watchdog feed
-	LPC_WDT->WDTC = 5000000;	//set timeout 5s watchdog timer
 #endif
-	enableInputInterrupt();
-	while (0x80&NEATRD(3));
-
 
 }
 

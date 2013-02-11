@@ -267,8 +267,17 @@ PUBLIC void timer2CPU4(void)
 {
 	LPC_SC->PCONP|=1<<22	;	//enable timer 2.
 	LPC_TIM2->PR = 1-1; //(4MHz/4)/1 counts at 1MHz. Max time 4295s
-	LPC_TIM2->TCR = 0 | 1 << 1; //disable timer2, reset timer2
-	LPC_TIM2->TCR = 1 | 0 << 1; //enable timer2 (start timer2)
+//	LPC_TIM2->TCR = 0 | 1 << 1; //disable timer2, reset timer2
+//	LPC_TIM2->TCR = 1 | 0 << 1; //enable timer2 (start timer2)
+
+
+	LPC_SC->PCONP|=1<<23	;	//enable timer 3.
+	LPC_TIM3->PR = 1-1; //(4MHz/4)/1 counts at 1MHz. Max time 4295s
+//	LPC_TIM3->TCR = 0 | 1 << 1; //disable timer3, reset timer2
+//	LPC_TIM3->TCR = 1 | 0 << 1; //enable timer3 (start timer2)
+
+
+
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 ///@brief timer2CPU4
@@ -282,8 +291,13 @@ PUBLIC void timer2CPU12(void)
 {
 	LPC_SC->PCONP|=1<<22	;	//enable timer 2.
 	LPC_TIM2->PR = 3-1; //(12MHz/4)/3 counts at 1MHz. Max time 4295s
-	LPC_TIM2->TCR = 0 | 1 << 1; //disable timer2, reset timer2
-	LPC_TIM2->TCR = 1 | 0 << 1; //enable timer2 (start timer2)
+//	LPC_TIM2->TCR = 0 | 1 << 1; //disable timer2, reset timer2
+//	LPC_TIM2->TCR = 1 | 0 << 1; //enable timer2 (start timer2)
+
+	LPC_SC->PCONP|=1<<23	;	//enable timer 3.
+	LPC_TIM3->PR = 3-1; //(12MHz/4)/3 counts at 1MHz. Max time 4295s
+//	LPC_TIM3->TCR = 0 | 1 << 1; //disable timer3, reset timer2
+//	LPC_TIM3->TCR = 1 | 0 << 1; //enable timer3 (start timer2)
 }
 /////////////////////////////////////////////////////////////////////////////////////////////////
 ///@brief timer2CPU4
@@ -297,8 +311,12 @@ PUBLIC void timer2CPU100(void)
 {
 	LPC_SC->PCONP|=1<<22	;	//enable timer 2.
 	LPC_TIM2->PR = 25-1; //(100Mhz/4)/25 counts at 1MHz. Max time 4295s
-	LPC_TIM2->TCR = 0 | 1 << 1; //disable timer2, reset timer2
-	LPC_TIM2->TCR = 1 | 0 << 1; //enable timer2 (start timer2)
+//	LPC_TIM2->TCR = 0 | 1 << 1; //disable timer2, reset timer2
+//	LPC_TIM2->TCR = 1 | 0 << 1; //enable timer2 (start timer2)
+	LPC_SC->PCONP|=1<<23	;	//enable timer 3.
+	LPC_TIM3->PR = 25-1; //(100Mhz/4)/25 counts at 1MHz. Max time 4295s
+//	LPC_TIM3->TCR = 0 | 1 << 1; //disable timer3, reset timer2
+//	LPC_TIM3->TCR = 1 | 0 << 1; //enable timer3 (start timer2)
 }
 
 
@@ -320,8 +338,9 @@ PUBLIC void	us(unsigned int time_us)
 
 //change to use TIMER2, always clocks at 1MHz
 
-	time_us=time_us+LPC_TIM2->TC;
-	while (time_us>LPC_TIM2->TC);
+	LPC_TIM3->TC=0;
+	time_us=time_us+LPC_TIM3->TC;
+	while (time_us>LPC_TIM3->TC);
 
 }
 

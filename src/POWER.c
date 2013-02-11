@@ -48,7 +48,7 @@ PUBLIC int LITHIUM=0;
 
 
 //Private variables
-
+static int t=0;
 
 
 //External variables
@@ -361,7 +361,7 @@ if (PCBiss==3||PCBiss==4)
 //	No need to separately reset flags.
 	else if (SW1|SW2|SW3|SWF1|SWF2|SWF3)
 		{
-
+		BTACC=0;		//any input press clears BTACC
 		if (debounce==0)
 		{
 			CPU12MHz();
@@ -369,6 +369,7 @@ if (PCBiss==3||PCBiss==4)
 			LPC_TIM2->TC = 0;
 			PENDALARM=0x30^(inputChange()&0x30);	//NZ if EXT and/or INT pressed.//else 0.
 			debounce=1;
+
 		}
 		else
 		{
@@ -379,7 +380,7 @@ if (PCBiss==3||PCBiss==4)
 
 	else if (SWBT)
 	{
-		BTACC=1;
+		BTACC=1;					//any bluetooth sets BTACC.
 		if (CPUSPEED==0)		//has been asleep
 		{
 
@@ -480,7 +481,7 @@ PUBLIC int powerDown(void)
 	byte a;
 	int b,s;
 	int c,d,e,f,g,h,i,j,k,x;
-	static int t=0;
+
 	//FEED watchdog.
 	s=LPC_TIM2->TC;
 
@@ -581,9 +582,7 @@ PUBLIC int powerDown(void)
 //	LPC_SC->PCON = 0x0;
 	// Deep Sleep Mode wake up from EINT/GPIO Does not recover from sleep.
 
-    //Power down mode.
-	SCB->SCR = 0x4;
-	LPC_SC->PCON = 0x01;
+
 	//Power Down Mode wake up from EINT/GPIO Works but not on debug.
 	CPU4MHz();						//reduce power.
 	LPC_SC->PCONP=1<<15;		//only GPIO needed during power down.
@@ -597,10 +596,15 @@ PUBLIC int powerDown(void)
 		SCB->SCR = 0x4;			//sleepdeep bit
 		LPC_SC->PCON = 0x01;	//combined with sleepdeep bit gives power down mode. IRC is disabled, so WDT disabled.
 #endif
-		enableInputInterrupt();
-#if release==1
-	__WFI(); //go to power down.
+#if release==0
+	    //Power down mode.
+		SCB->SCR = 0x0;
+		LPC_SC->PCON = 0x00;
 #endif
+		enableInputInterrupt();
+
+	__WFI(); //go to power down.
+
 
 
 	 LPC_SC->PCONP     = Peripherals ;       // Enable Power for Peripherals      */
@@ -611,6 +615,7 @@ PUBLIC int powerDown(void)
 #endif
 
 //	ACSTATE();
+
 	BatteryState();
 //	LEDFLASH();
 

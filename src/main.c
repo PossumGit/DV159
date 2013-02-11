@@ -125,6 +125,14 @@ PUBLIC int main(void) {
 
 		char a;
 		int charge;
+		timer2CPU4();		//12MHz clock, generate 1MHz system clock for sleep and delays from 12MHz CPU clock.
+		LPC_TIM2->TCR = 0 | 1 << 1; //disable timer2, reset timer2
+		LPC_TIM2->TCR = 1 | 0 << 1; //enable timer2 (start timer2)
+		LPC_TIM3->TCR = 0 | 1 << 1; //disable timer3, reset timer2
+		LPC_TIM3->TCR = 1 | 0 << 1; //enable timer3 (start timer2)
+		SSPNEATCPU4();	//SSP 1MHz derived from 4MHz for NEAT SSP.
+		BTbaudCPU12();
+
 		I2CINIT();			//at 4MHz.
 //		I2CNewBattery();
 
@@ -159,7 +167,7 @@ PUBLIC int main(void) {
 			I2CChargeWR(charge);
 
 		}
-		if ((0x08& I2CSlaveBuffer[6])&&(LPC_GPIO2->FIOPIN&1<<8))
+		if ((0x08& I2CSlaveBuffer[8])&&(LPC_GPIO2->FIOPIN&1<<8))
 		{
 			NIMH=1;
 			LITHIUM=0;
@@ -183,7 +191,7 @@ PUBLIC int main(void) {
 		p=SCB->VTOR;		//vector=0 if loaded at 0, 0x10000 if loaded at 0x10000, ie over USB driver.
 		if (p!=0)	//loaded over usb driver.
 		{
-			CPU12MHz();
+			CPU12MHz();		//otherwise CPU can lock up for no obvious reason I can understand.
 		}
 	//	LPC_TIM2->TC=0;
 	//	CPU12MHz();
@@ -278,7 +286,7 @@ PRIVATE void powerupHEX(void) {
 	unsigned int time;
 	int h,i,j,k,l;
 
-		byte	a,b;
+		byte	a,b,c,d;
 		int Charge;
 			int ChargeCalc;
 			int LastCharge;
@@ -306,13 +314,16 @@ PRIVATE void powerupHEX(void) {
 
 
 	case 0x02:			//TEST NEAT transmit, inc ID every 10s.
-		CPU12MHz();
-
+	//	CPU12MHz();
+	//	us(20000000);
 		LED2OFF();
 		LPC_TIM2->TC=0;
 		time=0;			//
 		NEATRESET();
 
+	//	NEATWR(0x45,0);
+
+	//	NEATINIT();
 		while(1)
 
 
@@ -341,59 +352,38 @@ PRIVATE void powerupHEX(void) {
 	case 0x03:			//TEST NEAT RX, receive an alarm,inc ID then re-transmit.
 						//works well with TREX pager 2.
 		CPU12MHz();
+		LED1GREEN();
 		us(1000000);
 		LED2OFF();
 
 
-	//		LED1YELLOW();
-		EnableWDT10s();		//10s watchdog until LOOP.
-		LPC_WDT->WDTC = 5000000;	//5s after next FEED(in powerDown in LOOP). set timeout 5s watchdog timer
-
-
-		CPU12MHz();
-		LPC_GPIO_BTRESET FIOCLR	= BTRESET;	//Bluetooth reset.	RESET BT
-		us(10000);
-		LPC_GPIO_BTRESET FIOSET	= BTRESET;	//Bluetooth reset.
-		us(50000);
-		initUART();
-		initBT();
-		resetBT();
-		setupBT();
-		LED1YELLOW();
-		I2CINIT();
-		I2CREAD();		//first read is not valid, so throw it away.
-
 
 			NEATRESET();
 			enableInputInterrupt();
-			LPC_TIM2->TC =3000000;
-
 			while(1)
 			{
 			LED1OFF();
-			powerDown();
-			if(SWNEAT)
+			CPU4MHz();						//reduce power.
+
+		#if release==1
+				SCB->SCR = 0x4;			//sleepdeep bit
+				LPC_SC->PCON = 0x01;	//combined with sleepdeep bit gives power down mode. IRC is disabled, so WDT disabled.
+		#endif
+
+		#if release==1
+			__WFI(); //go to power down.
+		#endif
+
+			if(SWNEAT)		//if wakeup with NEAT
 			{
 
+			LED1YELLOW();
 			SWNEAT=0;
 			CPU12MHz();
-			i=NEATRD(0x61);
-			j=NEATRD(0x60);
-
-
-			LED1GREEN();
-
 			NEATWR(2,0xA0);			//reset read
-			NEATRESET();
-			us(3000000);
-			LED1YELLOW();
-			NEATTX(0xFF,0x00,1+i+256*j);		//battery state, ALARM type, ID(16 bits)
+
+			us(500000);
 			LED1OFF();
-			LPC_TIM2->TC =3000000;
-			SWNEAT=0;		//ignore repeats within 4s.
-			NEATWR(2,0xA0);			//reset read
-
-			if(3!=HEX())break;
 			}
 
 
@@ -576,6 +566,18 @@ PRIVATE void powerupHEX(void) {
 
 		break;
 	case 0x0B:				//Enable USB programming.
+	//	CPU12MHz();
+		LED1GREEN();
+		us(1000000);
+		LED2OFF();
+		NEATRESET();
+
+		NEATWR(4,0x02);			//read firmware
+
+		a=NEATRD(0x65);
+		b=NEATRD(0x66);
+		c=NEATRD(0x67);
+
 		break;
 
 	case 0x0C: 				//DEBUG recover clock
@@ -718,12 +720,13 @@ PRIVATE void powerupHEX(void) {
 		I2CREAD();		//first read is not valid, so throw it away.
 
 	//	CPU12MHz();
-//		NEATRESET();
-		initSSP0();
-		LPC_GPIO_NEATCS FIOSET = NEATCS; //NEAT disable
-		LPC_GPIO_NEATCS FIODIR |=NEATCS; //CHIPEN on NEAT.
-		LPC_GPIO_NEATINT FIODIR &= ~(NEATINT); //NEAT INt is input.
-		NEATWR(1,1);				//reset NEAT/as power up reset.
+		NEATRESET();
+//		initSSP0();
+//		LPC_GPIO_NEATCS FIOSET = NEATCS; //NEAT disable
+//		LPC_GPIO_NEATCS FIODIR |=NEATCS; //CHIPEN on NEAT.
+//		LPC_GPIO_NEATINT FIODIR &= ~(NEATINT); //NEAT INt is input.
+//		NEATWR(1,1);				//reset NEAT/as power up reset.
+//		NEATWR(0x45,0);				//set alarm type as 0.
 
 	//	LED1OFF();
 	//	LED2OFF();

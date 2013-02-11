@@ -17,8 +17,9 @@
 //
 //
 #define PCBissue 4		//pcb issue, options 3, 4
-#define release  1
-#define Version 0x20465F31	//	"1_F " little endian.
+#define release 1
+
+#define Version 0x20485F31	//	"1_G " little endian.
 extern int	PCBiss;		//calculated PCB issue (main.c)
 //0 means debug, 1 means release.
 //note issue 2 is now obsolete and no boards are now in use.
@@ -36,7 +37,7 @@ typedef unsigned int word;		//32 bit on LPC17**
 #define EXTERNAL extern								//defined outside of file
 #define CaptureMax  8192				//8192*4 bytes = 32768 bytes of RAM. Size of Buffer.
 #define	CaptureExt	6000				//size of Buffer2
-#define Peripherals 1<<1|1<<2|1<<4|1<<8|1<<10|1<<15|1<<19|1<<21|1<<22|1<<27|1<<31;        // Power Control for Peripherals      */
+#define Peripherals 1<<1|1<<2|1<<4|1<<8|1<<10|1<<15|1<<19|1<<21|1<<22|1<<23|1<<27|1<<31;        // Power Control for Peripherals      */
 
 
 

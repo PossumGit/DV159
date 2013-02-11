@@ -153,7 +153,7 @@ char I[] =
 
 	if(rxstart>=rxlen)rxstart=0;
 
-	BTACC=1;
+
 	switch (SEQUENCE)//a sequence of N,alarm, battery, IDMSB, IDLSB.
 	{
 	case 1:
@@ -412,13 +412,13 @@ char I[] =
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PRIVATE int waitBTRX(word us)
     {
-    word p, r, s;
-
-    p = LPC_TIM2->TC; //current value of timer 2 in us.
+    int p, r, s;
+    LPC_TIM3->TC=0;
+    p = LPC_TIM3->TC; //current value of timer 2 in us.
 
     while (1)
 	{
-	r = LPC_TIM2->TC;
+	r = LPC_TIM3->TC;
 	if (r - p > maxtime)
 	    maxtime = r - p;
 
@@ -443,14 +443,17 @@ PRIVATE void receiveBTbuffer(void)
     int a, b, c, d, e, i, x;
     byte Dollar = ' ';
     word m;
+
     maxtime = 0;
     for (i = 0; i < CaptureMax; i++)
 	{
+
 	if (waitBTRX(1000000))
 	    break; //wait for char, break if 100ms timeout.
 	a = LPC_UART1->RBR;
 	if (a == '$') //ignore next char.
 	    {
+
 	    if (waitBTRX(1000000))
 		break; //wait for char, break if 100ms timeout.
 	    x = LPC_UART1->RBR;
@@ -461,6 +464,7 @@ PRIVATE void receiveBTbuffer(void)
 	b = LPC_UART1->RBR;
 	if (b == '$') //ignore next char.
 	    {
+
 	    if (waitBTRX(1000000))
 		break; //wait for char, break if 100ms timeout.
 	    x = LPC_UART1->RBR;
@@ -471,6 +475,7 @@ PRIVATE void receiveBTbuffer(void)
 	c = LPC_UART1->RBR;
 	if (c == '$') //ignore next char.
 	    {
+
 	    if (waitBTRX(1000000))
 		break; //wait for char, break if 100ms timeout.
 	    x = LPC_UART1->RBR;
