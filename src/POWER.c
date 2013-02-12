@@ -98,6 +98,7 @@ EXTERNAL void  EnableWDT10s(void);
 EXTERNAL void NEATALARM(void);
 EXTERNAL int I2CBATTERY(void);
 EXTERNAL byte	inputChange(void);
+EXTERNAL void SystemOFF(void);
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -518,8 +519,9 @@ PUBLIC int powerDown(void)
 			if  (ALARMtime * 100000 < LPC_TIM2->TC) {
 
 	//			LED2GREEN();
-
+	//			LPC_GPIO_BTRESET FIOCLR	= BTRESET;	//Bluetooth reset.	RESET BT
 			NEATALARM();
+	//		LPC_GPIO_BTRESET FIOSET	= BTRESET;	//Bluetooth reset.	RESET BT
 			PENDALARM = 0;
 			a=0x30&inputChange();
 			if	(a!=0x30)	//input still pressed after NEAT alarm.
@@ -539,6 +541,9 @@ PUBLIC int powerDown(void)
 				//turn off when input released.
 			while(1)
 			{
+				LPC_GPIO_BTRESET FIOCLR	= BTRESET;	//Bluetooth reset.	RESET BT
+				NEATALARM();
+
 				LPC_GPIO_OFF FIOSET =OFF; //OFF button set high to turn off.
 				NEATOFF();
 				LPC_GPIO_BTRESET FIOCLR	= BTRESET;	//Bluetooth reset.	RESET BT
@@ -559,7 +564,7 @@ PUBLIC int powerDown(void)
 
 	{
 //		LED1GREEN();
-
+		if (30000000 < LPC_TIM2->TC)	SystemOFF();		//if >30s then power off.
 	if(0x40==((LPC_UART1->LSR)&(0x41)))	//bit 1=0 RX FIFO empty, bit 6=1 TX FIFO empty.
 	if(rxstart==rxend)					//nothing waiting in bluetooth rx buffer
 	if(txstart==txend)					//nothing waiting in bluetooth tx buffer

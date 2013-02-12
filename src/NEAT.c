@@ -41,6 +41,7 @@ EXTERNAL void enableInputInterrupt(void);
 EXTERNAL void	LED1GREEN(void);
 EXTERNAL void	LED1YELLOW(void);
 EXTERNAL void	LED1OFF(void);
+EXTERNAL void SystemOFF(void);
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -316,10 +317,10 @@ a=3000000+LPC_TIM2->TC;
 	LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
 	LPC_WDT->WDFEED=0x55;			//watchdog feed
 #endif
-//	NEATRESET();
+	NEATRESET();
 //	while (0x80&NEATRD(3));
 	while ((0x80&NEATRD(3))	&& (a>LPC_TIM2->TC))
-		 if (a<=LPC_TIM2->TC) 	 NVIC_SystemReset();						//system reset;
+		 if (a<=LPC_TIM2->TC) 	 SystemOFF();					//system reset;
 
 
 	NEATWR(0x45,alarm);		//alarm type
@@ -331,13 +332,13 @@ a=3000000+LPC_TIM2->TC;
 		NEATWR(0x41,ID);		//LSB of transmit ID
 
 
-	while (0x80&NEATRD(3));
+//	while (0x80&NEATRD(3));
 	NEATWR(0x03,0x80);		//transmit code.
 	disableInputInterrupt();
 
 	enableInputInterrupt();
 	while ((0x80&NEATRD(3))	&& (a>LPC_TIM2->TC))
-		if (a<=LPC_TIM2->TC) 	 NVIC_SystemReset();						//system reset;
+		if (a<=LPC_TIM2->TC) 	SystemOFF();					//system reset;
 //	while (0x80&NEATRD(3));
 #if release==1
 	LPC_WDT->WDTC = 5000000;	//set timeout 5s watchdog timer

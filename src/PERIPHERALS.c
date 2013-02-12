@@ -43,6 +43,7 @@ PUBLIC void EnableWDT10s(void);
 PUBLIC void EnableWDT2s(void);
 PUBLIC int PCB(void);
 PUBLIC void BatteryState(void);
+PUBLIC void SystemOFF(void);
 /////////////////////////////////////////////////////////////////////////////////////////////////
 ///@brief return PCB number
 ///@param void
@@ -421,5 +422,29 @@ PUBLIC void	us(unsigned int time_us)
 	 NVIC_SystemReset();						//system reset
 	 NVIC->ICER[0]|=0x1<<0;	//disable WDT interrupt.
  }
+//////////////////////////////////////////////////////
+ //////////////////////////////////////////////////////////////
+ //////////////////////////////////////////////////////////////
+ //
+ //
+ //
+PUBLIC void SystemOFF(void)
+{
+		LED1OFF();
+		LED2OFF();
+		disableInputInterrupt();
+	LPC_GPIO_OFF FIOSET =OFF; //OFF button set high to turn off.
+		NEATOFF();
+		LPC_GPIO_BTRESET FIOCLR	= BTRESET;	//Bluetooth reset.	RESET BT
+	CPU4MHz();
 
+	while(1)
+		{
+
+		SCB->SCR = 0x4;			//sleepdeep bit
+		LPC_SC->PCON = 0x03;	//combined with sleepdeep bit gives power down mode. IRC is disabled, so WDT disabled.
+		__WFI();
+		}
+
+}
 

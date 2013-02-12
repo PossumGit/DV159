@@ -55,6 +55,7 @@ PUBLIC void initBT(void);
 PUBLIC void factoryBT(void);
 PUBLIC void txBT(void);
 PUBLIC void discoverBT(void);
+EXTERNAL void SystemOFF(void);
 
 
 //External functions
@@ -377,21 +378,24 @@ char I[] =
 	    //go to sleep
 	case 'Z':
 	{
-			LED1OFF();
-			LED2OFF();
-			disableInputInterrupt();
-		LPC_GPIO_OFF FIOSET =OFF; //OFF button set high to turn off.
-			NEATOFF();
-			LPC_GPIO_BTRESET FIOCLR	= BTRESET;	//Bluetooth reset.	RESET BT
-		CPU4MHz();
 
-		while(1)
-			{
+		 SystemOFF();
 
-			SCB->SCR = 0x4;			//sleepdeep bit
-			LPC_SC->PCON = 0x03;	//combined with sleepdeep bit gives power down mode. IRC is disabled, so WDT disabled.
-			__WFI();
-			}
+//			LED1OFF();
+//			LED2OFF();
+//			disableInputInterrupt();
+//		LPC_GPIO_OFF FIOSET =OFF; //OFF button set high to turn off.
+//			NEATOFF();
+//			LPC_GPIO_BTRESET FIOCLR	= BTRESET;	//Bluetooth reset.	RESET BT
+//		CPU4MHz();
+
+//		while(1)
+//			{
+
+//			SCB->SCR = 0x4;			//sleepdeep bit
+//			LPC_SC->PCON = 0x03;	//combined with sleepdeep bit gives power down mode. IRC is disabled, so WDT disabled.
+//			__WFI();
+//			}
 		//never gets here because turns off first.
 		break;
 	    }

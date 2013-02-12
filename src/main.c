@@ -316,6 +316,7 @@ PRIVATE void powerupHEX(void) {
 	case 0x02:			//TEST NEAT transmit, inc ID every 10s.
 	//	CPU12MHz();
 	//	us(20000000);
+		LPC_GPIO_BTRESET FIOCLR	= BTRESET;	//Bluetooth reset.	RESET BT
 		LED2OFF();
 		LPC_TIM2->TC=0;
 		time=0;			//
@@ -341,7 +342,7 @@ PRIVATE void powerupHEX(void) {
 		while (LPC_TIM2->TC<time);
 		time=20000000;			//
 		LED1GREEN();
-
+	//	NEATALARM();
 		NEATTX(0xFF,0x00,h);		//battery state, ALARM type, ID(16 bits)
 		LED1OFF();
 
