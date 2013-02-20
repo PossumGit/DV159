@@ -42,6 +42,7 @@ PRIVATE volatile word I2CWriteLength;
 PRIVATE volatile word RdIndex = 0;
 PRIVATE volatile word WrIndex = 0;
 PRIVATE volatile word COUNT=0;
+PRIVATE volatile word lastcharge=0x8000;
 PRIVATE volatile byte Batt=100;
 
 //External variables
@@ -242,6 +243,30 @@ PUBLIC void I2CREAD(void)
 		}
 	charge=((I2CSlaveBuffer[6])<<8)+I2CSlaveBuffer[7];
 
+
+	if (charge>0x7400&&charge<0x9000)
+		{lastcharge=charge;}
+
+	else
+			{
+
+		I2CMasterBuffer[0]=0x90;
+		I2CMasterBuffer[1]=0x10;		//
+		I2CMasterBuffer[2]=0x91;
+		I2CReadLength=2;
+		I2CWriteLength=2;
+		I2CGO();
+		I2CSlaveBuffer[6]=I2CSlaveTempBuffer[0];
+		I2CSlaveBuffer[7]=I2CSlaveTempBuffer[1];
+		charge=((I2CSlaveBuffer[6])<<8)+I2CSlaveBuffer[7];
+		if (charge>0x7400&&charge<0x9000)
+			{lastcharge=charge;}
+		else
+			{charge=lastcharge;}
+
+
+			}
+
 	if (charge>storedcharge)		//charging.
 		//discharge use rate in monitor.
 		//charge, add efficiency factor in.
@@ -253,9 +278,10 @@ PUBLIC void I2CREAD(void)
 							charge=storedcharge+1.05*(charge-storedcharge);		//LI ION to force fully charged state as 0x8000
 				if (charge>0x8000){
 					charge=0x8000;
+					I2CChargeWR(charge);
 					ChargeConfidence=5;
 				}
-				I2CChargeWR(charge);
+			//	I2CChargeWR(charge);
 				if(0x7FF0>charge)
 					ChargeConfidence=3;
 				storedcharge=charge;
@@ -266,6 +292,8 @@ PUBLIC void I2CREAD(void)
 	else 	//charging.
 	{
 		storedcharge=charge;
+
+
 
 
 	}
@@ -300,7 +328,7 @@ PUBLIC int I2CBATTERY(void)
  char a,c;
  int b;
 // word i;
-
+ 	 I2CREAD();
 	I2CMasterBuffer[0]=0x90;
 	I2CMasterBuffer[1]=0x0C;
 	I2CMasterBuffer[2]=0x91;

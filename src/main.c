@@ -316,7 +316,7 @@ PRIVATE void powerupHEX(void) {
 	case 0x02:			//TEST NEAT transmit, inc ID every 10s.
 	//	CPU12MHz();
 	//	us(20000000);
-		LPC_GPIO_BTRESET FIOCLR	= BTRESET;	//Bluetooth reset.	RESET BT
+	//	LPC_GPIO_BTRESET FIOCLR	= BTRESET;	//Bluetooth reset.	RESET BT
 		LED2OFF();
 		LPC_TIM2->TC=0;
 		time=0;			//
@@ -690,8 +690,79 @@ PRIVATE void powerupHEX(void) {
 		break;
 
 
+	case	0x10:			//radio transmit BT disabled
+	LPC_GPIO_BTRESET FIOCLR	= BTRESET;	//Bluetooth reset.	RESET BT
+			LED2OFF();
+		LPC_TIM2->TC=0;
+		time=0;			//
+		NEATRESET();
+		while(1)
+		for (l=1;l<10;(l++))
+		for (k=0;k<10;k++)
+		for (j=0;j<10;j++)
+		for (i=0;i<10;i++)
+		{
+			LPC_TIM2->TC=0;
+			time=5000000;			//
+			h=i+(j<<4)+(k<<8)+(l<<12);
+		while (LPC_TIM2->TC<time);
+		time=20000000;			//
+		LED1GREEN();
+
+		NEATTX(0xFF,0x00,h);		//battery state, ALARM type, ID(16 bits)
+		LED1OFF();
+		}
+		break;
+
+	case 0x11:
+		LPC_GPIO_BTRESET FIOCLR	= BTRESET;	//Bluetooth reset.	RESET BT
+
+			LED1GREEN();
+			us(1000000);
+			LED2OFF();
 
 
+
+				NEATRESET();
+				enableInputInterrupt();
+				while(1)
+				{
+				LED1OFF();
+				CPU4MHz();						//reduce power.
+
+			#if release==1
+					SCB->SCR = 0x4;			//sleepdeep bit
+					LPC_SC->PCON = 0x01;	//combined with sleepdeep bit gives power down mode. IRC is disabled, so WDT disabled.
+			#endif
+
+			#if release==1
+				__WFI(); //go to power down.
+			#endif
+
+				if(SWNEAT)		//if wakeup with NEAT
+				{
+
+				LED1YELLOW();
+				SWNEAT=0;
+		//		CPU12MHz();
+				NEATWR(2,0xA0);			//reset read
+
+				us(500000);
+				LED1OFF();
+				}
+
+
+				}
+
+			break;
+
+	case	0x20:
+
+		Charge=0x7900;
+		I2CChargeWR(Charge);
+		while(1);
+
+		break;
 	case 0x00:		//main startup and execute for QWAYO
 	default:
 #if release==1

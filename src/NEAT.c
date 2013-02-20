@@ -216,7 +216,8 @@ void NEATRESET()
 /////////////////////////////////////////////////////////////////////////////////////////////////
 void NEATALARM()
 {	int a,b,c,d;
-	a=3000000+LPC_TIM2->TC;
+	b=LPC_TIM2->TC;
+	a=3000000+b;
 	disableInputInterrupt();
 #if release==1
 	LPC_WDT->WDTC = 18000000;	//set timeout 18s watchdog timer
@@ -264,9 +265,11 @@ void NEATALARM()
 			else
 				{LED1GREEN();}
 			};
-	 if (a<=LPC_TIM2->TC) 	 NVIC_SystemReset();						//system reset;
 
-	 if (a>LPC_TIM2->TC)
+
+	 if (a<=LPC_TIM2->TC) 	 NVIC_SystemReset();						//system reset;
+	 c=LPC_TIM2->TC;
+	 while (a>LPC_TIM2->TC)
 	 {	if ((LPC_TIM2->TC / 200000) % 2)
 		{LED1YELLOW();}
 	else
@@ -274,7 +277,7 @@ void NEATALARM()
 	}
 
 
-
+	 c=LPC_TIM2->TC;
 
 
 
@@ -320,8 +323,9 @@ a=3000000+LPC_TIM2->TC;
 	NEATRESET();
 //	while (0x80&NEATRD(3));
 	while ((0x80&NEATRD(3))	&& (a>LPC_TIM2->TC))
-		 if (a<=LPC_TIM2->TC) 	 SystemOFF();					//system reset;
-
+		 if (a<=LPC_TIM2->TC)
+			 {SystemOFF();					//system reset;
+			 }
 
 	NEATWR(0x45,alarm);		//alarm type
 		NEATWR(0x42,0x00);		//select 40,41 as address
@@ -338,7 +342,10 @@ a=3000000+LPC_TIM2->TC;
 
 	enableInputInterrupt();
 	while ((0x80&NEATRD(3))	&& (a>LPC_TIM2->TC))
-		if (a<=LPC_TIM2->TC) 	SystemOFF();					//system reset;
+		if (a<=LPC_TIM2->TC)
+			{SystemOFF();					//system reset;
+			}
+
 //	while (0x80&NEATRD(3));
 #if release==1
 	LPC_WDT->WDTC = 5000000;	//set timeout 5s watchdog timer

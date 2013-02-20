@@ -70,8 +70,7 @@ EXTERNAL void playIR(void);
 EXTERNAL byte HEX(void);
 EXTERNAL void us(unsigned int time_us);
 EXTERNAL void CPU12MHz(void);
-EXTERNAL void BTbaudCPU100();
-EXTERNAL void BTbaudCPU12();
+
 EXTERNAL void BatteryState();
 
 

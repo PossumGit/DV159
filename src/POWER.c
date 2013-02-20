@@ -99,6 +99,8 @@ EXTERNAL void NEATALARM(void);
 EXTERNAL int I2CBATTERY(void);
 EXTERNAL byte	inputChange(void);
 EXTERNAL void SystemOFF(void);
+EXTERNAL void BTbaudCPU100();
+EXTERNAL void BTbaudCPU12();
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -150,6 +152,7 @@ PUBLIC void CPU100MHz (void)
 	  timer2CPU100();		//generate 1MHz system clock for sleep and delays from 100MHz cpu clock.
 	  SSPNEATCPU100();		//SSP 1MHz derived from 100MHz for NEAT SSP.
 	  CPUSPEED=100;
+	  BTbaudCPU100();
 }
 
 
@@ -275,7 +278,7 @@ PUBLIC void CPU4MHz(void)
 //clock now at 4MHz IRC.
 	  timer2CPU4();		//12MHz clock, generate 1MHz system clock for sleep and delays from 12MHz CPU clock.
 	  SSPNEATCPU4();	//SSP 1MHz derived from 4MHz for NEAT SSP.
-	  BTbaudCPU12();
+
 		CPUSPEED=4;
 }
 
@@ -542,12 +545,14 @@ PUBLIC int powerDown(void)
 			while(1)
 			{
 				LPC_GPIO_BTRESET FIOCLR	= BTRESET;	//Bluetooth reset.	RESET BT
-				NEATALARM();
-
+	//			NEATALARM();
+				LED2GREEN();
 				LPC_GPIO_OFF FIOSET =OFF; //OFF button set high to turn off.
-				NEATOFF();
-				LPC_GPIO_BTRESET FIOCLR	= BTRESET;	//Bluetooth reset.	RESET BT
-				CPU4MHz();
+				us(1000000);
+				 NVIC_SystemReset();
+		//		NEATOFF();
+	//			LPC_GPIO_BTRESET FIOCLR	= BTRESET;	//Bluetooth reset.	RESET BT
+	//			CPU4MHz();
 			}
 			}
 
