@@ -19,7 +19,7 @@
 #define PCBissue 4		//pcb issue, options 3, 4
 #define release 1
 
-#define Version 0x204B5F31	//	"1_G " little endian.
+#define Version 0x204D5F31	//	"1_G " little endian.
 extern int	PCBiss;		//calculated PCB issue (main.c)
 //0 means debug, 1 means release.
 //note issue 2 is now obsolete and no boards are now in use.
@@ -50,6 +50,9 @@ typedef unsigned int word;		//32 bit on LPC17**
 
 #define IROUT	1<<28					// P1.28
 #define LPC_GPIO_IROUT	LPC_GPIO1->
+
+#define IRON	1<<29					// P1.29
+#define LPC_GPIO_IRON	LPC_GPIO1->
 
 #define MICCE	1<<8					// P1.8
 #define LPC_GPIO_MICCE	LPC_GPIO1->

@@ -55,6 +55,9 @@ PUBLIC void initBT(void);
 PUBLIC void factoryBT(void);
 PUBLIC void txBT(void);
 PUBLIC void discoverBT(void);
+
+PUBLIC void	BTQUIET(void);
+PUBLIC void	BTON(void);
 EXTERNAL void SystemOFF(void);
 
 
@@ -239,6 +242,10 @@ char I[] =
 	    sendBT(W, 1);
 	    break;
 	    }
+
+	case 'A':
+	case 'a':
+		break;
 
 
 	case 'b':
@@ -924,3 +931,176 @@ PUBLIC void setupBT(void)
     rxstart=rxend;
     }
 
+
+
+void	BTQUIET(void)
+{
+    int i,s;
+	SystemCoreClockUpdate ();
+	s=SystemCoreClock; //4MHz
+    byte CMD[] =
+	{
+	'$', '$', '$'
+	}; //,'\r','\n'};    \r is CR, \n is LF
+    byte ENDCMD[] =
+	{
+	'-', '-', '-', '\r', '\n'
+	};
+
+
+    byte BT2s[] =
+    {
+    	'S','W',',','0','C','8','0','\r','\n'			//number in hex 256*0.625ms=2s
+    };
+
+
+
+    rxstart = rxend;
+
+
+    sendBT(CMD, sizeof(CMD));
+    for (i = 0; i < 3000; i++)
+	{
+	us(1000);
+	rxtxBT();
+	if ((rxstart + 5) % rxlen <= rxend)
+	    {
+	    if (rx[rxstart] != 'C')
+		rxstart = (rxstart + 1) % rxlen;
+	    if ((rx[rxstart] == 'C') && (rx[(rxstart + 1) % rxlen] == 'M')
+		    && (rx[(rxstart + 2) % rxlen] == 'D'))
+		{
+		LED1YELLOW();
+		i = 20000;				//
+		}
+	    }
+	}
+
+
+
+    rxstart = rxend;
+    sendBT(BT2s, sizeof(BT2s));
+    for (i = 0; i < 3000; i++)
+	{
+	us(1000);
+	rxtxBT();
+	if ((rxstart + 5) % rxlen <= rxend)
+	    {
+	    if (rx[rxstart] != 'A')
+		rxstart = (rxstart + 1) % rxlen;
+	    if ((rx[rxstart] == 'A') && (rx[(rxstart + 1) % rxlen] == 'O')
+		    && (rx[(rxstart + 2) % rxlen] == 'K'))
+		{
+		LED1GREEN();
+		i = 20000;
+		}
+	    }
+	}
+    rxstart = rxend;
+    sendBT(ENDCMD, sizeof(ENDCMD));
+    for (i = 0; i < 3000; i++)
+	{
+	us(1000);
+	rxtxBT();
+	if ((rxstart + 5) % rxlen == rxend)
+	    {
+	    if (rx[rxstart] != 'E')
+		rxstart = (rxstart + 1) % rxlen;
+	    if ((rx[rxstart] == 'E') && (rx[(rxstart + 1) % rxlen] == 'N')
+		    && (rx[(rxstart + 2) % rxlen] == 'D'))
+		{
+	    	rxstart=rxend;
+		LED1YELLOW();
+		i = 20000;
+		}
+	    }
+	}
+    rxstart=rxend;
+}
+
+void	BTON(void)
+{
+    int i,s;
+	SystemCoreClockUpdate ();
+	s=SystemCoreClock; //4MHz
+    byte CMD[] =
+	{
+	'$', '$', '$'
+	}; //,'\r','\n'};    \r is CR, \n is LF
+    byte ENDCMD[] =
+	{
+	'-', '-', '-', '\r', '\n'
+	};
+
+
+    byte BT2s[] =
+    {
+    	'S','W',',','0','1','0','0','\r','\n'			//number in hex 256*0.625ms=160ms
+    };
+
+
+
+    rxstart = rxend;
+
+
+    sendBT(CMD, sizeof(CMD));
+    for (i = 0; i < 3000; i++)
+	{
+	us(1000);
+	rxtxBT();
+	if ((rxstart + 5) % rxlen <= rxend)
+	    {
+	    if (rx[rxstart] != 'C')
+		rxstart = (rxstart + 1) % rxlen;
+	    if ((rx[rxstart] == 'C') && (rx[(rxstart + 1) % rxlen] == 'M')
+		    && (rx[(rxstart + 2) % rxlen] == 'D'))
+		{
+		LED1YELLOW();
+		i = 20000;				//
+		}
+	    }
+	}
+
+
+
+    rxstart = rxend;
+    sendBT(BT2s, sizeof(BT2s));
+    for (i = 0; i < 3000; i++)
+	{
+	us(1000);
+	rxtxBT();
+	if ((rxstart + 5) % rxlen <= rxend)
+	    {
+	    if (rx[rxstart] != 'A')
+		rxstart = (rxstart + 1) % rxlen;
+	    if ((rx[rxstart] == 'A') && (rx[(rxstart + 1) % rxlen] == 'O')
+		    && (rx[(rxstart + 2) % rxlen] == 'K'))
+		{
+		LED1GREEN();
+		i = 20000;
+		}
+	    }
+	}
+    rxstart = rxend;
+    sendBT(ENDCMD, sizeof(ENDCMD));
+    for (i = 0; i < 3000; i++)
+	{
+	us(1000);
+	rxtxBT();
+	if ((rxstart + 5) % rxlen == rxend)
+	    {
+	    if (rx[rxstart] != 'E')
+		rxstart = (rxstart + 1) % rxlen;
+	    if ((rx[rxstart] == 'E') && (rx[(rxstart + 1) % rxlen] == 'N')
+		    && (rx[(rxstart + 2) % rxlen] == 'D'))
+		{
+	    	rxstart=rxend;
+		LED1YELLOW();
+		i = 20000;
+		}
+	    }
+	}
+    rxstart=rxend;
+
+
+}

@@ -143,7 +143,7 @@ PUBLIC void CPU100MHz (void)
   LPC_SC->PLL0FEED  = 0x55;
   while (!(LPC_SC->PLL0STAT & ((1<<25) | (1<<24))));// Wait for PLLC0_STAT & PLLE0_STAT
 
-  LPC_SC->CLKOUTCFG = CLKOUTCFG_Val;    // Clock Output Configuration
+  //LPC_SC->CLKOUTCFG =0 ;    // Clock Output Configuration
 
   LPC_SC->FLASHCFG  = (LPC_SC->FLASHCFG & ~0x0000F000) | FLASHCFG_Val;
   //CPU100MHz disables GPIO interrupts
@@ -152,7 +152,7 @@ PUBLIC void CPU100MHz (void)
 	  timer2CPU100();		//generate 1MHz system clock for sleep and delays from 100MHz cpu clock.
 	  SSPNEATCPU100();		//SSP 1MHz derived from 100MHz for NEAT SSP.
 	  CPUSPEED=100;
-	  BTbaudCPU100();
+	//  BTbaudCPU100();
 }
 
 
@@ -219,7 +219,7 @@ PUBLIC void CPU12MHz(void)
 	   LPC_SC->CLKSRCSEL = 0x01; //IRC 4MHzmain oscillator.
 	  timer2CPU12();		//12MHz clock, generate 1MHz system clock for sleep and delays from 12MHz CPU clock.
 	  SSPNEATCPU12();		//SSP 1MHz derived from 12MHz for NEAT SSP.
-	  BTbaudCPU12();
+//	  BTbaudCPU12();
 	  CPUSPEED=12;
 }
 
@@ -398,7 +398,7 @@ if (PCBiss==3||PCBiss==4)
 	{
 			CPU12MHz();
 			readNEAT();
-			LPC_TIM2->TC = 3000000;
+			LPC_TIM2->TC = 0;
 	}
 
 }

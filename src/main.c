@@ -582,6 +582,8 @@ PRIVATE void powerupHEX(void) {
 		break;
 
 	case 0x0C: 				//DEBUG recover clock
+		LPC_GPIO1-> FIODIR |= IRON; 		//output
+		LPC_GPIO1-> FIOSET |=IRON	;
 		while (1) {
 			LED1GREEN();
 			LED1GREEN();

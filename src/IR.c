@@ -74,7 +74,7 @@ PUBLIC int captureIR(void) {
 
 
 	IRAddress = CaptureFirst;
-	LED1YELLOW();
+	LED1GREEN();
 	CPU100MHz();		//also disables ext interrupts.
 #if release==1
 	LPC_WDT->WDTC = 40000000;	//set timeout 40s watchdog timer
@@ -97,7 +97,7 @@ if (PCBiss==3||PCBiss==4)
 		if('A'!=LPC_UART1->RBR)	break;
 		repeatInput();	//change of input?
 		txBT();		//send any available data from change of input to BT.
-
+		if (IRAddress >= CaptureMax) break;
 	}
 
 	endCaptureIR();
@@ -140,7 +140,7 @@ PUBLIC void playIR(void) {
 
 
 
-	LED2GREEN();
+//	LED2GREEN();
 	if (Buffer[2] != 0) {
 		LED1GREEN();
 		CPU100MHz();	//CPU100MHz disables interrupts except TIMER 0 and TIMER 1
@@ -632,5 +632,6 @@ PUBLIC void initIR(void) {
 PRIVATE void endCaptureIR(void) {
 	LPC_TIM0->CCR &= ~0x07; //disable any capture interrupt
 	NVIC->ICER[0] = 1 << 1 | 1 << 2; //disable TIMER0 and TIMER1 interrupts.
+
 }
 
