@@ -571,9 +571,9 @@ PRIVATE void endPlayIR(void) {
 	LPC_TIM0->MCR &= ~0x07; //disable match interrupt
 	LPC_TIM1->MCR &= ~0x07; //disable match interrupt
 	NVIC->ICER[0] = 1 << 1 | 1 << 2; //disable TIMER0 and TIMER1 interrupts.
-	while ((LPC_TIM0->MR0 > LPC_TIM0->TC)) // wait until last pulse has finished.
-	{
-	}
+//	while ((LPC_TIM0->MR0 > LPC_TIM0->TC)) // wait until last pulse has finished.
+//	{
+//	}
 }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////

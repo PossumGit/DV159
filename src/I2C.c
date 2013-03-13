@@ -43,7 +43,8 @@ PRIVATE volatile word RdIndex = 0;
 PRIVATE volatile word WrIndex = 0;
 PRIVATE volatile word COUNT=0;
 PRIVATE volatile word lastcharge=0x8000;
-PRIVATE volatile byte Batt=100;
+PRIVATE volatile int Batt=800;
+PRIVATE volatile int LCharge=0x8000;
 
 //External variables
 EXTERNAL int storedcharge;
@@ -241,6 +242,10 @@ PUBLIC void I2CREAD(void)
 					LITHIUM=1;
 					}
 		}
+
+//rest of this goes wrong some of the time, therefore remove unless sorted.
+	//problem is faulty data read from DC2745.
+/*
 	charge=((I2CSlaveBuffer[6])<<8)+I2CSlaveBuffer[7];
 
 
@@ -297,7 +302,7 @@ PUBLIC void I2CREAD(void)
 
 
 	}
-
+*/
 }
 
 
@@ -305,7 +310,17 @@ PUBLIC void I2CREAD(void)
 
 
 
+PUBLIC char I2CBAT(void)
+{
+	I2CMasterBuffer[0]=0x90;
+			I2CMasterBuffer[1]=0x0C;
+			I2CMasterBuffer[2]=0x91;
+			I2CReadLength=1;
+			I2CWriteLength=2;
+			I2CGO();
+	return (I2CSlaveTempBuffer[0]);
 
+}
 
 
 
@@ -321,37 +336,140 @@ PUBLIC void I2CREAD(void)
 /// Descriptions:	The routine to complete a I2C transaction
 ///					from start to stop. All the intermediate
 ///					steps are handled in the interrupt handler.
-
+///
+//
+//
+//if new battery CHARGE=0x8000.
+//
+//if ACON and charge> 0x8000 and charge <0x9000 then charge=0x8000
+//
+//
+//if ACON: GREEN, last=GREEN
+//
+//else if NIMH and V<3.0 || V>4.8V: LED= last;
+//else if NIMH and V<3.5V YELLOW store last
+//else if NIMH and V>4.0V GREEN store last
+//
+//
+//
+//if charge <0x7900 then YELLOW store last
+//
+//else GREEN.
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC int I2CBATTERY(void)
 {
- char a,c;
- int b;
+			//return 1=GREEN=good battery, 0=yellow=low battery.
+ int c,v;
 // word i;
- 	 I2CREAD();
-	I2CMasterBuffer[0]=0x90;
-	I2CMasterBuffer[1]=0x0C;
-	I2CMasterBuffer[2]=0x91;
-	I2CReadLength=1;
-	I2CWriteLength=2;
-	I2CGO();
-
-	a=I2CSlaveTempBuffer[0];
-	if (a<60)a=Batt;
-	else Batt=a;
-
+ //
+ //
+	if(!(LPC_GPIO2->FIOPIN &(1<<8)))
+	{	//AC on.
+	Batt=1;		//ACON: GREEN, last=GREEN (GREEN=good battery)
 	I2CMasterBuffer[0]=0x90;
 	I2CMasterBuffer[1]=0x10;
 	I2CMasterBuffer[2]=0x91;
 	I2CReadLength=2;
 	I2CWriteLength=2;
 	I2CGO();
+	c=(I2CSlaveTempBuffer[0]<<8)| I2CSlaveTempBuffer[1];
+	if (c>0x8000)		// ACON and charge> 0x8000 and charge <0x9000 then charge=0x8000
+		{
+		I2CChargeWR(0x8000);		//write 0x8000.
+		}
+		return 1;		//AC on.
 
-	b=(I2CSlaveTempBuffer[0]<<8)| I2CSlaveTempBuffer[1];
-	if ((b<0x79AE)&&(b>0x6000)) a=70;		//low battery if low charge. min charge on current batteries is 0x7840
-	if(!(LPC_GPIO2->FIOPIN &(1<<8)))a=100;
-	return a;
+	}
+//measure volts.
+		I2CMasterBuffer[0]=0x90;
+		I2CMasterBuffer[1]=0x0C;
+		I2CMasterBuffer[2]=0x91;
+		I2CReadLength=2;
+		I2CWriteLength=2;
+		I2CGO();
+
+		v=I2CSlaveTempBuffer[0]<<3 | I2CSlaveTempBuffer[1]>>5;
+		if (v<615||v>984) v=Batt;
+		else Batt=v;					//b=volts.
+
+
+
+
+	if(	NIMH)
+	{
+
+//v*4.88mV(/32)
+//v=615=3.0V
+//v=635=3.1V
+//v=656=3.2V
+//v=676=3.3V
+//v=697=3.4V
+//v=717=3.5V
+//v=738=3.6V
+//v=758=3.7V
+//v=789=3.8V
+//v=800=3.9V
+//v=820=4.0V
+//v=840=4.1V
+//v=861=4.2V
+//v=881=4.3V
+//v=902=4.4V
+//v=922=4.5V
+//v=984=4.8V
+
+
+	if (v<738) return 0;			//<3.6V low battery
+	if (v>800) return 1;			//>3.9V good battery
+//check charge state:
+	I2CMasterBuffer[0]=0x90;
+	I2CMasterBuffer[1]=0x10;
+	I2CMasterBuffer[2]=0x91;
+	I2CReadLength=2;
+	I2CWriteLength=2;
+	I2CGO();
+	c=(I2CSlaveTempBuffer[0]<<8)| I2CSlaveTempBuffer[1];
+	if (c<0x7400||c>0xA000) c=LCharge;
+		else LCharge=c;
+	if (c<0x79AE) return 0;
+	else return 1;
+
+	}
+	else
+	if (LITHIUM)
+	{
+		//v*4.88mV
+		//v=615=3.0V
+		//v=717=3.5V
+		//v=758=3.7V
+		//v=800=3.9V
+		//v=820=4.0V
+		//v=984=4.8V
+	if (v<758) return 0;		//lithium less than 3.7V
+	if (v>800) return 1;		//lithium > 3.9V
+//check charge state:
+	I2CMasterBuffer[0]=0x90;
+		I2CMasterBuffer[1]=0x10;
+		I2CMasterBuffer[2]=0x91;
+		I2CReadLength=2;
+		I2CWriteLength=2;
+		I2CGO();
+		c=(I2CSlaveTempBuffer[0]<<8)| I2CSlaveTempBuffer[1];
+		if (c<0x7400||c>0xA000) c=LCharge;
+			else LCharge=c;
+		if (c<0x79AE) return 0;
+		else return 1;
+
+	}
+
+	else
+	return 1;
 }
+
+
+
+
+
+
 
 
 

@@ -17,9 +17,9 @@
 //
 //
 #define PCBissue 4		//pcb issue, options 3, 4
-#define release 1
+#define release	1
 
-#define Version 0x204D5F31	//	"1_G " little endian.
+#define Version 0x204E5F31	//	"1_G " little endian.
 extern int	PCBiss;		//calculated PCB issue (main.c)
 //0 means debug, 1 means release.
 //note issue 2 is now obsolete and no boards are now in use.
@@ -90,7 +90,7 @@ typedef unsigned int word;		//32 bit on LPC17**
 #define NEATCS			1<<21			// P1.21
 #define LPC_GPIO_NEATCS LPC_GPIO1->
 
-#define NEATINT			1<<5			// P1.25 MOD to P2.5 pin 68 on PCB.
+#define NEATINT			1<<4			// P1.25 MOD to P2.4 pin 68 on PCB.
 #define LPC_GPIO_NEATINT LPC_GPIO2->
 
 #define LED1G			1<<16			// P1.16

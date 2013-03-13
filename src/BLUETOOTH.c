@@ -252,6 +252,16 @@ char I[] =
 	case 'B':
 	{
 		I2CREAD();
+
+		I2CSlaveBuffer[0xA]=0;
+		I2CSlaveBuffer[0xB]=0;
+		I2CSlaveBuffer[0xC]=0;
+		I2CSlaveBuffer[0xD]=0;
+		I2CSlaveBuffer[0xE]=0;
+		I2CSlaveBuffer[0xF]=0;
+
+
+
 		sendBT(I2CSlaveBuffer,16);  //register 0x0a to register 0x11 of DS2745.
 
 		//0A(0): Temperature MSB

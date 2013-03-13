@@ -152,7 +152,7 @@ PUBLIC void CPU100MHz (void)
 	  timer2CPU100();		//generate 1MHz system clock for sleep and delays from 100MHz cpu clock.
 	  SSPNEATCPU100();		//SSP 1MHz derived from 100MHz for NEAT SSP.
 	  CPUSPEED=100;
-	//  BTbaudCPU100();
+	  BTbaudCPU100();
 }
 
 
@@ -219,7 +219,7 @@ PUBLIC void CPU12MHz(void)
 	   LPC_SC->CLKSRCSEL = 0x01; //IRC 4MHzmain oscillator.
 	  timer2CPU12();		//12MHz clock, generate 1MHz system clock for sleep and delays from 12MHz CPU clock.
 	  SSPNEATCPU12();		//SSP 1MHz derived from 12MHz for NEAT SSP.
-//	  BTbaudCPU12();
+	  BTbaudCPU12();
 	  CPUSPEED=12;
 }
 
@@ -382,7 +382,7 @@ if (PCBiss==3||PCBiss==4)
 
 		}
 
-	else if (SWBT)
+	if (SWBT)
 	{
 		BTACC=1;					//any bluetooth sets BTACC.
 		if (CPUSPEED==0)		//has been asleep
@@ -394,12 +394,18 @@ if (PCBiss==3||PCBiss==4)
 		}
 			LPC_TIM2->TC = 0;
 	}
-	else 	if (SWNEAT)
+		if (SWNEAT)
 	{
 			CPU12MHz();
 			readNEAT();
 			LPC_TIM2->TC = 0;
 	}
+		if(!(NEATINT && LPC_GPIO_NEATINT  FIOPIN))		//NEAT INT is low, read neat.  GPIO in.
+		{
+			CPU12MHz();
+			NEATRESET();
+			LPC_TIM2->TC = 0;
+		}
 
 }
 
@@ -595,11 +601,11 @@ PUBLIC int powerDown(void)
 
 	//Power Down Mode wake up from EINT/GPIO Works but not on debug.
 	CPU4MHz();						//reduce power.
-	LPC_SC->PCONP=1<<15;		//only GPIO needed during power down.
+
 	CPUSPEED=0;		//0 means asleep, 12=12MHz, 100=100MHz.
-
+//	NEATWR(2,0xA0);			//reset receiver
 	LPC_GPIOINT->IO0IntEnR|=0x1<<16;			//Bluetooth rising interrupt
-
+	LPC_SC->PCONP=1<<15;		//only GPIO needed during power down.
 
 	 //Power down mode.
 #if release==1
@@ -641,14 +647,14 @@ PUBLIC int powerDown(void)
 ///@brief Battery state indicator, LED is yellow for low battery, or green for battery good..
 ///@param void
 ///@return void
-///
-///battery low if volt below 3.591V
+
+//
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC void BatteryState()
 {
 	byte a;
 	a=I2CBATTERY();
-if(a >=95)//92=92*8*4.88mV =3.591V, 93=3.63V, 95=3.708V
+if(a==1)//good battery
 {
 	LED1GREEN();//battery good active
 	batterygood=1;
@@ -670,38 +676,13 @@ else
 
 
 
-////////////////////////////////////////////////////////////
-///@brief Charge state from Power on and power off.
-///@param void
-///@return void
-///
-///set batterygood to true or false. always true if power on.
-///set NIMH or lithium if charge is on
-///
-////////////////////////////////////////////////////////////
-void ACSTATE()
-{
-	if(ACON)
-		{
-			ACON=0;
-			batterygood=1;
-				I2CREAD();
 
-		}
-		if(ACOFF)
-		{
-			ACOFF=0;
-			if( I2CBATTERY()>95)batterygood=1;
-			else batterygood=0;
-			I2CREAD();
-		}
-}
 
 
 void LEDFLASH()
 {
 
-	ACSTATE();
+
 
 	if(batterygood)
 	{

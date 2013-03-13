@@ -28,6 +28,7 @@ PUBLIC void NEATTX(byte , byte , word);
 PUBLIC void NEATINIT(void);
 PUBLIC void	NEATOFF(void);
 PUBLIC void NEATALARM(void);
+PUBLIC void NEATSIM(void);
 //External functions
 
 EXTERNAL void initSSP0(void);
@@ -44,6 +45,7 @@ EXTERNAL void	LED1OFF(void);
 EXTERNAL void SystemOFF(void);
 EXTERNAL void	BTQUIET(void);
 EXTERNAL void	BTON(void);
+
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -201,17 +203,17 @@ void NEATRESET()
 	LPC_GPIO_NEATCS FIOSET = NEATCS; //NEAT disable
 	LPC_GPIO_NEATCS FIODIR |=NEATCS; //CHIPEN on NEAT.
 	LPC_GPIO_NEATINT FIODIR &= ~(NEATINT); //NEAT INt is input.
-	us(10000);			//10ms
+	us(100000);			//10ms
 
 	NEATWR(1,1);				//reset NEAT/as power up reset.
 
 
 	{
-		us(300000);
+		us(100000);
 	}
 	NEATWR(0x08,00);		//number of short preamble packages sent
 	NEATWR(0x09,03);		//number of long preamble packages sent.
-	NEATWR(2,0xA0);			//reset receiver
+	NEATWR(2,0xA0);			//reset receiver //A0 for power saving. //E0 for always on receiver.
 
 	us(10000);
 
@@ -220,12 +222,11 @@ void NEATRESET()
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 ///@brief NEATTX transmits an alarm from position 0x10 preset by NEAT.
-///@return void
+///@the turns off power.
 /////////////////////////////////////////////////////////////////////////////////////////////////
 void NEATALARM()
 {	int a,b,c,d;
-	b=LPC_TIM2->TC;
-	a=3000000+b;
+
 	disableInputInterrupt();
 	LPC_GPIO_BTRESET FIOCLR	= BTRESET;	//Bluetooth reset.	RESET BT
 #if release==1
@@ -236,48 +237,16 @@ void NEATALARM()
 #endif
 
 
-//NEATWR(1,1);				//reset NEAT/as power up reset.
-//	while(a>LPC_TIM2->TC)
-//	{
-//		if ((LPC_TIM2->TC / 200000) % 2)
-//			{LED1YELLOW();}
-//		else
-//			{LED1GREEN();}
-//	}
-//NEATWR(2,0xA0);			//reset receiver
-
-
-
-//	us(10000);
-
-//	while (0x80&NEATRD(3));		//wait for ready		//should be instant.
-
-//	while ((0x80&NEATRD(3))	&& (a>LPC_TIM2->TC))
-//		 if (a<=LPC_TIM2->TC) 	 NVIC_SystemReset();						//system reset;
-
 	NEATWR(0x08,00);		//number of short preamble packages sent
-	NEATWR(0x09,6);		//number of long preamble packages sent.
+	NEATWR(0x09,8);		//number of long preamble packages sent.
 	NEATWR(0x42,0x01);		//select 10,11 as address
-//	NEATWR(0x40,ID>>8);		//MSB of transmit ID
-//	NEATWR(0x41,ID);		//LSB of transmit ID
-//	NEATWR(0x45,0);		//alarm type
-//	NEATWR(0x46,0xFF);	//battery state
-
 	NEATWR(0x03,0x80);		//transmit code.
 
 
 
-	while ((0x80&NEATRD(3))	&&(a>LPC_TIM2->TC))
-		{
-		if ((LPC_TIM2->TC / 200000) % 2)
-				{LED1YELLOW();}
-			else
-				{LED1GREEN();}
-			};
+	b=LPC_TIM2->TC;
+	a=5000000+b;
 
-	LPC_GPIO_BTRESET FIOSET	= BTRESET;	//Bluetooth reset.	RESET BT
-	 if (a<=LPC_TIM2->TC) 	 NVIC_SystemReset();						//system reset;
-	 c=LPC_TIM2->TC;
 	 while (a>LPC_TIM2->TC)
 	 {	if ((LPC_TIM2->TC / 200000) % 2)
 		{LED1YELLOW();}
@@ -286,10 +255,47 @@ void NEATALARM()
 	}
 
 
-	 c=LPC_TIM2->TC;
 
 
 
+
+
+	LPC_GPIO_OFF FIOSET =OFF; //OFF button set high to turn off.
+
+	LED2YELLOW();
+	LPC_TIM2->TC = 0;
+	us(1000000);
+	enableInputInterrupt();
+
+
+
+}
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief This routine enables NEAT RX, not sure why.
+///@return void
+/////////////////////////////////////////////////////////////////////////////////////////////////
+void NEATSIM()
+{	int a,b,c,d;
+	b=LPC_TIM2->TC;
+	a=3000000+b;
+	disableInputInterrupt();
+	LPC_GPIO_BTRESET FIOCLR	= BTRESET;	//Bluetooth reset.	RESET BT
+#if release==1
+	LPC_WDT->WDTC = 18000000;	//set timeout 18s watchdog timer
+	LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
+	LPC_WDT->WDFEED=0x55;			//watchdog feed
+
+#endif
+
+
+	NEATWR(0x08,00);		//number of short preamble packages sent
+	NEATWR(0x09,6);		//number of long preamble packages sent.
+	NEATWR(0x42,0x01);		//select 10,11 as address
+	NEATWR(2,0xA0);			//reset read
+
+	LPC_GPIO_BTRESET FIOSET	= BTRESET;	//Bluetooth reset.	RESET BT
 		LPC_GPIOINT->IO2IntClr=0x1<<12;					//SW2 bit 1	EXT
 		LPC_GPIOINT->IO2IntClr=0x1<<11;					//SW1 bit 0 INT
 		LPC_GPIOINT->IO0IntClr=0x1<<21;					//SW3 bit 2 MID
@@ -311,8 +317,6 @@ void NEATALARM()
 }
 
 
-
-
 /////////////////////////////////////////////////////////////////////////////////////////////////
 ///@brief NEATTX transmits an alarm.
 ///@param byte battery: 0=empty, 0xFF = full
@@ -323,7 +327,7 @@ void NEATALARM()
 void NEATTX(byte battery, byte alarm, word ID)
 {	int a,b,c,d,tim, tim2;
 
-a=3000000+LPC_TIM2->TC;
+
 	disableInputInterrupt();
 #if release==1
 
@@ -331,17 +335,19 @@ a=3000000+LPC_TIM2->TC;
 	LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
 	LPC_WDT->WDFEED=0x55;			//watchdog feed
 #endif
-//	NEATRESET();
-//	while (0x80&NEATRD(3));
 
-//	while ((0x80&NEATRD(3))	&& (a>LPC_TIM2->TC))
-//		 if (a<=LPC_TIM2->TC)
-//			 {SystemOFF();					//system reset;
-//			 }
-//	LPC_GPIO_BTRESET FIOCLR	= BTRESET;	//Bluetooth reset.	RESET BT
-	//	BTQUIET();
+/*	LPC_TIM2->TC=0;
+	a=6000000;		//6s timeout.
+	while ((0x80&NEATRD(3))	&& (a>LPC_TIM2->TC))
+	{
+		if (a<=LPC_TIM2->TC)
+			{SystemOFF();					//system reset;
+			}
+	}
+	*/
+
 		NEATWR(0x08,00);		//number of short preamble packages sent
-		NEATWR(0x09,6);		//number of long preamble packages sent.
+		NEATWR(0x09,8);		//number of long preamble packages sent.
 		NEATWR(0x45,alarm);		//alarm type
 		NEATWR(0x42,0x00);		//select 40,41 as address
 		NEATWR(0x46,battery);	//battery state
@@ -349,15 +355,9 @@ a=3000000+LPC_TIM2->TC;
 		NEATWR(0x41,ID);		//LSB of transmit ID
 
 
-//	while (0x80&NEATRD(3));
+
 	NEATWR(0x03,0x80);		//transmit code.
 
-
-
-	while ((0x80&NEATRD(3))	&& (a>LPC_TIM2->TC))
-		if (a<=LPC_TIM2->TC)
-			{SystemOFF();					//system reset;
-			}
 
 
 ///	LPC_GPIO_BTRESET FIOSET	= BTRESET;	//Bluetooth reset.	RESET BT

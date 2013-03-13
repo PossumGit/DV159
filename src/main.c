@@ -99,6 +99,7 @@ EXTERNAL void BatteryState(void);
 EXTERNAL char READPIO(void);
 EXTERNAL void NEATALARM(void);
 EXTERNAL char I2CSTATUS(void);
+EXTERNAL void NEATSIM(void);
 EXTERNAL int storedcharge;
 EXTERNAL int ChargeConfidence;
 
@@ -141,7 +142,7 @@ PUBLIC int main(void) {
 		I2CREAD();
 //				a= I2CSTATUS();
 
-		ChargeConfidence=2;			//not very good confidence.
+/*		ChargeConfidence=2;			//not very good confidence.
 		charge=(I2CSlaveBuffer[6]<<8)| I2CSlaveBuffer[7];
 		//charge*0.417 gives charge in mAh.
 		//volts*4.88mV/32 gives volts. =volts*0.1525 in mV
@@ -181,6 +182,7 @@ PUBLIC int main(void) {
 
 
 		storedcharge=charge;
+		*/
 	I2CNewBattery();		//reset new battery, allow PIO to read battery chemistry.
 
 
@@ -261,7 +263,7 @@ PRIVATE void LOOP(void) {
 	LPC_TIM2->TC = 0;
 
 	while (1) {
-			powerDown();  	//Go to low power state if no comms, and timer2>3s:
+			powerDown();  	//Go to low power state if no comms, and timer3>3s:
 			processBT(); 	//process received information.
 			rxtxBT(); 		//receive/transmit any BT data//may be possible to DMA here.
 
@@ -460,18 +462,13 @@ PRIVATE void powerupHEX(void) {
 			if(6!=HEX())break;
 
 			CPU4MHz();
-			I2CREAD();
-			if( I2CBATTERY()>95)
-				{
-					LED1GREEN();
-				}
-				else
-				{	LED1YELLOW();
-				}
+
+			BatteryState();
 				CPU100MHz();
 				us(200000);
 				LED1OFF();
 				us(200000);
+			//	LED1GREEN();
 
 			}
 		break;
@@ -600,7 +597,7 @@ PRIVATE void powerupHEX(void) {
 
 
 		I2CSTATUS();
-		a=I2CBATTERY();
+		a=I2CBAT();
 		if (a<0x60)
 		{
 		b=0x10&I2CSTATUS();
@@ -651,15 +648,37 @@ PRIVATE void powerupHEX(void) {
 
 	case 0x0E:				//FREEWAY REMOTE code
 		//from starting code to first IR is 5.8ms
+
 		CPU4MHz();
 
-	//		LED1GREEN();
-		I2CINIT();
-//		I2CREAD();		//first read is not valid, so throw it away.
+
+		I2CSTATUS();
+		a=I2CBAT();
+		if (a<0x60)
+		{
+		b=0x10&I2CSTATUS();
+			if (b)
+			{a=100;
+			}
+		}
+			if(a >=95)//95=3.708V
+		{
+				b=0x10;
+			LED1GREEN();//battery good active
+		}
+		else
+		{
+			b=0;
+			 LED1YELLOW();//battery low active.
+		}
 
 
-		BatteryState();			//LED Orange/yellow depending on battery state. //takes about 5.8ms
+
+//		BatteryState();			//LED Orange/yellow depending on battery state.//takes about 5.8ms
+//main+10.8ms
 		 I2CSHUTDOWN();
+
+
 			LED2OFF();
 			EnableWDT10s();		//10s watchdog until LOOP.
 			LPC_WDT->WDTC = 60000000;	//set timeout 10s watchdog timer
@@ -705,7 +724,7 @@ PRIVATE void powerupHEX(void) {
 		for (i=0;i<10;i++)
 		{
 			LPC_TIM2->TC=0;
-			time=5000000;			//
+			time=15000000;			//
 			h=i+(j<<4)+(k<<8)+(l<<12);
 		while (LPC_TIM2->TC<time);
 		time=20000000;			//
@@ -765,6 +784,18 @@ PRIVATE void powerupHEX(void) {
 		while(1);
 
 		break;
+
+
+
+
+
+
+
+
+
+
+
+
 	case 0x00:		//main startup and execute for QWAYO
 	default:
 #if release==1
@@ -852,6 +883,7 @@ PRIVATE void powerupHEX(void) {
 		BatteryState();			//LED Orange/yellow depending on battery state.
 	//	BTACC=0;
 		LED2OFF();
+		NEATSIM();
 		LOOP();			//never exits this loop.
 		break;
 ;
