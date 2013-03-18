@@ -18,7 +18,7 @@
 #include "lpc17xx_pinsel.h"
 //public variables
 //local variables.
-PRIVATE word IRAddress = 0; ///< Count IR pulses during capture/replay
+PRIVATE volatile word IRAddress = 0; ///< Count IR pulses during capture/replay
 PRIVATE word PulseWidth = 100; ///< 100 system clocks=1uS.
 PRIVATE word IRData = 1; ///< Used to communicate end from interrupt routines.
 PRIVATE word IRTimeMatch = 1;///< Last time set into match regsister.
@@ -34,7 +34,7 @@ PRIVATE int COUNT[] = { 0, 0, 0, 0, 0, 0, 0, 0 };///< used for loops in compress
 
 //external variables
 EXTERNAL volatile int Buffer[]; ///< Whole of RAM2 is Buffer, reused for NEAT, Bluetooth, audio and IR replay and capture
-
+PUBLIC	int BUFLEN;
 //Local functions
 PRIVATE void startCaptureIR(void);
 PRIVATE void endCaptureIR(void);
@@ -99,7 +99,7 @@ if (PCBiss==3||PCBiss==4)
 		txBT();		//send any available data from change of input to BT.
 		if (IRAddress >= CaptureMax) break;
 	}
-
+	BUFLEN=4*(IRAddress+1);
 	endCaptureIR();
 
 	correctIR();
@@ -159,6 +159,8 @@ PUBLIC void playIR(void) {
 			txBT();		//send any available data from change of input to BT.
 		}
 		LED1OFF();
+
+
 		endPlayIR();
 #if release==1
 		LPC_WDT->WDTC = 5000000;	//set timeout 5s watchdog timer

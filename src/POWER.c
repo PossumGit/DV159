@@ -46,7 +46,7 @@ PUBLIC int ChargeConfidence=3;
 PUBLIC int NIMH=1;
 PUBLIC int LITHIUM=0;
 
-
+	int	CLED=0;
 //Private variables
 static int t=0;
 
@@ -495,6 +495,8 @@ PUBLIC int powerDown(void)
 	//FEED watchdog.
 	s=LPC_TIM2->TC;
 
+////////////////////////////////
+	///debounce
 	if((debounce==1)&&(20000 < LPC_TIM2->TC))
 	{
 		debounce=0;
@@ -502,75 +504,38 @@ PUBLIC int powerDown(void)
 		PENDALARM=0x30^(inputChange()&0x30);	//NZ if EXT and/or INT pressed.//else 0.
 	}
 
-
+//////////////////
+	///watchdog
 #if release==1
 	LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
 	LPC_WDT->WDFEED=0x55;			//watchdog feed
-
 #endif
 
 
 	b=LPC_SSP0->SR;			//bit 7=1 is SPI transfers complete
 	b=LPC_UART1->LSR;
 
-
+/////////////////////////
+	///correct occasional timer glitch
 	if  (  s -t > 10000 ) {
-
 		LPC_TIM2->TC= t;
 	}
 
 
-
-	LEDFLASH();
+//	 LED2YELLOW();
+	LEDFLASH();			///LED flash sequence.
 	s=LPC_TIM2->TC;
 	if (PENDALARM && ALARMtime&&!BTACC) {
-
 			if  (ALARMtime * 100000 < LPC_TIM2->TC) {
-
-	//			LED2GREEN();
-	//			LPC_GPIO_BTRESET FIOCLR	= BTRESET;	//Bluetooth reset.	RESET BT
 			NEATALARM();
-	//		LPC_GPIO_BTRESET FIOSET	= BTRESET;	//Bluetooth reset.	RESET BT
-			PENDALARM = 0;
-			a=0x30&inputChange();
-			if	(a!=0x30)	//input still pressed after NEAT alarm.
-			{
-				disableInputInterrupt();
-			LPC_GPIOINT->IO2IntClr=0x1<<12;					//SW2 bit 1	EXT
-			LPC_GPIOINT->IO2IntClr=0x1<<11;					//SW1 bit 0 INT
-			LPC_GPIOINT->IO0IntClr=0x1<<21;					//SW3 bit 2 MID
-			LPC_GPIOINT->IO2IntClr=0x1<<12;					//SW2 bit 1	EXT
-			LPC_GPIOINT->IO2IntClr=0x1<<11;					//SW1 bit 0 INT
-			LPC_GPIOINT->IO0IntClr=0x1<<21;					//SW3 bit 2 MID
-			LPC_GPIOINT->IO0IntClr=0x1<<16;					//BT Interrupt
-			LPC_GPIOINT->IO2IntClr=0x1<<4;					//NEAT Interrupt MOD, wire NEAT INTERRUPt to P2.4 pin 69.
-			NVIC->ICPR[0]=(0x1<<21);		//clear pending GPIO interrupt
-
-			while(0x30!=0x30&inputChange());
-				//turn off when input released.
-			while(1)
-			{
-				LPC_GPIO_BTRESET FIOCLR	= BTRESET;	//Bluetooth reset.	RESET BT
-	//			NEATALARM();
-				LED2GREEN();
-				LPC_GPIO_OFF FIOSET =OFF; //OFF button set high to turn off.
-				us(1000000);
-				 NVIC_SystemReset();
-		//		NEATOFF();
-	//			LPC_GPIO_BTRESET FIOCLR	= BTRESET;	//Bluetooth reset.	RESET BT
-	//			CPU4MHz();
+	/////////////never returns from NEATALARM.
+			 NVIC_SystemReset();
 			}
-			}
-
-
-	//	if input still pressed, then go into power down sequence.
-
-
-
+//	if input still pressed, then go into power down sequence.
 			LED1OFF();
 		}
 
-	}
+
 	else
 
 	{
@@ -590,7 +555,7 @@ PUBLIC int powerDown(void)
 
 
 	LED1OFF();
-	LED2OFF();
+//	LED2OFF();
 	CPUSPEED=0;		//0 means asleep, 12=12MHz, 100=100MHz.
 
     // Deep-Sleep Mode, set SLEEPDEEP bit
@@ -618,7 +583,7 @@ PUBLIC int powerDown(void)
 		LPC_SC->PCON = 0x00;
 #endif
 		enableInputInterrupt();
-
+		 LED2OFF();
 	__WFI(); //go to power down.
 
 
@@ -683,9 +648,10 @@ void LEDFLASH()
 {
 
 
-
 	if(batterygood)
 	{
+
+
 		if (100000 > LPC_TIM2->TC)
 	{LED1GREEN();}
 	else if (1000000 > LPC_TIM2->TC)

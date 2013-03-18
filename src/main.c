@@ -126,6 +126,7 @@ PUBLIC int main(void) {
 
 		char a;
 		int charge;
+		LED2GREEN();
 		timer2CPU4();		//12MHz clock, generate 1MHz system clock for sleep and delays from 12MHz CPU clock.
 		LPC_TIM2->TCR = 0 | 1 << 1; //disable timer2, reset timer2
 		LPC_TIM2->TCR = 1 | 0 << 1; //enable timer2 (start timer2)
@@ -183,13 +184,13 @@ PUBLIC int main(void) {
 
 		storedcharge=charge;
 		*/
-	I2CNewBattery();		//reset new battery, allow PIO to read battery chemistry.
+	///I2CNewBattery();		//reset new battery, allow PIO to read battery chemistry.
 
 
 	//note bit 3=1 means NIMH, bit 3=0 means Lithium, but only when on charge.
 
 //ext interrupt 2 causes problems after USB. ICER0 bit 20.
-		 LPC_GPIO_BTRESET FIOSET = BTRESET; //BLUETOOTH NRESET OUT High, Low to reset.
+	//	 LPC_GPIO_BTRESET FIOSET = BTRESET; //BLUETOOTH NRESET OUT High, Low to reset.
 		p=SCB->VTOR;		//vector=0 if loaded at 0, 0x10000 if loaded at 0x10000, ie over USB driver.
 		if (p!=0)	//loaded over usb driver.
 		{
@@ -208,7 +209,7 @@ PUBLIC int main(void) {
 			LED2GREEN();	//nimh battery.
 //		}
 	//main +5ms
-		LED1OFF();
+		LED1GREEN();
 		STATE='P';
 		ALARMtime=30;			//3s
 
@@ -261,10 +262,12 @@ PRIVATE void LOOP(void) {
 	int 	a;
 	CPU12MHz();
 	LPC_TIM2->TC = 0;
-
+	LED2OFF();
 	while (1) {
 			powerDown();  	//Go to low power state if no comms, and timer3>3s:
+
 			processBT(); 	//process received information.
+
 			rxtxBT(); 		//receive/transmit any BT data//may be possible to DMA here.
 
 	}
@@ -818,12 +821,13 @@ PRIVATE void powerupHEX(void) {
 
 		initUART();
 		initBT();
+		us(500000);
 	//	resetBT();
 	//	setupBT();
 	//	LED1YELLOW();
 		I2CINIT();
 		I2CREAD();		//first read is not valid, so throw it away.
-
+		BatteryState();			//LED Orange/yellow depending on battery state.
 	//	CPU12MHz();
 		NEATRESET();
 //		initSSP0();
@@ -880,9 +884,9 @@ PRIVATE void powerupHEX(void) {
 		CPU12MHz();
 		LPC_TIM2->TC = 0;
 		LPC_SC->PCONP     = Peripherals ;       // Enable Power for Peripherals      */
-		BatteryState();			//LED Orange/yellow depending on battery state.
+
 	//	BTACC=0;
-		LED2OFF();
+//		LED2OFF();
 		NEATSIM();
 		LOOP();			//never exits this loop.
 		break;

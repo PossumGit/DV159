@@ -23,7 +23,8 @@ PRIVATE volatile int rxoverflow = 0;	// DEBUG detect overflow BT RX.
 PRIVATE volatile byte tx[txlen];		// BT TX buffer.
 PRIVATE volatile int txoverflow = 0;	// DEBUG detect overflow BT TX.
 PRIVATE volatile unsigned int maxtime;			//DEBUG only, measure BT response time.
-
+				int	start;				//for read by android
+				int	length;				//read buffer by android
 
 //Public variables
 PUBLIC volatile unsigned int rxstart = 0;		// BT RX.
@@ -31,6 +32,7 @@ PUBLIC volatile unsigned int rxend = 0;		// BT RX.
 PUBLIC volatile unsigned int txstart = 0;		// BT TX.
 PUBLIC volatile unsigned int txend = 0;		// BT TX.
 PUBLIC int BTACC=0;
+PUBLIC	int BUFLEN=0;
 //External variables
 EXTERNAL volatile word Buffer[]; ///< Whole of RAM2 is Buffer, reused for audio and IR replay and capture
 EXTERNAL volatile byte I2CSlaveBuffer[];///<transfer DS2745 battery state, modified in interrupt.
@@ -41,10 +43,10 @@ EXTERNAL char STATE;
 EXTERNAL int	PCBiss;		//=3 for PCHB issue 3, =4 for PCB issue 4.
 
 //local functions
-PRIVATE void sendBTbuffer(void);
+PRIVATE void sendBTbuffer(int,int);
 PRIVATE void receiveBTbuffer(void);
 PRIVATE int waitBTRX( word);	///<wait for data ready in BT receive channel, timeout after word us.
-
+int BUFFERSIZE(void);
 // public functions
 PUBLIC void sendBT(byte a[] , unsigned int );
 PUBLIC int processBT(void);
@@ -106,6 +108,7 @@ static  byte battery=0xFF;		//NEAT sequence used in ProcessBT.
 
 static byte IRtype,IRrep;		//IR sequence used in ProcessBT.
 static int IRcode;				//IR sequence used in ProcessBT.
+static char ReportBUFLEN[]="1234A";
 char I[] =
 	{
 			"QWAYO firmware xxx, PCB x. Copyright Possum 2012-13. \0\0\0\0"
@@ -156,7 +159,7 @@ char I[] =
 
 	if(rxstart>=rxlen)rxstart=0;
 
-
+	LED1GREEN();
 	switch (SEQUENCE)//a sequence of N,alarm, battery, IDMSB, IDLSB.
 	{
 	case 1:
@@ -228,6 +231,55 @@ char I[] =
 		sendBT(ACK, sizeof(ACK));
 		break;
 	}
+	case 0x300:
+	{
+		start=a;
+		SEQUENCE=0x301;
+		break;
+	}
+	case 0x301:
+	{
+		start=a|(start<<8);
+		SEQUENCE=0x302;
+		break;
+	}
+	case 0x302:
+	{
+		start=a|(start<<8);
+		SEQUENCE=0x303;
+		break;
+	}
+	case 0x303:
+	{
+		start=a|(start<<8);
+		SEQUENCE=0x304;
+		break;
+	}
+	case 0x304:
+	{
+		length=a;
+		SEQUENCE=0x305;
+		break;
+	}
+	case 0x305:
+	{
+		length=a|(length<<8);
+		SEQUENCE=0x306;
+		break;
+	}
+	case 0x306:
+	{
+		length=a|(length<<8);
+		SEQUENCE=0x307;
+		break;
+	}
+	case 0x307:
+	{
+		length=a|(length<<8);
+		sendBTbuffer(start,length); //ends with 4 off 00 bytes=integer 0
+		SEQUENCE=0x0;
+		break;
+	}
 
 
 
@@ -292,7 +344,18 @@ char I[] =
 	    break;
 	    }
 
+	case 'd':
+		case 'D': //capture IR
+		    {
+		 //   	BUFLEN= BUFFERSIZE();
+		    	ReportBUFLEN[0]=BUFLEN>>24;
+		    	ReportBUFLEN[1]=BUFLEN>>16;
+		    	ReportBUFLEN[2]=BUFLEN>>8;
+		    	ReportBUFLEN[3]=BUFLEN;
+			sendBT(ReportBUFLEN, sizeof(ReportBUFLEN-1));
 
+		    break;
+		    }
 
 
 	case 'i':
@@ -342,8 +405,12 @@ char I[] =
 	case 'r': //read buffer
 	case 'R':
 	    {
+	    	SEQUENCE=0x300;
+		    	break;
 
-	    sendBTbuffer(); //ends with 4 off 00 bytes=integer 0
+
+
+
 	    //so no ACK. Does not expect ACK.
 	    break;
 	    }
@@ -374,6 +441,7 @@ char I[] =
 	case 'W':
 	    {
 
+
 	    while (0 == (1 << 6 & LPC_UART1->LSR))
 		;//wait for tx data ready
 
@@ -397,29 +465,16 @@ char I[] =
 
 		 SystemOFF();
 
-//			LED1OFF();
-//			LED2OFF();
-//			disableInputInterrupt();
-//		LPC_GPIO_OFF FIOSET =OFF; //OFF button set high to turn off.
-//			NEATOFF();
-//			LPC_GPIO_BTRESET FIOCLR	= BTRESET;	//Bluetooth reset.	RESET BT
-//		CPU4MHz();
-
-//		while(1)
-//			{
-
-//			SCB->SCR = 0x4;			//sleepdeep bit
-//			LPC_SC->PCON = 0x03;	//combined with sleepdeep bit gives power down mode. IRC is disabled, so WDT disabled.
-//			__WFI();
-//			}
-		//never gets here because turns off first.
 		break;
 	    }
 	    }
+
 	}
 	}
+//	LED1OFF();
 	return 1;
 	}
+//    LED1OFF();
     return 0;
     }
 
@@ -516,6 +571,7 @@ PRIVATE void receiveBTbuffer(void)
 	if (e == 0)
 	    break;
 	}
+    BUFLEN=4* (i+1);
     m = LPC_TIM2->TC;
     for (; i < CaptureMax; i++) //fill rest of Buffer with 0.
 	{
@@ -530,11 +586,15 @@ PRIVATE void receiveBTbuffer(void)
 ///
 ///finally sends integer 0.
 /////////////////////////////////////////////////////////////////////////////////////////////////
-PRIVATE void sendBTbuffer(void)
+PRIVATE void sendBTbuffer(int start, int length)
     {
     byte a;
     int i;
-    for (i = 0; (Buffer[i] != 0) && i < CaptureMax-1; i++)
+    int end;
+    i=length;
+    end=start+length;
+   for (i=length;(Buffer[i] != 0) && i <end ; i++)
+ //   for (i = 0; (Buffer[i] != 0) && i < CaptureMax-1; i++)
 	{
 	while ((0 == (1 << 6 & LPC_UART1->LSR)))
 	    ;//data available and buffer available
@@ -593,10 +653,41 @@ PRIVATE void sendBTbuffer(void)
     while ((0 == (1 << 6 & LPC_UART1->LSR)))
 	;//data available and buffer available
     LPC_UART1->THR = 0;
-
+  //  BUFLEN=i+1;
     }
 
 
+
+
+
+/////////////////////////////////////////////////////////////////
+//find buffer size, return number of bytes that will be sent via BT.
+//look for Buffer[x]==0 for end of buffer.
+//
+//
+int BUFFERSIZE(void)
+{
+	int a=0;
+	int b=0;
+	int c=4;		//always get 00000000 at end, even if buffer full.
+	while(a<CaptureMax)
+	{
+	b=Buffer[a++];
+	if (b==0)break;
+	c+=4;
+	//extra chars to escape $s.
+	if ((b&0xFF)==0x24)
+		c++;
+	if ((b&0xFF00)==0x2400)
+		c++;
+	if((b&0xFF0000)==0x240000)
+		c++;
+	if((b&0xFF000000)==0x24000000)
+		c++;
+
+	}
+	 return c;
+}
 /////////////////////////////////////////////////////////////////////////////////////////////////
 ///@brief BT comms with BT module RN42/RN41 transmit data
 ///@param void
@@ -642,8 +733,8 @@ PUBLIC void sendBT(byte istat[], unsigned int ilength)
 PUBLIC word rxtxBT(void)
     {
     int s, r,a;
-	SystemCoreClockUpdate ();
-	s=SystemCoreClock; //4MHz
+//	SystemCoreClockUpdate ();
+//	s=SystemCoreClock; //4MHz
     r = 0;
     s = LPC_UART1->LSR;
     while (1 & LPC_UART1->LSR)
@@ -767,7 +858,7 @@ PUBLIC void resetBT()
     {
 
     LPC_GPIO_BTRESET FIOCLR = BTRESET; //NRESET OUT High, Low to reset.
-    us(10000);
+    us(100000);
     LPC_GPIO_BTRESET FIOSET = BTRESET; //NRESET OUT High, Low to reset.
 
 	us(100000); //10ms delay
@@ -824,6 +915,12 @@ PUBLIC void discoverBT(void)
     LPC_GPIO_BTDISCOVERY FIOCLR = BTDISCOVERY; //DISCOVERY PIO3. OUT LOW=disable auto-discovery.
     LED1OFF();
     }
+
+
+
+
+
+
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
 ///@brief setup command config unlimited time
