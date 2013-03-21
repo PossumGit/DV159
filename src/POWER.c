@@ -61,7 +61,7 @@ EXTERNAL int ALARMtime;
 EXTERNAL int BTACC;
 EXTERNAL char STATE;
 EXTERNAL int	PCBiss;		//=3 for PCHB issue 3, =4 for PCB issue 4.
-
+EXTERNAL  int SEQUENCE;			//used in ProcessBT for NEAT and IR sequence.
 
 //Private functions
 PRIVATE void LEDFLASH(void);
@@ -544,7 +544,7 @@ PUBLIC int powerDown(void)
 	if(0x40==((LPC_UART1->LSR)&(0x41)))	//bit 1=0 RX FIFO empty, bit 6=1 TX FIFO empty.
 	if(rxstart==rxend)					//nothing waiting in bluetooth rx buffer
 	if(txstart==txend)					//nothing waiting in bluetooth tx buffer
-	if (3000000 < LPC_TIM2->TC)
+	if ((3000000 < LPC_TIM2->TC)&&(SEQUENCE!=0x400))
 	{
 //		s=LPC_TIM2->TC;
 

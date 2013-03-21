@@ -19,18 +19,18 @@
 //public variables
 //local variables.
 PRIVATE volatile word IRAddress = 0; ///< Count IR pulses during capture/replay
-PRIVATE word PulseWidth = 100; ///< 100 system clocks=1uS.
-PRIVATE word IRData = 1; ///< Used to communicate end from interrupt routines.
-PRIVATE word IRTimeMatch = 1;///< Last time set into match regsister.
-PRIVATE word Period = 2632; ///<38KHz default.
-PRIVATE word Mark = 0x10000; ///<Mark burst in IR compression processing. Initial is bigger than max mark.
-PRIVATE word Space = 0; ///<Space gap between bursts in IR compression.
-PRIVATE word SymbolBank = 0; ///<location of first symbol (skip) in SYMBOL BANK
-PRIVATE word SymbolWord = 0;	///< a word out of the symbol bank.
-PRIVATE word DataStep = 0; ///<used in compression timer1 ISR
-PRIVATE word Pulse = 1; ///<1=pulse, 0=no pulse.
-PRIVATE word Delay = 0;///<delay in compress routine.
-PRIVATE int COUNT[] = { 0, 0, 0, 0, 0, 0, 0, 0 };///< used for loops in compress.
+PRIVATE volatile word PulseWidth = 100; ///< 100 system clocks=1uS.
+PRIVATE volatile word IRData = 1; ///< Used to communicate end from interrupt routines.
+PRIVATE volatile word IRTimeMatch = 1;///< Last time set into match regsister.
+PRIVATE volatile word Period = 2632; ///<38KHz default.
+PRIVATE volatile word Mark = 0x10000; ///<Mark burst in IR compression processing. Initial is bigger than max mark.
+PRIVATE volatile word Space = 0; ///<Space gap between bursts in IR compression.
+PRIVATE volatile word SymbolBank = 0; ///<location of first symbol (skip) in SYMBOL BANK
+PRIVATE volatile word SymbolWord = 0;	///< a word out of the symbol bank.
+PRIVATE volatile word DataStep = 0; ///<used in compression timer1 ISR
+PRIVATE volatile word Pulse = 1; ///<1=pulse, 0=no pulse.
+PRIVATE volatile word Delay = 0;///<delay in compress routine.
+PRIVATE volatile int COUNT[] = { 0, 0, 0, 0, 0, 0, 0, 0 };///< used for loops in compress.
 
 //external variables
 EXTERNAL volatile int Buffer[]; ///< Whole of RAM2 is Buffer, reused for NEAT, Bluetooth, audio and IR replay and capture
@@ -98,8 +98,9 @@ if (PCBiss==3||PCBiss==4)
 		repeatInput();	//change of input?
 		txBT();		//send any available data from change of input to BT.
 		if (IRAddress >= CaptureMax) break;
+		if(LPC_TIM0->CR0 > 0x7e000000)break;
 	}
-	BUFLEN=4*(IRAddress+1);
+	BUFLEN=IRAddress+1;
 	endCaptureIR();
 
 	correctIR();
@@ -114,7 +115,7 @@ if (PCBiss==3||PCBiss==4)
 }
 
 #if release==1
-	LPC_WDT->WDTC = 5000000;	//set timeout 40s watchdog timer
+	LPC_WDT->WDTC = 10000000;	//set timeout 40s watchdog timer
 	LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
 	LPC_WDT->WDFEED=0x55;			//watchdog feed
 #endif
@@ -138,7 +139,7 @@ if (PCBiss==3||PCBiss==4)
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC void playIR(void) {
 
-
+int a;
 
 //	LED2GREEN();
 	if (Buffer[2] != 0) {
@@ -150,9 +151,18 @@ PUBLIC void playIR(void) {
 		LPC_WDT->WDFEED=0x55;			//watchdog feed
 
 #endif
+
+
+
 		startPlayIR();
 		while (IRData > 0)//wait here during play IR
 		{
+	//		if (IRData<LPC_TIM1->TC)
+//			{
+//				a=1;
+//				break;
+//			}
+
 			if (1 & LPC_UART1->LSR) //if character comes in from bluetooth, read char and abort if its not an A.
 			if('A'!=LPC_UART1->RBR)	break;
 			repeatInput();	//change of input?
@@ -162,8 +172,9 @@ PUBLIC void playIR(void) {
 
 
 		endPlayIR();
+
 #if release==1
-		LPC_WDT->WDTC = 5000000;	//set timeout 5s watchdog timer
+		LPC_WDT->WDTC = 10000000;	//set timeout 5s watchdog timer
 		LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
 		LPC_WDT->WDFEED=0x55;			//watchdog feed
 
@@ -184,11 +195,13 @@ void TIMER1_IRQHandler(void) {
 		LPC_TIM0->EMR = 1 | 1 << 4; //Set P1.28, clear P1.28 MR0 on match
 		LPC_TIM0->TCR = 1 | 0 << 1; //reset timer0 and start timer0// bit 1 has to be cleared for counting.
 	}
+
 	//end of pulse section.
 	//
 	//
 	//read next word out of buffer.
 	//0 is end of buffer.
+	LED2GREEN();
 	if (IRAddress < CaptureMax) {
 
 
@@ -495,7 +508,8 @@ PRIVATE void compress(void) {
 void TIMER0_IRQHandler(void) {
 
 
-	if (IRAddress < CaptureMax) {
+
+	if ((IRAddress < CaptureMax)) {
 		Buffer[IRAddress++] = LPC_TIM0->CR0;
 	} else {
 		endCaptureIR();
@@ -510,8 +524,10 @@ void TIMER0_IRQHandler(void) {
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PRIVATE void startCaptureIR(void) {
 	IRAddress = CaptureFirst;
-	LPC_SC->PCLKSEL0 &= ~(3 << 2); //CLEAR PREDIVIDE bits.
-	LPC_SC->PCLKSEL0 |= 1 << 2; //TIMER0 PREDIVIDE =1 (system clock)
+	LPC_SC->PCLKSEL0 &= ~((3 << 2)|(3<<4)); //CLEAR PREDIVIDE bits.
+	LPC_SC->PCLKSEL0 |= ((1 << 2)|(1<<4)); //TIMER0 PREDIVIDE =1 (system clock)|TIMER1 PREDIVIDE =1 (system clock)
+
+//	LPC_SC->PCLKSEL0 |= 1 << 2; //TIMER0 PREDIVIDE =1 (system clock)
 	LPC_TIM0->PR = 0; //PRESCALE reset when count=1 IR CLOCK=system clock.
 	LPC_PINCON->PINSEL3 |= (3 << 20); //set P1.26 as capture 0.0
 	LPC_TIM0->CCR &= ~0x07; //disable any capture interrupt.
@@ -530,15 +546,17 @@ PRIVATE void startCaptureIR(void) {
 ///@return void
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PRIVATE void startPlayIR(void) {
-
+	disableInputInterrupt();
 	IRAddress = 0;
 	IRTimeMatch = 0;
 	Mark = 0x10000;
 	DataStep = 0;
 	compress(); //look at IR DATA, HEADER first, set up first match
 
-	LPC_SC->PCLKSEL0 &= ~(3 << 2); //CLEAR PREDIVIDE bits.
-	LPC_SC->PCLKSEL0 |= 1 << 2; //TIMER0 PREDIVIDE =1 (system clock)
+
+	LPC_SC->PCLKSEL0 &= ~((3 << 2)|(3<<4)); //CLEAR PREDIVIDE bits.
+	LPC_SC->PCLKSEL0 |= ((1 << 2)|(1<<4)); //TIMER0 PREDIVIDE =1 (system clock)|TIMER1 PREDIVIDE =1 (system clock)
+
 	LPC_TIM0->PR = 0; //PRESCALE reset when count=1 IR CLOCK=system clock.
 
 
@@ -549,8 +567,7 @@ PRIVATE void startPlayIR(void) {
 	LPC_TIM0->MR0 = 0; //set and clear MR0 to clear P1.28
 	LPC_PINCON->PINSEL3 |= (3 << 24); //set P1.28 as timer0 match 0.0
 
-	LPC_SC->PCLKSEL0 &= ~(3 << 4); //CLEAR PREDIVIDE bits.
-	LPC_SC->PCLKSEL0 |= (1 << 4); //TIMER1 PREDIVIDE =1 (system clock)
+
 	LPC_TIM1->PR = 0; //set IR sample clock
 
 	NVIC->ISER[0] = 1 << 2;
@@ -558,6 +575,10 @@ PRIVATE void startPlayIR(void) {
 	LPC_TIM0->MR0 = PulseWidth; //generate match on MR0 after PulseWidth system clocks.(3uS)
 	LPC_TIM0->MCR = 1 << 1 | 1 << 2; //stop and reset timer on match.
 	//	LPC_TIM1->MR0 = 1;//compress sets up first match.
+
+
+
+
 	LPC_TIM1->MCR = 1; //enable MR0
 	LPC_TIM1->TCR = 0 | 1 << 1; //enable timer 1 (reset timer1)
 	LPC_TIM1->TCR = 1 | 0 << 1; //enable timer 1 (start timer1)

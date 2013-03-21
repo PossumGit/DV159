@@ -392,9 +392,10 @@ void HardFault_Handler(void)
 {
     while(1)
    {
-//	LED2YELLOW();
+	LED2YELLOW();
    	 NVIC_SystemReset();
     }
+
 }
 __attribute__ ((section(".after_vectors")))
 void MemManage_Handler(void)

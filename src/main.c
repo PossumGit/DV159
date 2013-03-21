@@ -136,90 +136,21 @@ PUBLIC int main(void) {
 		BTbaudCPU12();
 
 		I2CINIT();			//at 4MHz.
-//		I2CNewBattery();
 
-//		a= I2CSTATUS();
-//		I2CSHUTDOWN();
 		I2CREAD();
-//				a= I2CSTATUS();
 
-/*		ChargeConfidence=2;			//not very good confidence.
-		charge=(I2CSlaveBuffer[6]<<8)| I2CSlaveBuffer[7];
-		//charge*0.417 gives charge in mAh.
-		//volts*4.88mV/32 gives volts. =volts*0.1525 in mV
-		//current*0.1042 =current in mA
-		//temperature*0.125/32 gives degrees C = temperature *0.0039
-		//if full charge=0x8000 and capacity =800mAh then full discharge=0x7882.
-		if (I2CSlaveBuffer[8]&0x40)//new battery.
-			{ChargeConfidence=1;
-			charge=0x8000;
-			I2CChargeWR(charge);
-
-			}
-
-		if (charge>0x8300)
-			{ChargeConfidence=4;
-			charge=0x8000;
-			I2CChargeWR(charge);
-			}
-		else if(charge>=0x8000)
-		{
-			ChargeConfidence=3;
-			charge=0x8000;
-			I2CChargeWR(charge);
-
-		}
-		if ((0x08& I2CSlaveBuffer[8])&&(LPC_GPIO2->FIOPIN&1<<8))
-		{
-			NIMH=1;
-			LITHIUM=0;
-		}
-		else
-		{NIMH=0;
-		LITHIUM=1;
-		}
-
-
-
-
-		storedcharge=charge;
-		*/
-	///I2CNewBattery();		//reset new battery, allow PIO to read battery chemistry.
-
-
-	//note bit 3=1 means NIMH, bit 3=0 means Lithium, but only when on charge.
-
-//ext interrupt 2 causes problems after USB. ICER0 bit 20.
-	//	 LPC_GPIO_BTRESET FIOSET = BTRESET; //BLUETOOTH NRESET OUT High, Low to reset.
 		p=SCB->VTOR;		//vector=0 if loaded at 0, 0x10000 if loaded at 0x10000, ie over USB driver.
 		if (p!=0)	//loaded over usb driver.
 		{
 			CPU12MHz();		//otherwise CPU can lock up for no obvious reason I can understand.
 		}
-	//	LPC_TIM2->TC=0;
-	//	CPU12MHz();
 
-//		a= READPIO();		//takes about 5ms
-//		if (a&0x08)
-//		{
-//			LED2YELLOW();	//lithium battery
-//		}
-//		else
-//		{
 			LED2GREEN();	//nimh battery.
-//		}
+
 	//main +5ms
 		LED1GREEN();
 		STATE='P';
 		ALARMtime=30;			//3s
-
-	//	 us(1000);
-	//	 while(1)
-	//	 {
-	//		 LED1YELLOW();
-	//		 LED1GREEN();
-	//	 }
-
 
 
 		LPC_GPIO_MICCE FIOCLR = MICCE; 		//MIC CHIPEN=0=disabled.
@@ -804,7 +735,7 @@ PRIVATE void powerupHEX(void) {
 #if release==1
 
 		EnableWDT10s();		//10s watchdog until LOOP.
-		LPC_WDT->WDTC = 5000000;	//5s after next FEED(in powerDown in LOOP). set timeout 5s watchdog timer
+	//	LPC_WDT->WDTC = 10000000;	//5s after next FEED(in powerDown in LOOP). set timeout 5s watchdog timer
 
 #endif
 		CPU12MHz();

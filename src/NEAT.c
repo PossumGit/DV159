@@ -309,7 +309,7 @@ void NEATSIM()
 		enableInputInterrupt();
 	LED1OFF();
 #if release==1
-	LPC_WDT->WDTC = 5000000;	//set timeout 10s watchdog timer
+	LPC_WDT->WDTC = 10000000;	//set timeout 10s watchdog timer
 	LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
 	LPC_WDT->WDFEED=0x55;			//watchdog feed
 //	LPC_WDT->WDTC = 5000000;	//set timeout 5s watchdog timer
@@ -363,7 +363,7 @@ void NEATTX(byte battery, byte alarm, word ID)
 ///	LPC_GPIO_BTRESET FIOSET	= BTRESET;	//Bluetooth reset.	RESET BT
 //	while (0x80&NEATRD(3));
 #if release==1
-	LPC_WDT->WDTC = 5000000;	//set timeout 5s watchdog timer
+	LPC_WDT->WDTC = 10000000;	//set timeout 5s watchdog timer
 	LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
 	LPC_WDT->WDFEED=0x55;			//watchdog feed
 #endif
