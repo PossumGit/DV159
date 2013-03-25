@@ -61,6 +61,7 @@ EXTERNAL void initBT(void);
 EXTERNAL int processBT(void);
 EXTERNAL void resetBT();
 EXTERNAL void setupBT(void);
+EXTERNAL void receiveBTbuffer(int,int);
 
 EXTERNAL void CPU4MHz(void);
 EXTERNAL void CPU12MHz(void);
@@ -499,16 +500,21 @@ PRIVATE void powerupHEX(void) {
 		break;
 	case 0x0B:				//Enable USB programming.
 	//	CPU12MHz();
+
+		CPU12MHz();
 		LED1GREEN();
-		us(1000000);
-		LED2OFF();
-		NEATRESET();
+		initUART();
+			initBT();
+	while(1)
+			{
+			us(1000000);
+			LED1GREEN();
+		receiveBTbuffer(0, 0x2000);
 
-		NEATWR(4,0x02);			//read firmware
 
-		a=NEATRD(0x65);
-		b=NEATRD(0x66);
-		c=NEATRD(0x67);
+
+		LED1OFF();
+			}
 
 		break;
 

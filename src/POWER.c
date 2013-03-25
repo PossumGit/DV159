@@ -165,7 +165,9 @@ PUBLIC void CPU100MHz (void)
 
 PUBLIC void CPU12MHz(void)
 {
-
+//	CPU100MHz();
+//	enableInputInterrupt();
+//	return;
 	/* Clock Setup                        */
 
 	  if (((LPC_SC->PLL0STAT >> 24) & 3) == 3)		//PLL  connected and enabled.
@@ -589,7 +591,7 @@ PUBLIC int powerDown(void)
 
 
 	 LPC_SC->PCONP     = Peripherals ;       // Enable Power for Peripherals      */
-
+	 CPU12MHz();
 #if release==1
 	LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
 	LPC_WDT->WDFEED=0x55;			//watchdog feed

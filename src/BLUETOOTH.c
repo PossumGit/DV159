@@ -45,7 +45,7 @@ EXTERNAL int	PCBiss;		//=3 for PCHB issue 3, =4 for PCB issue 4.
 
 //local functions
 PRIVATE void sendBTbuffer(int,int);
-PRIVATE void receiveBTbuffer(int,int);
+PUBLIC void receiveBTbuffer(int,int);
 PRIVATE int waitBTRX( word);	///<wait for data ready in BT receive channel, timeout after word us.
 void SENDTERM(void);
 void SENDBTNT(int start,int length);
@@ -127,6 +127,10 @@ char I[] =
 	{
 	'n'
 	};
+    byte STOP[]=
+    {
+    		"STOP"
+    };
 //if (PCBiss==4)
  //   {
 //	strcpy(I,"QWAYO firmware xxx, PCB x. Copyright Possum 2012-13. \0\0\0\0");//strcpy copies to first \0 only.
@@ -312,7 +316,51 @@ char I[] =
     // 	enableInputInterrupt();
 		}
 
-    	SEQUENCE=0x00;
+
+	case 0x500:
+
+	{
+		start=a;
+		SEQUENCE=0x501;
+		break;
+	}
+	case 0x501:
+	{
+		start=a|(start<<8);
+		SEQUENCE=0x502;
+		break;
+	}
+	case 0x502:
+	{
+		start=a|(start<<8);
+		SEQUENCE=0x503;
+		break;
+	}
+	case 0x503:
+	{
+		start=a|(start<<8);
+		SEQUENCE=0x00;
+
+	    while (0 == (1 << 6 & LPC_UART1->LSR)) ;//wait for tx data ready
+
+	    LPC_UART1->THR = 'A'; //immediate ACK to indicate ready.
+	    if (waitBTRX(5000000))
+		{
+		sendBT(NACK, sizeof(NACK)); //NACK if wait longer than 3s for BT data
+		break; //wait for char, break if 3s timeout.
+		}
+	    //	while (0 == (1 & LPC_UART1->LSR));				//wait for RX data ready.
+	    else
+		{
+		receiveBTbuffer(start, 0x2000); //ends with 4 off 00 bytes = integer 0.
+	//	us(1000000);
+	//	receiveBTbuffer(0x1000, 0x1000);
+		sendBT(ACK, sizeof(ACK));
+		}
+
+
+
+
 	 	 break;
 	}
 
@@ -511,6 +559,22 @@ char I[] =
 	    break;
 	    }
 	    //go to sleep
+
+
+	case 'x':
+	case 'X':
+	    {
+
+
+
+	    SEQUENCE=0x500;
+	    break;
+
+	    }
+	    //go to sleep
+
+
+
 	case 'Z':
 	{
 
@@ -528,7 +592,7 @@ char I[] =
 //    LED1OFF();
     return 0;
     }
-
+    }
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -563,7 +627,7 @@ PRIVATE int waitBTRX(word us)
 ///
 ///ends with integer 0
 /////////////////////////////////////////////////////////////////////////////////////////////////
-PRIVATE void receiveBTbuffer(int start, int length)
+ void receiveBTbuffer(int start, int length)
     {
 
     int a, b, c, d, e, i, x, end;
@@ -571,10 +635,25 @@ PRIVATE void receiveBTbuffer(int start, int length)
     word m;
 
     maxtime = 0;
+
+#if release==1
+		LPC_WDT->WDTC = 40000000;	//set timeout 40s watchdog timer
+		LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
+		LPC_WDT->WDFEED=0x55;			//watchdog feed
+
+#endif
+
+
     i=start;
     end=start+length;
-    if((start>=0) && (start<CaptureMax) && (end<=CaptureMax))
+    if((start>=0) && (start<CaptureMax))
     {
+if (end>CaptureMax){
+	end=CaptureMax;
+
+
+
+}
 
     for (; i<end; i++)
 	{
@@ -689,6 +768,13 @@ PRIVATE void receiveBTbuffer(int start, int length)
 	Buffer[i] = 0;
 	}
     }
+#if release==1
+		LPC_WDT->WDTC = 10000000;	//set timeout 5s watchdog timer
+		LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
+		LPC_WDT->WDFEED=0x55;			//watchdog feed
+
+#endif
+
     }
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1096,7 +1182,10 @@ PUBLIC void setupBT(void)
     	'S','W',',','0','1','0','0','\r','\n'			//number in hex 256*0.625ms=160ms
     };
 
-
+    byte Buad230K[] =			//baud rate 230k
+       {
+    		   'S','U',',','2','3','\r','\n'
+       };
     LED1GREEN();
     for (i = 0; i < 1000; i++, us(1000))
 	; //1s delay
@@ -1160,6 +1249,26 @@ PUBLIC void setupBT(void)
 	    }
 	}
     rxstart = rxend;
+ /*   sendBT(Baud230K, sizeof(Buad230K));
+    for (i = 0; i < 3000; i++)
+	{
+	us(1000);
+	rxtxBT();
+	if ((rxstart + 5) % rxlen <= rxend)
+	    {
+	    if (rx[rxstart] != 'A')
+		rxstart = (rxstart + 1) % rxlen;
+	    if ((rx[rxstart] == 'A') && (rx[(rxstart + 1) % rxlen] == 'O')
+		    && (rx[(rxstart + 2) % rxlen] == 'K'))
+		{
+		LED1GREEN();
+		i = 20000;
+		}
+	    }
+	}
+    rxstart = rxend;
+
+   */
     sendBT(ENDCMD, sizeof(ENDCMD));
     for (i = 0; i < 3000; i++)
 	{
