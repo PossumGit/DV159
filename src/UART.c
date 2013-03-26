@@ -75,14 +75,15 @@ PUBLIC void initUART(void)
 
 void	BTbaudCPU100()
 {
+	return;
 	///set DLAB to set up Baud rate.
 	LPC_UART1->LCR =3<<0|1<<7;						//8 bit word, divisor latch enable. OK
 	///
 	///PCLK = 25MHz= 100MHz/4	(PCLSEL1)
 	///baud rate = PCLK/(16*(256*DLM+DLL)*(1+DIV/MUL))
 	/// For 921KBaud.
-	LPC_SC->PCLKSEL0 |=  1<< 8; 					//0=100MHz/4= 25MHz. UART clock (CCLK/4 by RESET)OK 3=/8=12.5mhz
-	LPC_UART1->DLL =4;								//UART CLOCK. 7///DLL=1,2 does not work.
+	LPC_SC->PCLKSEL0 |=  3<< 8; 					//BAUD 3=115, 0=230, 2=460, 1=921. 100MHz/4= 25MHz. UART clock (CCLK/4 by RESET)OK 3=/8=12.5mhz
+	LPC_UART1->DLL =4;								//DLL must be >2. UART CLOCK. 7///DLL=1,2 does not work.
 	LPC_UART1->DLM =0;								//UART CLOCK. 0
 	LPC_UART1->FDR =9<<0|13<<4;					//Fractional divide. 0.93333
 	///clear DLAB for comms
@@ -108,8 +109,8 @@ void	BTbaudCPU12()
 	///PCLK = 25MHz= 100MHz/4	(PCLSEL1)
 	///baud rate = PCLK/(16*(256*DLM+DLL)*(1+DIV/MUL))
 	///
-	LPC_SC->PCLKSEL0 |=  2<< 8; 					//12MHz/2=6MHz	//2 for 115, 1 for 230, 1 for 460
-	LPC_UART1->DLL =3;								//UART CLOCK.//3 for 115, 3 for 230, 1 for 460
+	LPC_SC->PCLKSEL0 |=  2<< 8; 					//12MHz/2=6MHz	//2=115, 1=230, 0 for 57.6, 3=28.8
+	LPC_UART1->DLL =3;								//DLL must be >2. UART CLOCK.//3 for 115, 3 for 230, 1 for 460
 	LPC_UART1->DLM =0;								//UART CLOCK.
 	LPC_UART1->FDR =1<<0|12<<4;					//Fractional divide.	//1<<0|12<<4 for 115/230, 5<<0|8<<4 for 460
 	///clear DLAB for comms
@@ -135,7 +136,7 @@ void	BTbaud110CPU12()
 	///PCLK = 25MHz= 100MHz/4	(PCLSEL1)
 	///baud rate = PCLK/(16*(256*DLM+DLL)*(1+DIV/MUL))
 	///
-	LPC_SC->PCLKSEL0 |=  1<< 8; 					//12MHz/2=6MHz	//2 for 115, 1 for 230, 1 for 460
+	LPC_SC->PCLKSEL0 |=  2<< 8; 					//2(/2)=115, 1(/1)=230, 0(/4) for 57.6, 3(/8)=28.8
 	LPC_UART1->DLL =3;								//UART CLOCK.//3 for 115, 3 for 230, 1 for 460
 	LPC_UART1->DLM =0;								//UART CLOCK.
 	LPC_UART1->FDR =1<<0|12<<4;					//Fractional divide.	//1<<0|12<<4 for 115/230, 5<<0|8<<4 for 460

@@ -53,11 +53,13 @@ EXTERNAL int repeatInput(void);
 EXTERNAL void txBT(void);
 EXTERNAL byte	inputChange(void);
 EXTERNAL int	PCBiss;		//=3 for PCHB issue 3, =4 for PCB issue 4.
+EXTERNAL void receiveBTbuffer(int,int);
 //EXTERNAL word	inputTime(void);
 // PUBLIC functions
 
 PUBLIC int captureIR(void);
 PUBLIC void playIR(void);
+PUBLIC void streamIR(int);
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -124,6 +126,70 @@ if (PCBiss==3||PCBiss==4)
 	return 0;
 
 }
+
+
+/*
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief stream IR starting from address 0, stream BT starting from address start
+///@param int start
+///@return void
+///@par Modifies
+/// Buffer[]: Save IR data to Buffer[]
+///@par Notes
+/// CaptureBuffer[x]>=CaptureStart(100000=1ms) is replay IR data.
+/// CaptureBuffer[x]==0 is end of IR data.
+///@par Time
+/// WaitEndIR(3s) wait for repeat IR. WaitForIr(10s) wait for first IR
+/////////////////////////////////////////////////////////////////////////////////////////////////
+PUBLIC void streamIR(start) {
+
+int a;
+
+//	LED2GREEN();
+//	if (Buffer[2] != 0) {
+		LED1GREEN();
+		CPU100MHz();	//CPU100MHz disables interrupts except TIMER 0 and TIMER 1
+#if release==1
+		LPC_WDT->WDTC = 40000000;	//set timeout 40s watchdog timer
+		LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
+		LPC_WDT->WDFEED=0x55;			//watchdog feed
+
+#endif
+
+		receiveBTbuffer(0,start);
+		startPlayIR();
+		receiveBTbuffer(start,0x2000);
+		while (IRData > 0)//wait here during play IR
+		{
+	//		if (IRData<LPC_TIM1->TC)
+//			{
+//				a=1;
+//				break;
+//			}
+
+		//	if (1 & LPC_UART1->LSR) //if character comes in from bluetooth, read char and abort if its not an A.
+		//	if('A'!=LPC_UART1->RBR)	break;
+		//	repeatInput();	//change of input?
+		//	txBT();		//send any available data from change of input to BT.
+		}
+		LED1OFF();
+
+
+		endPlayIR();
+
+#if release==1
+		LPC_WDT->WDTC = 10000000;	//set timeout 5s watchdog timer
+		LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
+		LPC_WDT->WDFEED=0x55;			//watchdog feed
+
+#endif
+	//}
+		CPU12MHz();
+}
+*/
+
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 ///@brief Replay IR signal stored in Buffer[]
@@ -220,6 +286,8 @@ void TIMER1_IRQHandler(void) {
 
 	} else {
 		IRData = 0; //end of replay.
+
+
 	}
 
 	LPC_TIM1->IR = (1 << 0); // reset MR0 interrupt (enable next interrupt)

@@ -67,6 +67,7 @@ EXTERNAL void SystemOFF(void);
 
 
 //External functions
+EXTERNAL void streamIR(int);
 EXTERNAL void NEATTX(byte battery, byte alarm, word ID);
 EXTERNAL void IRsynthesis(byte IRtype, byte IRrep, int IRcode);
 EXTERNAL void LED1GREEN(void);
@@ -340,29 +341,85 @@ char I[] =
 	{
 		start=a|(start<<8);
 		SEQUENCE=0x00;
-
-	    while (0 == (1 << 6 & LPC_UART1->LSR)) ;//wait for tx data ready
-
-	    LPC_UART1->THR = 'A'; //immediate ACK to indicate ready.
-	    if (waitBTRX(5000000))
-		{
-		sendBT(NACK, sizeof(NACK)); //NACK if wait longer than 3s for BT data
-		break; //wait for char, break if 3s timeout.
-		}
-	    //	while (0 == (1 & LPC_UART1->LSR));				//wait for RX data ready.
-	    else
-		{
 		receiveBTbuffer(start, 0x2000); //ends with 4 off 00 bytes = integer 0.
-	//	us(1000000);
-	//	receiveBTbuffer(0x1000, 0x1000);
 		sendBT(ACK, sizeof(ACK));
-		}
+//		}
 
 
 
 
 	 	 break;
 	}
+	case 0x600:
+
+	{
+		start=a;
+		SEQUENCE=0x601;
+		break;
+	}
+	case 0x601:
+	{
+		start=a|(start<<8);
+		SEQUENCE=0x602;
+		break;
+	}
+	case 0x602:
+	{
+		start=a|(start<<8);
+		SEQUENCE=0x603;
+		break;
+	}
+	case 0x603:
+	{
+		start=a|(start<<8);
+		SEQUENCE=0x604;
+		break;
+	}
+	case 0x604:
+		{
+			length=a;
+			SEQUENCE=0x605;
+			break;
+		}
+		case 0x605:
+		{
+			length=a|(length<<8);
+			SEQUENCE=0x606;
+			break;
+		}
+		case 0x606:
+		{
+			length=a|(length<<8);
+			SEQUENCE=0x607;
+			break;
+		}
+		case 0x607:
+		{
+			SEQUENCE=0x0;
+			length=a|(length<<8);
+			sendBT(ACK, sizeof(ACK));
+
+			receiveBTbuffer(start, length); //ends with 4 off 00 bytes = integer 0.
+
+
+
+			break;
+		}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 	case 0:
@@ -561,18 +618,26 @@ char I[] =
 	    //go to sleep
 
 
-	case 'x':
-	case 'X':
+//	case 'x':		//copy from BT to buffer from address 1234 (4 bytes bigendian)
+//	case 'X':
+//	    {
+//	    SEQUENCE=0x500;
+//	    break;
+//	    }
+	    //go to sleep
+
+
+	case 'v':			//copy from BT to buffer from address 1234 and start playing IR.
+	case 'V':
 	    {
 
 
 
-	    SEQUENCE=0x500;
+	    SEQUENCE=0x600;
 	    break;
 
 	    }
 	    //go to sleep
-
 
 
 	case 'Z':
