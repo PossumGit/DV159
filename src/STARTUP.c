@@ -301,6 +301,10 @@ ResetISR(void) {
 	  LPC_GPIO_BTRESET FIOCLR = BTRESET;
 	LPC_GPIO_BTRESET FIODIR |= BTRESET;	//
 
+
+    LPC_GPIO_BTFACTORY FIOSET = BTFACTORY;			//set factory default to high, to start factory default sequence.
+    LPC_GPIO_BTFACTORY FIODIR |= BTFACTORY;
+
 #ifndef USE_OLD_STYLE_DATA_BSS_INIT
     //
     // Copy the data sections from flash to SRAM.

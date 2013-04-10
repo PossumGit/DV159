@@ -27,8 +27,10 @@ EXTERNAL void	us(unsigned int time_us);
 
 //public functions
 PUBLIC void initUART(void);
-PUBLIC void	BTbaudCPU100();
-PUBLIC void	BTbaudCPU12();
+PUBLIC void	BTbaudCPU100(void);
+PUBLIC void	BTbaudCPU12(void);
+PUBLIC void	BTbaudCPU44L(void);
+PUBLIC void	BTbaudCPU44(void);
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -75,20 +77,51 @@ PUBLIC void initUART(void)
 
 void	BTbaudCPU100()
 {
-	return;
+//	return;
 	///set DLAB to set up Baud rate.
 	LPC_UART1->LCR =3<<0|1<<7;						//8 bit word, divisor latch enable. OK
 	///
 	///PCLK = 25MHz= 100MHz/4	(PCLSEL1)
 	///baud rate = PCLK/(16*(256*DLM+DLL)*(1+DIV/MUL))
 	/// For 921KBaud.
-	LPC_SC->PCLKSEL0 |=  3<< 8; 					//BAUD 3=115, 0=230, 2=460, 1=921. 100MHz/4= 25MHz. UART clock (CCLK/4 by RESET)OK 3=/8=12.5mhz
+	LPC_SC->PCLKSEL0 &= ~(3<<8);
+
+//default baud==11
+	LPC_SC->PCLKSEL0 |=  3<< 8; 					//BAUD 3=115, 0=230, 2=460, 1=921. 1=/1, 0=/4, 2=/2, 3=/8
 	LPC_UART1->DLL =4;								//DLL must be >2. UART CLOCK. 7///DLL=1,2 does not work.
 	LPC_UART1->DLM =0;								//UART CLOCK. 0
 	LPC_UART1->FDR =9<<0|13<<4;					//Fractional divide. 0.93333
+#if baud==23
+	LPC_SC->PCLKSEL0 &= ~(3<<8);
+	LPC_SC->PCLKSEL0 |=  0<< 8; 					//BAUD 3=115, 0=230, 2=460, 1=921. 1=/1, 0=/4, 2=/2, 3=/8
+	LPC_UART1->DLL =4;								//DLL must be >2. UART CLOCK. 7///DLL=1,2 does not work.
+	LPC_UART1->DLM =0;								//UART CLOCK. 0
+	LPC_UART1->FDR =9<<0|13<<4;					//Fractional divide. 0.93333
+#elif baud==46
+	LPC_SC->PCLKSEL0 &= ~(3<<8);
+	LPC_SC->PCLKSEL0 |=  2<< 8; 					//BAUD 3=115, 0=230, 2=460, 1=921. 1=/1, 0=/4, 2=/2, 3=/8
+	LPC_UART1->DLL =4;								//DLL must be >2. UART CLOCK. 7///DLL=1,2 does not work.
+	LPC_UART1->DLM =0;								//UART CLOCK. 0
+	LPC_UART1->FDR =9<<0|13<<4;					//Fractional divide. 0.93333
+
+
+#elif baud==92
+	LPC_SC->PCLKSEL0 &= ~(3<<8);
+	LPC_SC->PCLKSEL0 |=  1<< 8; 					//BAUD 3=115, 0=230, 2=460, 1=921. 1=/1, 0=/4, 2=/2, 3=/8
+	LPC_UART1->DLL =4;								//DLL must be >2. UART CLOCK. 7///DLL=1,2 does not work.
+	LPC_UART1->DLM =0;								//UART CLOCK. 0
+	LPC_UART1->FDR =9<<0|13<<4;					//Fractional divide. 0.93333
+
+#endif
 	///clear DLAB for comms
 	LPC_UART1->LCR =3<<0|0<<7;						//8 bit word, divisor latch enable. OK
 }
+
+
+
+
+
+
 
 
 
@@ -109,26 +142,39 @@ void	BTbaudCPU12()
 	///PCLK = 25MHz= 100MHz/4	(PCLSEL1)
 	///baud rate = PCLK/(16*(256*DLM+DLL)*(1+DIV/MUL))
 	///
+
+
+//baud==11
+	LPC_SC->PCLKSEL0 &= ~(3<<8);
 	LPC_SC->PCLKSEL0 |=  2<< 8; 					//12MHz/2=6MHz	//2=115, 1=230, 0 for 57.6, 3=28.8
+#if baud==23
+	LPC_SC->PCLKSEL0 &= ~(3<<8);
+	LPC_SC->PCLKSEL0 |=  1<< 8; 					//12MHz/2=6MHz	//2=115, 1=230, 0 for 57.6, 3=28.8
+#elif baud==46
+//not feasible on 12MHz.
+#elif baud==92
+//not feasible on 12MHz.
+#endif
+
 	LPC_UART1->DLL =3;								//DLL must be >2. UART CLOCK.//3 for 115, 3 for 230, 1 for 460
 	LPC_UART1->DLM =0;								//UART CLOCK.
 	LPC_UART1->FDR =1<<0|12<<4;					//Fractional divide.	//1<<0|12<<4 for 115/230, 5<<0|8<<4 for 460
+
 	///clear DLAB for comms
 	LPC_UART1->LCR =3<<0|0<<7;						//8 bit word, divisor latch enable. OK
 }
 
 
-
 /////////////////////////////////////////////////////////////////////////////////////////////////
-///@brief set up UART baud rate to 115.2Kbaud to match BT module RN42/RN41
+///@brief set up UART baud rate to 921.2Kbaud to match BT module RN42/RN41
 ///@param void
 ///@return void
-///12MHz CPU clock version
 ///
 ///note 4MHz variant does not work as outside working range.
+//44.22857MHz/(16*3*1)=921.4Kbaud
 /////////////////////////////////////////////////////////////////////////////////////////////////
 
-void	BTbaud110CPU12()
+void	BTbaudCPU44()
 {
 	///set DLAB to set up Baud rate.
 	LPC_UART1->LCR =3<<0|1<<7;						//8 bit word, divisor latch enable. OK
@@ -136,16 +182,65 @@ void	BTbaud110CPU12()
 	///PCLK = 25MHz= 100MHz/4	(PCLSEL1)
 	///baud rate = PCLK/(16*(256*DLM+DLL)*(1+DIV/MUL))
 	///
-	LPC_SC->PCLKSEL0 |=  2<< 8; 					//2(/2)=115, 1(/1)=230, 0(/4) for 57.6, 3(/8)=28.8
-	LPC_UART1->DLL =3;								//UART CLOCK.//3 for 115, 3 for 230, 1 for 460
+
+
+// baud==11
+	LPC_SC->PCLKSEL0 &= ~(3<<8);
+	LPC_SC->PCLKSEL0 |=  3<< 8; 					//PCLK=CCLK/1=44.22857MHZ
+	LPC_UART1->DLL =3;								//DLL must be >2. UART CLOCK.//3 for 115, 3 for 230, 1 for 460
 	LPC_UART1->DLM =0;								//UART CLOCK.
-	LPC_UART1->FDR =1<<0|12<<4;					//Fractional divide.	//1<<0|12<<4 for 115/230, 5<<0|8<<4 for 460
+	LPC_UART1->FDR =0<<0|1<<4;					//Fractional divide disabled
+#if baud==23
+	LPC_SC->PCLKSEL0 &= ~(3<<8);
+	LPC_SC->PCLKSEL0 |=  0<< 8; 					//PCLK=CCLK/1=44.22857MHZ
+	LPC_UART1->DLL =3;								//DLL must be >2. UART CLOCK.//3 for 115, 3 for 230, 1 for 460
+	LPC_UART1->DLM =0;								//UART CLOCK.
+	LPC_UART1->FDR =0<<0|1<<4;					//Fractional divide disabled
+#elif baud==46
+	LPC_SC->PCLKSEL0 &= ~(3<<8);
+	LPC_SC->PCLKSEL0 |=  2<< 8; 					//PCLK=CCLK/1=44.22857MHZ
+	LPC_UART1->DLL =3;								//DLL must be >2. UART CLOCK.//3 for 115, 3 for 230, 1 for 460
+	LPC_UART1->DLM =0;								//UART CLOCK.
+	LPC_UART1->FDR =0<<0|1<<4;					//Fractional divide disabled
+#elif baud==92
+	LPC_SC->PCLKSEL0 &= ~(3<<8);
+	LPC_SC->PCLKSEL0 |=  1<< 8; 					//PCLK=CCLK/1=44.22857MHZ
+	LPC_UART1->DLL =3;								//DLL must be >2. UART CLOCK.//3 for 115, 3 for 230, 1 for 460
+	LPC_UART1->DLM =0;								//UART CLOCK.
+	LPC_UART1->FDR =0<<0|1<<4;					//Fractional divide disabled
+#endif
+
 	///clear DLAB for comms
 	LPC_UART1->LCR =3<<0|0<<7;						//8 bit word, divisor latch enable. OK
 }
 
 
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief set up UART baud rate to 921.2Kbaud to match BT module RN42/RN41
+///@param void
+///@return void
+///
+///note 4MHz variant does not work as outside working range.
+//44.22857MHz/(8*16*3*1)=115.2Kbaud
+/////////////////////////////////////////////////////////////////////////////////////////////////
 
+void	BTbaudCPU44L()
+{
+	///set DLAB to set up Baud rate.
+	LPC_UART1->LCR =3<<0|1<<7;						//8 bit word, divisor latch enable. OK
+	///
+	///PCLK = 25MHz= 100MHz/4	(PCLSEL1)
+	///baud rate = PCLK/(16*(256*DLM+DLL)*(1+DIV/MUL))
+	///
+//set to 115.2Kbaud.
+	LPC_SC->PCLKSEL0 &= ~(3<<8);
+	LPC_SC->PCLKSEL0 |=  3<< 8; 					//PCLK=CCLK/1=44.22857MHZ
+	LPC_UART1->DLL =3;								//DLL must be >2. UART CLOCK.//3 for 115, 3 for 230, 1 for 460
+	LPC_UART1->DLM =0;								//UART CLOCK.
+	LPC_UART1->FDR =0<<0|1<<4;					//Fractional divide disabled
+	///clear DLAB for comms
+	LPC_UART1->LCR =3<<0|0<<7;						//8 bit word, divisor latch enable. OK
+}
 
 
 

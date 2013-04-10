@@ -116,6 +116,21 @@ PUBLIC void SSPNEATCPU12(void)
 	LPC_SSP0->CPSR = 6; //divide by 50 for 100MHZ, 6 for 12MHz, 2 for 4MHz (must be even) gives 1MHz clock for NEAT (max 1.8MHz.)
 
 }
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief SSPNEATCPU
+///sets up SSP clock for 12MHz clock
+///uses Timer2.
+///@return void
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
+PUBLIC void SSPNEATCPU44(void)
+{
+	LPC_SSP0->CPSR = 22; //divide by 22 for 44MHZ, 6 for 12MHz, 2 for 4MHz (must be even) gives 1MHz clock for NEAT (max 1.8MHz.)
+
+}
+
+
 /////////////////////////////////////////////////////////////////////////////////////////////////
 ///@brief SSPNEATCPU
 ///sets up SSP clock for 100MHz clock

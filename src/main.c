@@ -61,6 +61,7 @@ EXTERNAL void initBT(void);
 EXTERNAL int processBT(void);
 EXTERNAL void resetBT();
 EXTERNAL void setupBT(void);
+EXTERNAL void	BTbaudCPU44L(void);
 EXTERNAL void receiveBTbuffer(int,int);
 
 EXTERNAL void CPU4MHz(void);
@@ -128,11 +129,11 @@ PUBLIC int main(void) {
 		char a;
 		int charge;
 		LED2GREEN();
-		timer2CPU4();		//12MHz clock, generate 1MHz system clock for sleep and delays from 12MHz CPU clock.
+		timer2CPU4();		//4MHz clock, generate 1MHz system clock for sleep and delays from 4MHz CPU clock.
 		LPC_TIM2->TCR = 0 | 1 << 1; //disable timer2, reset timer2
 		LPC_TIM2->TCR = 1 | 0 << 1; //enable timer2 (start timer2)
-		LPC_TIM3->TCR = 0 | 1 << 1; //disable timer3, reset timer2
-		LPC_TIM3->TCR = 1 | 0 << 1; //enable timer3 (start timer2)
+		LPC_TIM3->TCR = 0 | 1 << 1; //disable timer3, reset timer3
+		LPC_TIM3->TCR = 1 | 0 << 1; //enable timer3 (start timer3)
 		SSPNEATCPU4();	//SSP 1MHz derived from 4MHz for NEAT SSP.
 		BTbaudCPU12();
 
@@ -242,10 +243,8 @@ PRIVATE void powerupHEX(void) {
 		while(1)
 		{
 			captureIR();
-
 			playIR();
-			CPU12MHz();
-			if(1!=HEX())break;
+
 		}
 		break;
 
@@ -331,16 +330,21 @@ PRIVATE void powerupHEX(void) {
 
 
 	case 04:					//TEST 4MHz LED flash
-		LPC_SC->PCONP     = Peripherals ;       // Enable Power for Peripherals      */
-		CPU12MHz();
+
+	/*	LPC_SC->PCONP     = Peripherals ;       // Enable Power for Peripherals
 		initUART();
+		CPU44MHz();
+		BTbaudCPU44L();
+	//	CPU100MHz();
 		initBT();
 		setupBT();
 		us(100000);
+		*/
+
 		LED2OFF();
 		CPU4MHz();
 		while(1)
-		{	if(4!=HEX())break;
+		{
 			LED2YELLOW();
 			LED2GREEN();
 			us(400000);
@@ -348,9 +352,11 @@ PRIVATE void powerupHEX(void) {
 			if (~a&(1<<4))
 			{
 				LED2YELLOW();
+				LED1YELLOW();
 			}
 			else if (~a&(1<<5))
 			{	LED2GREEN();
+			LED1GREEN();
 			}
 			else
 			{
@@ -366,7 +372,7 @@ PRIVATE void powerupHEX(void) {
 			LED2OFF();
 		while(1)
 		{
-			if(5!=HEX())break;
+
 			LED1GREEN();
 			us(300000);
 
@@ -475,7 +481,7 @@ PRIVATE void powerupHEX(void) {
 		LED2OFF();
 		for(;;);
 		break;
-	case 0x0A:
+	/*case 0x0A:
 
 		CPU4MHz();
 		us(100000);
@@ -497,24 +503,54 @@ PRIVATE void powerupHEX(void) {
 		 if(0x0A!=HEX())break;
 		}
 
-		break;
-	case 0x0B:				//Enable USB programming.
-	//	CPU12MHz();
+		break;*/
+	case 0x0A:				//Enable USB programming.
+
 
 		CPU12MHz();
-		LED1GREEN();
-		initUART();
-			initBT();
-	while(1)
-			{
-			us(1000000);
-			LED1GREEN();
-		receiveBTbuffer(0, 0x2000);
+
+		Buffer[i=0,i++]	=0x8524a481;
+		Buffer[i++]		=0x9016c010;
+		Buffer[i++]		=0x900ed010;
+		Buffer[i++]		=0x902ed010;
+		Buffer[i++]		=0xa3120111;
+		Buffer[i++]		=0xb0040004;
+		Buffer[i++]		=0x902ed000;
+		Buffer[i++]		=0x0;
+
+
+/*		k=160;
+		Buffer[i=0,i++]	=0x80301000;
+			Buffer[i++]		=0x00010000;
+			Buffer[i++]		=0x00010000+k;
+			Buffer[i++]		=0x00010000+2*k;
+			Buffer[i++]		=0x00010000+3*k;
+			Buffer[i++]		=0x00010000+4*k;
+			Buffer[i++]		=0x00010000+5*k;
+			Buffer[i++]		=0x00010000+6*k;
+			Buffer[i++]		=0x00010000+7*k;
+			Buffer[i++]		=0x00010000+8*k;
+			Buffer[i++]		=0x00010000+9*k;
+			Buffer[i++]		=0x00010000+10*k;
+			Buffer[i++]		=0x00010000+11*k;
+			Buffer[i++]		=0x00010000+12*k;
+			Buffer[i++]		=0x00010000+13*k;
+			Buffer[i++]		=0x00010000+14*k;
+			Buffer[i++]		=0x00010000+15*k;
+			Buffer[i++]		=0x00010000+16*k;
+			Buffer[i++]		=0x00010000+17*k;
+
+*/
+
+			Buffer[i++]		=0x0;
 
 
 
-		LED1OFF();
-			}
+
+
+		 playIR();
+//		 playIR();
+
 
 		break;
 
@@ -646,7 +682,36 @@ PRIVATE void powerupHEX(void) {
 	case 0x0F:				//factory reset Blue Tooth.
 		 CPU12MHz();
 		factoryBT(); //HEX2=0, HEX1=E Factory reset BT.
+		resetBT();
+//		LPC_SC->PCONP     = Peripherals ;       // Enable Power for Peripherals      */
+		initUART();
+//921kbaud
+
+#if baud==92
+				CPU44MHz();
+				BTbaudCPU44L();
+#elif baud==46
+				CPU44MHz();
+				BTbaudCPU44L();
+#elif baud==23
+				CPU44MHz();
+				BTbaudCPU44L();
+#elif baud==11
+				CPU44MHz();
+				BTbaudCPU44L();
+#endif
+
+//now default value of 115.2KBAUD.
+		initBT();
+		setupBT();
+		LED1YELLOW();
+		LED2YELLOW();
+
 		LED2OFF();
+		LED2OFF();
+		CPU12MHz();
+		us(10000);
+		LPC_GPIO_OFF FIOSET =OFF; //OFF button set high to turn off.
 		while(1);
 		break;
 

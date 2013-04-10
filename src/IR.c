@@ -18,12 +18,13 @@
 #include "lpc17xx_pinsel.h"
 //public variables
 //local variables.
+
 PRIVATE volatile word IRAddress = 0; ///< Count IR pulses during capture/replay
 PRIVATE volatile word PulseWidth = 100; ///< 100 system clocks=1uS.
 PRIVATE volatile word IRData = 1; ///< Used to communicate end from interrupt routines.
-PRIVATE volatile word IRTimeMatch = 1;///< Last time set into match regsister.
+PRIVATE volatile word IRTimeMatch = 1;///< Last time set into match register.
 PRIVATE volatile word Period = 2632; ///<38KHz default.
-PRIVATE volatile word Mark = 0x10000; ///<Mark burst in IR compression processing. Initial is bigger than max mark.
+PRIVATE volatile int Mark = 0x10000; ///<Mark burst in IR compression processing. Initial is bigger than max mark.
 PRIVATE volatile word Space = 0; ///<Space gap between bursts in IR compression.
 PRIVATE volatile word SymbolBank = 0; ///<location of first symbol (skip) in SYMBOL BANK
 PRIVATE volatile word SymbolWord = 0;	///< a word out of the symbol bank.
@@ -31,6 +32,8 @@ PRIVATE volatile word DataStep = 0; ///<used in compression timer1 ISR
 PRIVATE volatile word Pulse = 1; ///<1=pulse, 0=no pulse.
 PRIVATE volatile word Delay = 0;///<delay in compress routine.
 PRIVATE volatile int COUNT[] = { 0, 0, 0, 0, 0, 0, 0, 0 };///< used for loops in compress.
+PRIVATE volatile word plast;
+PRIVATE volatile word rlast;
 
 //external variables
 EXTERNAL volatile int Buffer[]; ///< Whole of RAM2 is Buffer, reused for NEAT, Bluetooth, audio and IR replay and capture
@@ -52,6 +55,7 @@ EXTERNAL void CPU12MHz(void);
 EXTERNAL int repeatInput(void);
 EXTERNAL void txBT(void);
 EXTERNAL byte	inputChange(void);
+
 EXTERNAL int	PCBiss;		//=3 for PCHB issue 3, =4 for PCB issue 4.
 EXTERNAL void receiveBTbuffer(int,int);
 //EXTERNAL word	inputTime(void);
@@ -60,6 +64,7 @@ EXTERNAL void receiveBTbuffer(int,int);
 PUBLIC int captureIR(void);
 PUBLIC void playIR(void);
 PUBLIC void streamIR(int);
+PUBLIC int streamcaptureIR(void);
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -100,7 +105,7 @@ if (PCBiss==3||PCBiss==4)
 		repeatInput();	//change of input?
 		txBT();		//send any available data from change of input to BT.
 		if (IRAddress >= CaptureMax) break;
-		if(LPC_TIM0->CR0 > 0x7e000000)break;
+	//	if(LPC_TIM0->CR0 > 0x7e000000)break;
 	}
 	BUFLEN=IRAddress+1;
 	endCaptureIR();
@@ -126,6 +131,110 @@ if (PCBiss==3||PCBiss==4)
 	return 0;
 
 }
+
+
+
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief Captures an IR signal and stores in Buffer[].
+///@param void
+///@return void
+///@par Modifies
+/// Buffer[]: Save IR data to Buffer[]
+///@par Time
+/// WaitEndIR(3s) wait for repeat IR. WaitForIr(10s) wait for first IR
+/////////////////////////////////////////////////////////////////////////////////////////////////
+PUBLIC int streamcaptureIR(void) {
+
+
+	IRAddress = CaptureFirst;
+	LED1GREEN();
+	CPU100MHz();		//also disables ext interrupts.
+#if release==1
+	LPC_WDT->WDTC = 40000000;	//set timeout 40s watchdog timer
+	LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
+	LPC_WDT->WDFEED=0x55;			//watchdog feed
+#endif
+if (PCBiss==3||PCBiss==4)
+{
+
+	LPC_GPIO1-> FIOSET |=1<<29			;//IR capture on.
+}
+
+	//CPU100MHz disables interrupts except TIMER 0 and TIMER 1
+
+	startCaptureIR(); //initiate IR capture
+	while ((IRAddress != CaptureFirst) ? (LPC_TIM0->TC < WaitEndIR
+			+ LPC_TIM0->CR0) : (LPC_TIM0->TC < WaitForIR)) // IR timeouts, WaitEndIR(3s), WaitForIR(10s).Wait here during capture IR.
+	{
+	//	if (1 & LPC_UART1->LSR) //if character comes in from bluetooth, read char and abort if its not an A.
+	//	if('A'!=LPC_UART1->RBR)	break;
+	//	repeatInput();	//change of input?
+	//	txBT();		//send any available data from change of input to BT.
+
+
+
+
+
+
+		if (IRAddress >= CaptureMax) break;
+	//	if(LPC_TIM0->CR0 > 0x7e000000)break;
+	}
+	BUFLEN=IRAddress+1;
+	endCaptureIR();
+
+	correctIR();
+
+	CPU12MHz();
+
+	LED1OFF();
+if (PCBiss==3||PCBiss==4)
+{
+
+	LPC_GPIO1->FIOCLR |=1<<29			;//IR capture off.
+}
+
+#if release==1
+	LPC_WDT->WDTC = 10000000;	//set timeout 40s watchdog timer
+	LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
+	LPC_WDT->WDFEED=0x55;			//watchdog feed
+#endif
+	if (IRAddress > CaptureFirst)
+		return 1;
+	return 0;
+
+}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 /*
@@ -223,12 +332,11 @@ int a;
 		startPlayIR();
 		while (IRData > 0)//wait here during play IR
 		{
-	//		if (IRData<LPC_TIM1->TC)
-//			{
-//				a=1;
-//				break;
-//			}
-
+			if (IRTimeMatch+100000<LPC_TIM1->TC)
+			{
+				break;	//abort if interrupt missed.
+			}
+	//		if(0x24000000<LPC_TIM1->TC)break;//break if time>$000
 			if (1 & LPC_UART1->LSR) //if character comes in from bluetooth, read char and abort if its not an A.
 			if('A'!=LPC_UART1->RBR)	break;
 			repeatInput();	//change of input?
@@ -267,7 +375,7 @@ void TIMER1_IRQHandler(void) {
 	//
 	//read next word out of buffer.
 	//0 is end of buffer.
-	LED2GREEN();
+//	LED2GREEN();
 	if (IRAddress < CaptureMax) {
 
 
@@ -280,13 +388,12 @@ void TIMER1_IRQHandler(void) {
 			IRTimeMatch = IRData; //save value of EndPlay for next interrupt.
 			LPC_TIM1->MR0 = IRTimeMatch; //set up next match.
 			IRAddress++;
-			if (IRAddress >= CaptureMax)
-				IRData = 0;
+
 		}
 
 	} else {
 		IRData = 0; //end of replay.
-
+	//	return;
 
 	}
 
@@ -305,33 +412,24 @@ PRIVATE void compress(void) {
 	IRData = Buffer[IRAddress];
 	while (1) {
 		switch ((IRData >> 28) & 0xF) {
-		case 0b1000: //HEADER
-		{
-			Period = (IRData >> 4) & 0xFFF; //SET Period maximum 4095 (40.95us) 30KHz-48KHz,455KHz,typical 38KHz(26.32us).
-			PulseWidth = (IRData >> 16) & 0x7FF;//SET Pulse Width from 50(0.5us) to 2047(20.47us)
-			SymbolBank = IRAddress; //new header has new symbol bank.
-			IRAddress = IRAddress + 1 + (IRData & 0xF); //next address, skip any symbol bank.
-			if (IRAddress >= CaptureMax)
-				IRData = 0;
-			else
-				IRData = Buffer[IRAddress];
-			break;
-		}
+
 		case 0b1001://SYMBOL
 		{
-			if (Mark < (IRData & 0xFF)) {
+
+			///bits 0-11=mark, 12-27=space.
+			if (Mark < (IRData & 0xFFF)) {		//was 0xFF		//here next to make frequency
 				Mark++;
 				IRTimeMatch = IRTimeMatch + Period;//save value of IRTimeMatch for next interrupt.
 				LPC_TIM1->MR0 = IRTimeMatch; //set up next match, pulse after period.
 				return; //exit compress and finish  interrupt.
-			} else if (Mark > (IRData & 0xFF)) {
-				Space = (IRData >> 8) & 0x3FFFF;
+			} else if (Mark > (IRData & 0xFFF)) {		//here first to calculate space.
+				Space = (IRData >> 12) & 0xFFFF;
 				IRspace = Space * Period;
 				if (IRspace > Sec3)
 					IRspace = Sec3; //maximum space=3s.
 				IRTimeMatch = IRTimeMatch + IRspace;
-				Mark = 0;
-			} else {
+				Mark = 0;			//to allow Mark to count up.
+			} else {		//Mark==IRData&0xFFF	//here at end to go to next word.
 				Mark = 0x10000;
 				IRAddress++;// go to next word.
 				if (IRAddress < CaptureMax)
@@ -340,6 +438,7 @@ PRIVATE void compress(void) {
 					IRData = 0;
 				break;
 			}
+
 			break;
 		}
 		case 0b1010://DATA
@@ -348,7 +447,7 @@ PRIVATE void compress(void) {
 			//space is always first, followed by mark.
 			//code is structured to speed up mark at expense of space. Space is longer so less time critical.
 			//mark can have 0 in it. Then you get 1 pulse.
-			if (Mark < (SymbolWord & 0xFF)) {
+			if (Mark < (SymbolWord & 0xFFF)) {
 				Mark++;
 				IRTimeMatch = IRTimeMatch + Period;//save value of IRTimeMatch for next interrupt.
 				LPC_TIM1->MR0 = IRTimeMatch; //set up next match, pulse after period.
@@ -366,7 +465,7 @@ PRIVATE void compress(void) {
 					Mark = 0x10000;
 				} else {
 					SymbolWord = Buffer[SymbolBank + a]; //load SWord with correct SYMBOL from SYMBOL BANK.
-					Space = (SymbolWord >> 8) & 0x3FFFF;
+					Space = (SymbolWord >> 12) & 0xFFFF;
 					IRspace = Space * Period;
 					if (IRspace > Sec3)
 						IRspace = Sec3; //maximum space=3s.
@@ -403,129 +502,179 @@ PRIVATE void compress(void) {
 				IRData = Buffer[IRAddress];
 			break;
 		}
+
+
+
 		case 0b1100://INPUT
-		{
-			a = inputChange();
-//			t = inputTime();
-			switch (0x7 & (IRData >> 25)) {
-			case 0: //DELAY, ABORT if input released
 			{
-				if (0==(a & 0x3)) //input released so ABORT.
+				a = 0x30 & inputChange();
+//				t = inputTime();
+				switch (0x7 & (IRData >> 25)) {
+				case 0: //DELAY, ABORT if input released
 				{
-					Delay=0;
-					Pulse=1;
-					IRData = 0;
-
-
-				} else //delay finshed, then continue.
-				{
-					if (Delay  >= (IRData & 0xfff)) {
-						Delay = 0;
-						Pulse=1;
-						IRAddress++; // go to next word.
-						if (IRAddress >= CaptureMax)
-							IRData = 0;
-						else
-							IRData = Buffer[IRAddress];
-
-					}else//add 50ms delay and try again.
+					if (0x30!=a) //input pressed. 0x0=both pressed, 0x30 both released 0x10 int pressed 0x20 ext pressed.
 					{
-
-					//generate interrupts at 50ms intervals.
-					Delay++;
-					Pulse = 0; //interrupt but no pulse.
-					IRTimeMatch = IRTimeMatch + 1000000;//10ms, save value of IRTimeMatch for next interrupt.
-					LPC_TIM1->MR0 = IRTimeMatch; //set up next match, pulse after period.
-					return; //exit compress and finish  interrupt.
-					}
-				}
-				break;
-			}
-			case 1://DELAY, ABORT if input pressed.
-			{
-						if (0!=(a & 0x3)) //input pressed so ABORT.
-						{
-							Delay=0;
+						if (Delay  >= (IRData & 0xfff)) {
+							Delay = 0;
 							Pulse=1;
-							IRData = 0;
-						} else //delay finshed, then continue.
+							IRAddress++; // go to next word.
+							if (IRAddress >= CaptureMax)
+								IRData = 0;
+							else
+								IRData = Buffer[IRAddress];
+
+						}else//add 50ms delay and try again.
 						{
 
-							if (Delay  >= (IRData & 0xfff)) {
-								Delay = 0;
-								Pulse=1;
-								IRAddress++; // go to next word.
-								if (IRAddress >= CaptureMax)
-									IRData = 0;
-								else
-									IRData = Buffer[IRAddress];
-
-							}else//add 10ms delay and try again.
-							{
-
-							//generate interrupts at 10ms intervals.
-							Delay++;
-							Pulse = 0; //interrupt but no pulse.
-							IRTimeMatch = IRTimeMatch + 1000000;//10ms, save value of IRTimeMatch for next interrupt.
-							LPC_TIM1->MR0 = IRTimeMatch; //set up next match, pulse after period.
-							return; //exit compress and finish  interrupt.
-							}
-						}
-						break;
-					}
-			case 2://SUBSIDIARY MODE
-			{
-
-				if (a & 0x3) //input pressed. 0= not pressed,1=internal, 2=external, 3=both.
-				{
-					if (t > ((IRData & 0xff) * 1000000))//greater than xx seconds pressed.
-					{
-						Pulse = 1;
-						IRData = 0; //abort
-					} else//less than xx seconds pressed.
-					{
-						Pulse = 1;
-						IRAddress++; // go to next word.
-						if (IRAddress >= CaptureMax)
-							IRData = 0;
-						else
-							IRData = Buffer[IRAddress];
-					}
-
-				}
-
-				else //input released
-				{
-					if (t > (((IRData >> 8) & 0xff) * 1000000)) //seconds released
-					{
-						IRData = 0; //abort
-						Pulse = 1;
-					} else//waiting for released timeout
-					{
 						//generate interrupts at 50ms intervals.
+						Delay++;
 						Pulse = 0; //interrupt but no pulse.
-						IRTimeMatch = IRTimeMatch + 5000000;//50ms, save value of IRTimeMatch for next interrupt.
+						IRTimeMatch = IRTimeMatch + 1000000;//10ms, save value of IRTimeMatch for next interrupt.
 						LPC_TIM1->MR0 = IRTimeMatch; //set up next match, pulse after period.
 						return; //exit compress and finish  interrupt.
+						}
+					}else
+					{		//input released so abort.
+									Delay=0;
+									Pulse=1;
+									IRData = 0;
+					} //delay finshed, then continue.
+					break;
+				}
+				case 1://DELAY, ABORT if input pressed.
+				{
+							if (0x30!=a) //input pressed so ABORT.
+							{
+								Delay=0;
+								Pulse=1;
+								IRData = 0;
+							} else //delay finshed, then continue.
+							{
+
+								if (Delay  >= (IRData & 0xfff)) {
+									Delay = 0;
+									Pulse=1;
+									IRAddress++; // go to next word.
+									if (IRAddress >= CaptureMax)
+										IRData = 0;
+									else
+										IRData = Buffer[IRAddress];
+
+								}else//add 10ms delay and try again.
+								{
+
+								//generate interrupts at 10ms intervals.
+								Delay++;
+								Pulse = 0; //interrupt but no pulse.
+								IRTimeMatch = IRTimeMatch + 1000000;//10ms, save value of IRTimeMatch for next interrupt.
+								LPC_TIM1->MR0 = IRTimeMatch; //set up next match, pulse after period.
+								return; //exit compress and finish  interrupt.
+								}
+							}
+							break;
+						}
+				case 2://SUBSIDIARY MODE
+				{
+
+					if (0x30!=a) //input pressed. 0= not pressed,1=internal, 2=external, 3=both.
+					{
+						plast=IRTimeMatch;
+						t=IRTimeMatch-rlast;		//time since last release in 10ns.
+						if (t > ((IRData & 0xff) * 100000000))//greater than xx seconds pressed.
+						{
+							Pulse = 1;
+							IRData = 0; //abort
+						} else//less than xx seconds pressed.
+						{
+							Pulse = 1;
+							IRAddress++; // go to next word.
+							if (IRAddress >= CaptureMax)
+								IRData = 0;
+							else
+								IRData = Buffer[IRAddress];
+						}
+
 					}
+
+					else //input released
+					{
+						rlast=IRTimeMatch;
+						t=IRTimeMatch-plast;		//time since last press in 10ns.
+						if (t > (((IRData >> 8) & 0xff) * 100000000)) //seconds released
+						{
+							IRData = 0; //abort
+							Pulse = 1;
+						} else//waiting for released timeout
+						{
+							//generate interrupts at 50ms intervals.
+							Pulse = 0; //interrupt but no pulse.
+							IRTimeMatch = IRTimeMatch + 5000000;//50ms, save value of IRTimeMatch for next interrupt.
+							LPC_TIM1->MR0 = IRTimeMatch; //set up next match, pulse after period.
+							return; //exit compress and finish  interrupt.
+						}
+					}
+
+					break;
+				}
+				case 3:		//abort if time>xx, abort if released.
+				{
+					if (0x30!=a) //input pressed. 0= not pressed,1=internal, 2=external, 3=both.
+							{
+
+								if (IRTimeMatch > ((IRData & 0xff) * 100000000))//greater than xx seconds pressed.
+								{
+									Pulse = 1;
+									IRData = 0; //abort
+								} else//less than xx seconds pressed.
+								{
+									Pulse = 1;
+									IRAddress++; // go to next word.
+									if (IRAddress >= CaptureMax)
+										IRData = 0;
+									else
+										IRData = Buffer[IRAddress];
+								}
+
+							}
+
+							else //input released abort.
+							{
+								Delay=0;
+								Pulse=1;
+								IRData = 0;
+							}
+					break;
+				}
+
+						default: {
+					IRAddress++;//ignore , go to next word.
+					if (IRAddress >= CaptureMax)
+						IRData = 0;
+					else
+						IRData = Buffer[IRAddress];
+
+					break;
+				}
 				}
 
 				break;
 			}
 
-					default: {
-				IRAddress++;//ignore , go to next word.
-				if (IRAddress >= CaptureMax)
-					IRData = 0;
-				else
-					IRData = Buffer[IRAddress];
-
-				break;
-			}
-			}
-
+		case 0b1000: //HEADER
+		{
+			Period = (IRData >> 4) & 0xFFF; //SET Period maximum 4095 (40.95us) 30KHz-48KHz,455KHz,typical 38KHz(26.32us).
+			PulseWidth = (IRData >> 16) & 0x7FF;//SET Pulse Width from 50(0.5us) to 2047(20.47us)
+			SymbolBank = IRAddress; //new header has new symbol bank.
+			IRAddress = IRAddress + 1 + (IRData & 0xF); //next address, skip any symbol bank.
+			if (IRAddress >= CaptureMax)
+				IRData = 0;
+			else
+				IRData = Buffer[IRAddress];
 			break;
 		}
+
+
+
 		case 0b1101://RESERVED
 		{
 			IRAddress++;//ignore , go to next word.
@@ -617,7 +766,7 @@ PRIVATE void startPlayIR(void) {
 	disableInputInterrupt();
 	IRAddress = 0;
 	IRTimeMatch = 0;
-	Mark = 0x10000;
+	Mark = 0x10000;//must be greater than maximum mark, currently 12 bits.
 	DataStep = 0;
 	compress(); //look at IR DATA, HEADER first, set up first match
 
@@ -658,6 +807,15 @@ PRIVATE void startPlayIR(void) {
 ///@return void
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PRIVATE void endPlayIR(void) {
+	//us(1000);
+	word a;
+	a=LPC_TIM1->TC;
+	if((IRTimeMatch+PulseWidth-a)>100000000)us(1000000);
+	else
+	{
+		while(IRTimeMatch+PulseWidth>LPC_TIM1->TC);	//wait for any post space added.
+	}
+
 	LPC_PINCON->PINSEL3 &= ~(3 << 24); //set P1.28 as GPIO, so force to 0 as output set to 0.
 	LPC_TIM0->MCR &= ~0x07; //disable match interrupt
 	LPC_TIM1->MCR &= ~0x07; //disable match interrupt

@@ -19,6 +19,13 @@
 #define CLKOUTCFG_Val         0x00000000
 #define FLASHCFG_Val          0x00004000
 
+#if release==0
+
+#define BTtimeout 3000000
+#elif release==1
+#define BTtimeout 500000
+#endif
+
 //Includes
 #include "HUB.h"
 #include "lpc17xx_clkpwr.h"
@@ -155,6 +162,59 @@ PUBLIC void CPU100MHz (void)
 	  BTbaudCPU100();
 }
 
+/////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief Change CPU to 44.228MHz PLL from 12MHz xtal clock.
+//This gives Baud rate of 921.4 which is OK for 921.2Kbaud for BT.
+///@param void
+///@return void
+/////////////////////////////////////////////////////////////////////////////////////////////////
+PUBLIC void CPU44MHz (void)
+{
+
+//If already at 100MHz, fullspeed do nothing.
+	  if (((LPC_SC->PLL0STAT >> 24) & 3) != 3)		//PLL not connected and enabled.
+	  {
+
+
+			disableInputInterrupt();
+                     // Clock Setup
+  LPC_SC->SCS       = 1<<5;	//enable main oscillator
+             // If Main Oscillator is enabled
+    while ((LPC_SC->SCS & (1<<6)) == 0);// Wait for Oscillator to be ready
+
+  LPC_SC->CCLKCFG   = 7-1;      //6 Setup Clock Divider by 7
+  LPC_SC->PCLKSEL0  = PCLKSEL0_Val;     //0 Peripheral Clock Selection
+  LPC_SC->PCLKSEL1  = PCLKSEL1_Val;		//0
+  LPC_SC->CLKSRCSEL = CLKSRCSEL_Val;    //1 Select Clock Source for PLL0
+  LPC_SC->PLL0CFG   = 128<<0|9<<16;      //*129| /10=12MHz*129/10=309.6MHz.
+  LPC_SC->PLL0FEED  = 0xAA;
+  LPC_SC->PLL0FEED  = 0x55;
+
+  LPC_SC->PLL0CON   = 0x01;             // PLL0 Enable
+  LPC_SC->PLL0FEED  = 0xAA;
+  LPC_SC->PLL0FEED  = 0x55;
+  while (!(LPC_SC->PLL0STAT & (1<<26)));// Wait for PLOCK0
+
+  LPC_SC->PLL0CON   = 0x03;             // PLL0 Enable & Connect
+  LPC_SC->PLL0FEED  = 0xAA;
+  LPC_SC->PLL0FEED  = 0x55;
+  while (!(LPC_SC->PLL0STAT & ((1<<25) | (1<<24))));// Wait for PLLC0_STAT & PLLE0_STAT
+
+  //LPC_SC->CLKOUTCFG =0 ;    // Clock Output Configuration
+
+  LPC_SC->FLASHCFG  = (LPC_SC->FLASHCFG & ~0x0000F000) | FLASHCFG_Val;
+  //CPU100MHz disables GPIO interrupts
+	  }
+	  enableInputInterrupt();
+	  timer2CPU44();		//generate 1MHz system clock for sleep and delays from 100MHz cpu clock.
+	  SSPNEATCPU44();		//SSP 1MHz derived from 100MHz for NEAT SSP.
+	  CPUSPEED=44;
+	  BTbaudCPU44();
+}
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -165,9 +225,20 @@ PUBLIC void CPU100MHz (void)
 
 PUBLIC void CPU12MHz(void)
 {
-//	CPU100MHz();
-//	enableInputInterrupt();
-//	return;
+//921kbaud:
+#if baud==92
+				CPU44MHz();		//require higer CPU speed for 921kbaud
+				return
+#elif baud==46
+				CPU44MHz();		//require higher CPU speed for 460kbaud.
+				return
+#elif baud==23
+								//OK with 12MHz
+#elif baud==11
+								//OK with 12MHz.
+#endif
+
+
 	/* Clock Setup                        */
 
 	  if (((LPC_SC->PLL0STAT >> 24) & 3) == 3)		//PLL  connected and enabled.
@@ -546,7 +617,7 @@ PUBLIC int powerDown(void)
 	if(0x40==((LPC_UART1->LSR)&(0x41)))	//bit 1=0 RX FIFO empty, bit 6=1 TX FIFO empty.
 	if(rxstart==rxend)					//nothing waiting in bluetooth rx buffer
 	if(txstart==txend)					//nothing waiting in bluetooth tx buffer
-	if ((3000000 < LPC_TIM2->TC)&&(SEQUENCE!=0x400))
+	if (((BTtimeout < LPC_TIM2->TC)&&(SEQUENCE!=0x400)&&BTACC)||(3000000 < LPC_TIM2->TC))
 	{
 //		s=LPC_TIM2->TC;
 
@@ -591,6 +662,7 @@ PUBLIC int powerDown(void)
 
 
 	 LPC_SC->PCONP     = Peripherals ;       // Enable Power for Peripherals      */
+		LPC_GPIOINT->IO0IntEnR&=~(0x1<<16);			//disable Bluetooth rising interrupt
 	 CPU12MHz();
 #if release==1
 	LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.

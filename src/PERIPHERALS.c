@@ -11,6 +11,7 @@
 
 //Public variables
 PUBLIC char STATE='P';
+PUBLIC word LastInputTime=1;
 //PUBLIC volatile word LastInputTime=0;
 PRIVATE  volatile byte InputState=0;
 //Private variables
@@ -28,6 +29,7 @@ EXTERNAL void sendBT(byte in[] , unsigned int);
 
 PUBLIC int repeatInput(void);
 PUBLIC byte	inputChange(void);
+
 PUBLIC void	LED1GREEN(void);
 PUBLIC void	LED1YELLOW(void);
 PUBLIC void	LED1OFF(void);
@@ -246,7 +248,7 @@ else if (PCBiss==2)
 	d=a|b|c|0xe;						//0xe sets bits 1,2,3 for TECLA spec.
 	if (d!=InputState){
 		InputState=d;
-//		LastInputTime=LPC_TIM2->TC;			//store time of last change of input
+		LastInputTime=LPC_TIM2->TC;			//store time of last change of input
 		return 0x80|d;						//bit 7 set indicates change.
 	}
 	else return d;
@@ -307,6 +309,28 @@ PUBLIC void timer2CPU12(void)
 ///
 ///sets up TIMER2 for 100MHz clock
 /////////////////////////////////////////////////////////////////////////////////////////////////
+
+
+PUBLIC void timer2CPU44(void)
+{
+	LPC_SC->PCONP|=1<<22	;	//enable timer 2.
+	LPC_TIM2->PR = 11-1; //(44MHz/4)/11 counts at 1MHz. Max time 4295s
+//	LPC_TIM2->TCR = 0 | 1 << 1; //disable timer2, reset timer2
+//	LPC_TIM2->TCR = 1 | 0 << 1; //enable timer2 (start timer2)
+
+	LPC_SC->PCONP|=1<<23	;	//enable timer 3.
+	LPC_TIM3->PR = 11-1; //(44MHz/4)/11 counts at 1MHz. Max time 4295s
+//	LPC_TIM3->TCR = 0 | 1 << 1; //disable timer3, reset timer2
+//	LPC_TIM3->TCR = 1 | 0 << 1; //enable timer3 (start timer2)
+}
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief timer2CPU4
+///@param void
+///@return void
+///
+///sets up TIMER2 for 100MHz clock
+/////////////////////////////////////////////////////////////////////////////////////////////////
+
 
 PUBLIC void timer2CPU100(void)
 {

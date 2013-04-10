@@ -52,6 +52,7 @@ void SENDBTNT(int start,int length);
 int BUFFERSIZE(void);
 // public functions
 PUBLIC void sendBT(byte a[] , unsigned int );
+PUBLIC void sendBTNC(byte a[] , unsigned int );		//send command even if not connected.
 PUBLIC int processBT(void);
 PUBLIC word rxtxBT(void);
 PUBLIC void resetBT();
@@ -103,7 +104,7 @@ EXTERNAL void BatteryState();
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC int processBT(void)
     {
-    byte a;
+    byte BluetoothData;
 
 
 
@@ -115,7 +116,7 @@ static  byte battery=0xFF;		//NEAT sequence used in ProcessBT.
 static byte IRtype,IRrep;		//IR sequence used in ProcessBT.
 static int IRcode;				//IR sequence used in ProcessBT.
 static char ReportBUFLEN[]="1234A";
-char I[] =
+char Information[] =
 	{
 			"QWAYO firmware xxx, PCB x. Copyright Possum 2012-13. \0\0\0\0"
 	};
@@ -135,10 +136,10 @@ char I[] =
 //if (PCBiss==4)
  //   {
 //	strcpy(I,"QWAYO firmware xxx, PCB x. Copyright Possum 2012-13. \0\0\0\0");//strcpy copies to first \0 only.
-	I[15]=Version&0xFF;
-	I[16]=(Version>>8)&0xFF;
-	I[17]=(Version>>16)&0xFF;
-	I[24]=0x30+PCBiss&0xFF;		//fails if PCBiss>9.
+	Information[15]=Version&0xFF;
+	Information[16]=(Version>>8)&0xFF;
+	Information[17]=(Version>>16)&0xFF;
+	Information[24]=0x30+PCBiss&0xFF;		//fails if PCBiss>9.
 
  //   }
  //   else if (PCBiss==3)
@@ -154,13 +155,13 @@ char I[] =
 
 
 
-    byte W[] =
+    byte Wakeup[] =
 	{
 	'W'
 	};
     if (rxstart != rxend)
 	{
-	a = rx[rxstart];
+	BluetoothData = rx[rxstart];
 
 	rxstart=(rxstart+1)%rxlen;	//mod does  work.
 //	rxstart=(rxstart++)%rxlen;	//mod does not work.
@@ -174,25 +175,25 @@ char I[] =
 	{
 	case 1:
 	{
-		battery=a;
+		battery=BluetoothData;
 		SEQUENCE=2;
 		break;
 	}
 	case 2:
 	{
-		alarm=a;
+		alarm=BluetoothData;
 		SEQUENCE=3;
 		break;
 	}
 	case 3:
 	{
-		ID=a<<8;
+		ID=BluetoothData<<8;
 		SEQUENCE=4;
 		break;
 	}
 	case 4:
 	{
-		ID=ID|a;
+		ID=ID|BluetoothData;
 
 
 //		NEATTX(0xFF,0x01,0x1234);		//battery state, LARM type, ID(16 bits)
@@ -204,24 +205,24 @@ char I[] =
 	}
 	case 0x100:
 	{
-		IRtype=a;
+		IRtype=BluetoothData;
 		SEQUENCE=0x101;
 		break;
 	}
 	case 0x101:
 
-	{	IRrep=a;
+	{	IRrep=BluetoothData;
 		SEQUENCE=0x102;
 		break;
 	}
 	case 0x102:
-	{	IRcode=a<<8;
+	{	IRcode=BluetoothData<<8;
 		SEQUENCE=0x103;
 		break;
 	}
 	case 0x103:
 	{
-		IRcode=IRcode|a;
+		IRcode=IRcode|BluetoothData;
 		IRsynthesis(IRtype,IRrep,IRcode);
 		playIR();
 		CPU12MHz();
@@ -236,56 +237,56 @@ char I[] =
 	//	NEATWR(0x1F,a);			//alarm time into 0x1D and 0x1F on NEAT module.
 	//	NEATWR(0x1f,00);
 	//	NEATWR(0x1D,a);			//alarm time into 0x1D and 0x1F.
-		ALARMtime=a;
+		ALARMtime=BluetoothData;
 		SEQUENCE=0x0;
 		sendBT(ACK, sizeof(ACK));
 		break;
 	}
 	case 0x300:
 	{
-		start=a;
+		start=BluetoothData;
 		SEQUENCE=0x301;
 		break;
 	}
 	case 0x301:
 	{
-		start=a|(start<<8);
+		start=BluetoothData|(start<<8);
 		SEQUENCE=0x302;
 		break;
 	}
 	case 0x302:
 	{
-		start=a|(start<<8);
+		start=BluetoothData|(start<<8);
 		SEQUENCE=0x303;
 		break;
 	}
 	case 0x303:
 	{
-		start=a|(start<<8);
+		start=BluetoothData|(start<<8);
 		SEQUENCE=0x304;
 		break;
 	}
 	case 0x304:
 	{
-		length=a;
+		length=BluetoothData;
 		SEQUENCE=0x305;
 		break;
 	}
 	case 0x305:
 	{
-		length=a|(length<<8);
+		length=BluetoothData|(length<<8);
 		SEQUENCE=0x306;
 		break;
 	}
 	case 0x306:
 	{
-		length=a|(length<<8);
+		length=BluetoothData|(length<<8);
 		SEQUENCE=0x307;
 		break;
 	}
 	case 0x307:
 	{
-		length=a|(length<<8);
+		length=BluetoothData|(length<<8);
 		sendBTbuffer(start,length); //ends with 4 off 00 bytes=integer 0
 		SEQUENCE=0x0;
 		break;
@@ -293,7 +294,7 @@ char I[] =
 
 	case 0x400:
 	{
-		if (a=='Q'||a=='q')
+		if (BluetoothData=='Q'||BluetoothData=='q')
 		{
 	//		disableInputInterrupt();
 
@@ -321,25 +322,25 @@ char I[] =
 	case 0x500:
 
 	{
-		start=a;
+		start=BluetoothData;
 		SEQUENCE=0x501;
 		break;
 	}
 	case 0x501:
 	{
-		start=a|(start<<8);
+		start=BluetoothData|(start<<8);
 		SEQUENCE=0x502;
 		break;
 	}
 	case 0x502:
 	{
-		start=a|(start<<8);
+		start=BluetoothData|(start<<8);
 		SEQUENCE=0x503;
 		break;
 	}
 	case 0x503:
 	{
-		start=a|(start<<8);
+		start=BluetoothData|(start<<8);
 		SEQUENCE=0x00;
 		receiveBTbuffer(start, 0x2000); //ends with 4 off 00 bytes = integer 0.
 		sendBT(ACK, sizeof(ACK));
@@ -353,53 +354,53 @@ char I[] =
 	case 0x600:
 
 	{
-		start=a;
+		start=BluetoothData;
 		SEQUENCE=0x601;
 		break;
 	}
 	case 0x601:
 	{
-		start=a|(start<<8);
+		start=BluetoothData|(start<<8);
 		SEQUENCE=0x602;
 		break;
 	}
 	case 0x602:
 	{
-		start=a|(start<<8);
+		start=BluetoothData|(start<<8);
 		SEQUENCE=0x603;
 		break;
 	}
 	case 0x603:
 	{
-		start=a|(start<<8);
+		start=BluetoothData|(start<<8);
 		SEQUENCE=0x604;
 		break;
 	}
 	case 0x604:
 		{
-			length=a;
+			length=BluetoothData;
 			SEQUENCE=0x605;
 			break;
 		}
 		case 0x605:
 		{
-			length=a|(length<<8);
+			length=BluetoothData|(length<<8);
 			SEQUENCE=0x606;
 			break;
 		}
 		case 0x606:
 		{
-			length=a|(length<<8);
+			length=BluetoothData|(length<<8);
 			SEQUENCE=0x607;
 			break;
 		}
 		case 0x607:
 		{
 			SEQUENCE=0x0;
-			length=a|(length<<8);
+			length=BluetoothData|(length<<8);
 			sendBT(ACK, sizeof(ACK));
-
-			receiveBTbuffer(start, length); //ends with 4 off 00 bytes = integer 0.
+			txBT();
+			receiveBTDMA(start, length); //ends with 4 off 00 bytes = integer 0.
 
 
 
@@ -424,12 +425,12 @@ char I[] =
 
 	case 0:
 	{
-	switch (a)
+	switch (BluetoothData)
 	    {
 
 	case '?':
 	    {
-	    sendBT(W, 1);
+	    sendBT(Wakeup, 1);
 	    break;
 	    }
 
@@ -500,7 +501,7 @@ char I[] =
 	case 'I':
 	    {
 
-	    sendBT(I, sizeof(I)-1);
+	    sendBT(Information, sizeof(Information)-1);
 	    break;
 	    }
 
@@ -525,6 +526,7 @@ char I[] =
 	{
 		IRsynthesis('P',4,0x2);		//Plessey  4 repeats, code 3
 		playIR();
+
 		CPU12MHz();
 		sendBT(ACK, sizeof(ACK));
 		break;
@@ -695,7 +697,7 @@ PRIVATE int waitBTRX(word us)
  void receiveBTbuffer(int start, int length)
     {
 
-    int a, b, c, d, e, i, x, end;
+    int Byte24, Byte16, Byte8, Byte0, ReceivedWord, i, EscapeByte, end;
     byte Dollar = ' ';
     word m;
 
@@ -728,103 +730,103 @@ if (end>CaptureMax){
 
     	while(!(1& LPC_UART1->LSR));	//wait for char.
 
-    	a = LPC_UART1->RBR;
-	if (a == '$') //ignore next char.
+    	Byte24 = LPC_UART1->RBR;
+	if (Byte24 == '$') //ignore next char.
 	    {
 
 	//    if (waitBTRX(1000000))
 	//	break; //wait for char, break if 100ms timeout.
 	  	while(!(1& LPC_UART1->LSR));	//wait for char.
-	    x = LPC_UART1->RBR;
+	    EscapeByte = LPC_UART1->RBR;
 	    }
 
 //	if (waitBTRX(1000000))
 //	    break; //wait for char, break if 100ms timeout.
   	while(!(1& LPC_UART1->LSR));	//wait for char.
-	b = LPC_UART1->RBR;
-	if (b == '$') //ignore next char.
+	Byte16 = LPC_UART1->RBR;
+	if (Byte16 == '$') //ignore next char.
 	    {
 
 	//    if (waitBTRX(1000000))
 	//	break; //wait for char, break if 100ms timeout.
 	  	while(!(1& LPC_UART1->LSR));	//wait for char.
-	    x = LPC_UART1->RBR;
+	    EscapeByte = LPC_UART1->RBR;
 	    }
 
 //	if (waitBTRX(1000000))
 //	    break; //wait for char, break if 100ms timeout.
   	while(!(1& LPC_UART1->LSR));	//wait for char.
-	c = LPC_UART1->RBR;
-	if (c == '$') //ignore next char.
+	Byte8 = LPC_UART1->RBR;
+	if (Byte8 == '$') //ignore next char.
 	    {
 
 	  //  if (waitBTRX(1000000))
 	//	break; //wait for char, break if 100ms timeout.
 	  	while(!(1& LPC_UART1->LSR));	//wait for char.
-	    x = LPC_UART1->RBR;
+	    EscapeByte = LPC_UART1->RBR;
 	    }
-	Dollar = c;
+	Dollar = Byte8;
 //	if (waitBTRX(1000000))
 //	    break; //wait for char, break if 100ms timeout.
   	while(!(1& LPC_UART1->LSR));	//wait for char.
-	d = LPC_UART1->RBR;
-	if (d == '$') //ignore next char.
+	Byte0 = LPC_UART1->RBR;
+	if (Byte0 == '$') //ignore next char.
 	    {
 	//    if (waitBTRX(1000000))
 	//	break; //wait for char, break if 100ms timeout.
 	  	while(!(1& LPC_UART1->LSR));	//wait for char.
-	    x = LPC_UART1->RBR;
+	    EscapeByte = LPC_UART1->RBR;
 	    }
 
-	e = a << 24 | b << 16 | c << 8 | d;
-	Buffer[i] = e;
-	if (e == 0)
+	ReceivedWord = Byte24 << 24 | Byte16 << 16 | Byte8 << 8 | Byte0;
+	Buffer[i] = ReceivedWord;
+	if (ReceivedWord == 0)
 	    break;
 	}
     if(i==0x2000)
     {
  //   waitBTRX(1000000);
       	while(!(1& LPC_UART1->LSR));	//wait for char.
-    	a = LPC_UART1->RBR;
-    	if (a == '$') //ignore next char.
+    	Byte24 = LPC_UART1->RBR;
+    	if (Byte24 == '$') //ignore next char.
     	    {
     	   // waitBTRX(1000000);
     	  	while(!(1& LPC_UART1->LSR));	//wait for char.
-    	    x = LPC_UART1->RBR;
+    	    EscapeByte = LPC_UART1->RBR;
     	    }
 
     //	waitBTRX(1000000);
       	while(!(1& LPC_UART1->LSR));	//wait for char.
-    	b = LPC_UART1->RBR;
-    	if (b == '$') //ignore next char.
+    	Byte16 = LPC_UART1->RBR;
+    	if (Byte16 == '$') //ignore next char.
     	    {
     		//waitBTRX(1000000);
     	  	while(!(1& LPC_UART1->LSR));	//wait for char.
-    	    x = LPC_UART1->RBR;
+    	    EscapeByte = LPC_UART1->RBR;
     	    }
 
     //waitBTRX(1000000);
       	while(!(1& LPC_UART1->LSR));	//wait for char.
-    	c = LPC_UART1->RBR;
-    	if (c == '$') //ignore next char.
+    	Byte8 = LPC_UART1->RBR;
+    	if (Byte8 == '$') //ignore next char.
     	    {
 
     	//waitBTRX(1000000);
       	while(!(1& LPC_UART1->LSR));	//wait for char.
-      	    x = LPC_UART1->RBR;
+      	    EscapeByte = LPC_UART1->RBR;
     	    }
-    	Dollar = c;
+    	Dollar = Byte8;
     //	waitBTRX(1000000);
       	while(!(1& LPC_UART1->LSR));	//wait for char.
-    	d = LPC_UART1->RBR;
-    	if (d == '$') //ignore next char.
+    	Byte0 = LPC_UART1->RBR;
+    	if (Byte0 == '$') //ignore next char.
     	    {
     	  	while(!(1& LPC_UART1->LSR));	//wait for char.
     	    //waitBTRX(1000000);
 
-    	    x = LPC_UART1->RBR;
+    	    EscapeByte = LPC_UART1->RBR;
     	    }
-    	e = a << 24 | b << 16 | c << 8 | d;
+    	ReceivedWord = Byte24 << 24 | Byte16 << 16 | Byte8 << 8 | Byte0;
     }
     BUFLEN=i+1;
     m = LPC_TIM2->TC;
@@ -841,6 +843,80 @@ if (end>CaptureMax){
 #endif
 
     }
+
+
+
+
+ /////////////////////////////////////////////////////////////////////////////////////////////////
+ ///@brief BT comms with BT module RN42/RN41 receive Buffer data
+ ///@param void
+ ///@return void
+ ///
+ ///ends with integer 0
+ /////////////////////////////////////////////////////////////////////////////////////////////////
+  void receiveBTDMA(int start, int length)
+     {
+
+     int a, i, x, end;
+     word b,c,d,e;
+
+
+ #if release==1
+ 		LPC_WDT->WDTC = 40000000;	//set timeout 40s watchdog timer
+ 		LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
+ 		LPC_WDT->WDFEED=0x55;			//watchdog feed
+
+ #endif
+
+
+     i=start;
+     end=start+length;
+     if((start>=0) && (start<CaptureMax))
+     {
+ if (end>CaptureMax){
+ 	end=CaptureMax;
+ }
+     for (; i<end; i++)
+ 	{
+   	while(!(1& LPC_UART1->LSR));	//2.6us wait for char.
+   	a = LPC_UART1->RBR;				//1.9us
+   	while(!(1& LPC_UART1->LSR));	//wait for char.
+ 	a = LPC_UART1->RBR|a<<8;
+   	while(!(1& LPC_UART1->LSR));	//wait for char.
+ 	a = LPC_UART1->RBR|a<<8;
+   	while(!(1& LPC_UART1->LSR));	//wait for char.
+ 	a = LPC_UART1->RBR|a<<8;
+ 	Buffer[i] = a;
+ 	if (a == 0)
+ 	    break;
+ 	}
+     if(i==0x2000)
+     {
+       	while(!(1& LPC_UART1->LSR));	//wait for char.
+     	a = LPC_UART1->RBR;
+        while(!(1& LPC_UART1->LSR));	//wait for char.
+     	a = LPC_UART1->RBR|a<<8;
+       	while(!(1& LPC_UART1->LSR));	//wait for char.
+     	a = LPC_UART1->RBR|a<<8;
+       	while(!(1& LPC_UART1->LSR));	//wait for char.
+     	a = LPC_UART1->RBR|a<<8;
+      }
+     BUFLEN=i+1;
+     for (; i < CaptureMax; i++) //fill rest of Buffer with 0.
+ 	{
+ 	Buffer[i] = 0;
+ 	}
+     }
+ #if release==1
+ 		LPC_WDT->WDTC = 10000000;	//set timeout 5s watchdog timer
+ 		LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
+ 		LPC_WDT->WDFEED=0x55;			//watchdog feed
+ #endif
+
+     }
+
+
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 ///@brief BT comms with BT module RN42/RN41 transmit Buffer until 0 data
@@ -991,7 +1067,11 @@ PUBLIC void sendBT(byte istat[], unsigned int ilength)
     {
     int i,a;
 	a=LPC_GPIO0->FIOPIN&(1<<26);		//is bluetooth connected? P0_26 = 1 if connected, = 0 if not connected.
+#if release==0
+	a=1;		//force always send if in debug mode
+#endif
 	if (a)
+
 		{
 	//only send if BT is connected.
 	//note that it takes around 20s for disconnected to be detected.
@@ -1018,6 +1098,42 @@ PUBLIC void sendBT(byte istat[], unsigned int ilength)
 		txend=0;
 	}
     }
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief BT comms with BT module RN42/RN41 transmit data
+///@param void
+///@return void
+//send even if not connected for commands.
+/////////////////////////////////////////////////////////////////////////////////////////////////
+PUBLIC void sendBTNC(byte istat[], unsigned int ilength)
+    {
+    int i,a;
+
+	//only send if BT is connected.
+	//note that it takes around 20s for disconnected to be detected.
+
+
+    for (i = 0; i < ilength; i++)
+	{
+	tx[(txend++)] = istat[i];
+	if(txend>=txlen)txend=0;
+
+
+	if (txend == txstart)
+	    {
+	txstart=txstart+1;
+	if(txstart>=txlen)txstart=0;
+//	    txstart = (txstart + 1) % txlen;		//overflow, lose old data
+	    txoverflow = 1;							//record that overflow occurred.
+	    }
+	}
+
+    }
+
+
+
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 ///@brief BT comms with BT module RN42/RN41 Receiver data.
@@ -1168,26 +1284,37 @@ PUBLIC void factoryBT(void)
     {
 
     LED1GREEN();
-  	us(500000); //1s delay
+    LED2GREEN();
+
+    LPC_GPIO_BTFACTORY FIODIR |= BTFACTORY;
+    LPC_GPIO_BTFACTORY FIOSET = BTFACTORY;
+    LPC_GPIO_BTRESET FIOSET = BTRESET;
+  	us(1000000); //1s delay
     LPC_GPIO_BTFACTORY FIOCLR = BTFACTORY;
     LED1YELLOW();
- 	us(500000); //1s delay
+    LED2YELLOW();
+ 	us(1000000); //1s delay
     LPC_GPIO_BTFACTORY FIOSET = BTFACTORY;
     LED1GREEN();
-	us(500000); //1s delay
+    LED2GREEN();
+	us(1000000); //1s delay
     LPC_GPIO_BTFACTORY FIOCLR = BTFACTORY;
     LED1YELLOW();
- 	us(500000); //1s delay
+    LED2YELLOW();
+ 	us(1000000); //1s delay
     LPC_GPIO_BTFACTORY FIOSET = BTFACTORY;
     LED1GREEN();
-  	us(500000); //1s delay
+    LED2GREEN();
+  	us(1000000); //1s delay
     LPC_GPIO_BTFACTORY FIOCLR = BTFACTORY;
     LED1YELLOW();
-	us(500000); //1s delay
+    LED2YELLOW();
+	us(1000000); //1s delay
     LPC_GPIO_BTFACTORY FIOSET = BTFACTORY;
     LED1GREEN();
-	us(500000); //1s delay
-    LED1OFF();
+    LED2GREEN();
+	us(1000000); //1s delay
+ //   LED1OFF();
     }
 
 ////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1246,11 +1373,30 @@ PUBLIC void setupBT(void)
     {
     	'S','W',',','0','1','0','0','\r','\n'			//number in hex 256*0.625ms=160ms
     };
+#if baud==92
+    byte BaudK[] =			//baud rate 230k
+       {
+    		   'S','U',',','9','2','\r','\n'
+       };
+#elif baud==46
+    byte BaudK[] =			//baud rate 230k
+       {
+    		   'S','U',',','4','6','\r','\n'
+       };
 
-    byte Buad230K[] =			//baud rate 230k
+#elif baud==23
+    byte BaudK[] =			//baud rate 230k
        {
     		   'S','U',',','2','3','\r','\n'
        };
+#elif baud==11
+    byte BaudK[] =			//baud rate 230k
+       {
+    		   'S','U',',','1','1','\r','\n'
+       };
+#endif
+
+
     LED1GREEN();
     for (i = 0; i < 1000; i++, us(1000))
 	; //1s delay
@@ -1258,7 +1404,7 @@ PUBLIC void setupBT(void)
     rxstart = rxend;
 
 
-    sendBT(CMD, sizeof(CMD));
+    sendBTNC(CMD, sizeof(CMD));
     for (i = 0; i < 3000; i++)
 	{
 	us(1000);
@@ -1277,7 +1423,7 @@ PUBLIC void setupBT(void)
 	}
 
     rxstart = rxend;
-    sendBT(NoTimeOut, sizeof(NoTimeOut));
+    sendBTNC(NoTimeOut, sizeof(NoTimeOut));
     for (i = 0; i < 3000; i++)
 	{
 	us(1000);
@@ -1296,7 +1442,7 @@ PUBLIC void setupBT(void)
 	}
 
     rxstart = rxend;
-    sendBT(BTsleep, sizeof(BTsleep));
+    sendBTNC(BTsleep, sizeof(BTsleep));
     for (i = 0; i < 3000; i++)
 	{
 	us(1000);
@@ -1314,7 +1460,7 @@ PUBLIC void setupBT(void)
 	    }
 	}
     rxstart = rxend;
- /*   sendBT(Baud230K, sizeof(Buad230K));
+   sendBTNC(BaudK, sizeof(BaudK));
     for (i = 0; i < 3000; i++)
 	{
 	us(1000);
@@ -1333,8 +1479,8 @@ PUBLIC void setupBT(void)
 	}
     rxstart = rxend;
 
-   */
-    sendBT(ENDCMD, sizeof(ENDCMD));
+
+    sendBTNC(ENDCMD, sizeof(ENDCMD));
     for (i = 0; i < 3000; i++)
 	{
 	us(1000);
