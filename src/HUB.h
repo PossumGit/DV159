@@ -17,13 +17,13 @@
 //
 //
 #define PCBissue 4		//pcb issue, options 3, 4
-#define release	0
+#define release	1
 
 
 #define baud 11	//92/46/23/11
 
 
-#define Version 0x20595F31	//	"1_G " little endian.
+#define Version 0x205A5F31	//	"1_Z " little endian.
 extern int	PCBiss;		//calculated PCB issue (main.c)
 //0 means debug, 1 means release.
 //note issue 2 is now obsolete and no boards are now in use.

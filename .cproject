@@ -54,8 +54,8 @@
 							<tool id="com.crt.advproject.link.exe.debug.51352939" name="MCU Linker" superClass="com.crt.advproject.link.exe.debug">
 								<option id="com.crt.advproject.link.arch.1544271586" name="Architecture" superClass="com.crt.advproject.link.arch" value="com.crt.advproject.link.target.cm3" valueType="enumerated"/>
 								<option id="com.crt.advproject.link.thumb.1947037713" name="Thumb mode" superClass="com.crt.advproject.link.thumb" value="true" valueType="boolean"/>
-								<option id="com.crt.advproject.link.script.2072601431" name="Linker script" superClass="com.crt.advproject.link.script" value="&quot;HUB_Debug.ld&quot;" valueType="string"/>
-								<option id="com.crt.advproject.link.manage.528148595" name="Manage linker script" superClass="com.crt.advproject.link.manage" value="true" valueType="boolean"/>
+								<option id="com.crt.advproject.link.script.2072601431" name="Linker script" superClass="com.crt.advproject.link.script" value="&quot;../linkscripts/hub.ld&quot; " valueType="string"/>
+								<option id="com.crt.advproject.link.manage.528148595" name="Manage linker script" superClass="com.crt.advproject.link.manage" value="false" valueType="boolean"/>
 								<option id="gnu.c.link.option.nostdlibs.929423785" name="No startup or default libs (-nostdlib)" superClass="gnu.c.link.option.nostdlibs" value="true" valueType="boolean"/>
 								<option id="gnu.c.link.option.other.1318258943" name="Other options (-Xlinker [option])" superClass="gnu.c.link.option.other" valueType="stringList">
 									<listOptionValue builtIn="false" value="-Map=${BuildArtifactFileBaseName}.map"/>
