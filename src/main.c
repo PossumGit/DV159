@@ -253,6 +253,10 @@ PRIVATE void powerupHEX(void) {
 	//	CPU12MHz();
 	//	us(20000000);
 	//	LPC_GPIO_BTRESET FIOCLR	= BTRESET;	//Bluetooth reset.	RESET BT
+		disableInputInterrupt();
+		initUART();
+		initBT();
+		us(500000);
 		LED2OFF();
 		LPC_TIM2->TC=0;
 		time=0;			//
@@ -288,9 +292,9 @@ PRIVATE void powerupHEX(void) {
 		break;
 	case 0x03:			//TEST NEAT RX, receive an alarm,inc ID then re-transmit.
 						//works well with TREX pager 2.
-		CPU12MHz();
+	//	CPU12MHz();
 		LED1GREEN();
-		us(1000000);
+	//	us(1000000);
 		LED2OFF();
 
 
@@ -316,7 +320,7 @@ PRIVATE void powerupHEX(void) {
 
 			LED1YELLOW();
 			SWNEAT=0;
-			CPU12MHz();
+	//		CPU12MHz();
 			NEATWR(2,0xA0);			//reset read
 
 			us(500000);

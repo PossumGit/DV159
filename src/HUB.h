@@ -17,7 +17,7 @@
 //
 //
 #define PCBissue 4		//pcb issue, options 3, 4
-#define release	1
+#define release	0
 
 
 #define baud 11	//92/46/23/11

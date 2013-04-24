@@ -162,7 +162,7 @@ char Information[] =
     if (rxstart != rxend)
 	{
 	BluetoothData = rx[rxstart];
-
+	BTACC=1;
 	rxstart=(rxstart+1)%rxlen;	//mod does  work.
 //	rxstart=(rxstart++)%rxlen;	//mod does not work.
 
