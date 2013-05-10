@@ -151,7 +151,7 @@ PUBLIC int main(void) {
 
 	//main +5ms
 		LED1GREEN();
-		STATE='P';
+
 		ALARMtime=30;			//3s
 
 
@@ -335,15 +335,13 @@ PRIVATE void powerupHEX(void) {
 
 	case 04:					//TEST 4MHz LED flash
 
-	/*	LPC_SC->PCONP     = Peripherals ;       // Enable Power for Peripherals
+		LPC_SC->PCONP     = Peripherals ;       // Enable Power for Peripherals
+
 		initUART();
-		CPU44MHz();
-		BTbaudCPU44L();
-	//	CPU100MHz();
+
 		initBT();
+
 		setupBT();
-		us(100000);
-		*/
 
 		LED2OFF();
 		CPU4MHz();
@@ -561,6 +559,11 @@ PRIVATE void powerupHEX(void) {
 	case 0x0C: 				//DEBUG recover clock
 		LPC_GPIO1-> FIODIR |= IRON; 		//output
 		LPC_GPIO1-> FIOSET |=IRON	;
+		LPC_GPIO_BTCTS FIODIR |= BTCTS; 		//output
+		LPC_GPIO_BTCTS FIOCLR |=BTCTS	;
+	//	initUART();
+		initBT();
+
 		while (1) {
 			LED1GREEN();
 			LED1GREEN();
@@ -686,8 +689,15 @@ PRIVATE void powerupHEX(void) {
 	case 0x0F:				//factory reset Blue Tooth.
 		 CPU12MHz();
 		factoryBT(); //HEX2=0, HEX1=E Factory reset BT.
+
+		LED1OFF();
+		LED2OFF();
+		LPC_GPIO_OFF FIOSET =OFF; //OFF button set high to turn off.
+		while(1);
+		us(1000000);
 		resetBT();
-//		LPC_SC->PCONP     = Peripherals ;       // Enable Power for Peripherals      */
+		us(1000000);
+		LPC_SC->PCONP     = Peripherals ;       // Enable Power for Peripherals      */
 		initUART();
 //921kbaud
 
@@ -706,15 +716,20 @@ PRIVATE void powerupHEX(void) {
 #endif
 
 //now default value of 115.2KBAUD.
+				LED1GREEN();
+				LED2OFF();
 		initBT();
-		setupBT();
-		LED1YELLOW();
-		LED2YELLOW();
 
-		LED2OFF();
-		LED2OFF();
-		CPU12MHz();
+		setupBT();
+
+
+
 		us(10000);
+		LED1GREEN();
+		LED2YELLOW();
+		while(1);
+		LED1OFF();
+		LED2OFF();
 		LPC_GPIO_OFF FIOSET =OFF; //OFF button set high to turn off.
 		while(1);
 		break;

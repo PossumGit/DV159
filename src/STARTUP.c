@@ -59,7 +59,7 @@ extern "C" {
 
 #include "HUB.h"
 #endif
-
+EXTERNAL char STATE;
 //*****************************************************************************
 #if defined (__cplusplus)
 extern "C" {
@@ -297,10 +297,17 @@ ResetISR(void) {
 
 	LPC_GPIO_IROUT FIOCLR = IROUT; 		//clear IR output (IR off).
 	LPC_GPIO_IROUT FIODIR |= IROUT; 	//IR defined as an output.
-
-	  LPC_GPIO_BTRESET FIOCLR = BTRESET;
 	LPC_GPIO_BTRESET FIODIR |= BTRESET;	//
 
+	 if(0x1&LPC_SC->RSID)
+		{STATE='P';								//Power up.
+	LPC_GPIO_BTRESET FIOCLR = BTRESET;
+		}
+	else if(0x2&LPC_SC->RSID) STATE='I';		//RESET	BUTTON or external voltage monitor reset.
+	else if(0x4&LPC_SC->RSID) STATE='J';		//WATCHDOG reset
+	else if(0x8&LPC_SC->RSID) STATE='K';		//BROWNOUT reset (should never see this.)
+
+	LPC_SC->RSID=0;								//Clear reset state.
 
     LPC_GPIO_BTFACTORY FIOSET = BTFACTORY;			//set factory default to high, to start factory default sequence.
     LPC_GPIO_BTFACTORY FIODIR |= BTFACTORY;

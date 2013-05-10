@@ -20,10 +20,10 @@
 #define release	1
 
 
-#define baud 11	//92/46/23/11
+#define baud 11	//92/46/23/11/  96 not implemented yet, copy of 115.2
 
 
-#define Version 0x205A5F31	//	"1_Z " little endian.
+#define Version 0x20425F32	//	"2_A " little endian.
 extern int	PCBiss;		//calculated PCB issue (main.c)
 //0 means debug, 1 means release.
 //note issue 2 is now obsolete and no boards are now in use.
@@ -115,7 +115,7 @@ typedef unsigned int word;		//32 bit on LPC17**
 #define LPC_GPIO_BTCTS LPC_GPIO0->
 
 #define BTRTS			1<<17			// P0.17
-#define LPC_GPIO_BTCTS LPC_GPIO0->
+#define LPC_GPIO_BTRTS LPC_GPIO0->
 
 #define BTSPICS			1<<31			//P1.31
 #define LPC_GPIO_BTSPICS LPC_GPIO1->

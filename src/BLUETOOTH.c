@@ -45,7 +45,7 @@ EXTERNAL int	PCBiss;		//=3 for PCHB issue 3, =4 for PCB issue 4.
 
 //local functions
 PRIVATE void sendBTbuffer(int,int);
-PUBLIC void receiveBTbuffer(int,int);
+PUBLIC int receiveBTbuffer(int,int);
 PRIVATE int waitBTRX( word);	///<wait for data ready in BT receive channel, timeout after word us.
 void SENDTERM(void);
 void SENDBTNT(int start,int length);
@@ -400,7 +400,7 @@ char Information[] =
 			length=BluetoothData|(length<<8);
 			sendBT(ACK, sizeof(ACK));
 			txBT();
-			receiveBTDMA(start, length); //ends with 4 off 00 bytes = integer 0.
+	//		receiveBTDMA(start, length); //ends with 4 off 00 bytes = integer 0.
 
 
 
@@ -610,9 +610,9 @@ char Information[] =
 	    //	while (0 == (1 & LPC_UART1->LSR));				//wait for RX data ready.
 	    else
 		{
-		receiveBTbuffer(0, 0x2000); //ends with 4 off 00 bytes = integer 0.
-	//	us(1000000);
-	//	receiveBTbuffer(0x1000, 0x1000);
+		if (receiveBTbuffer(0, 0x2000))sendBT(NACK, sizeof(NACK));
+		else
+
 		sendBT(ACK, sizeof(ACK));
 		}
 	    break;
@@ -634,8 +634,8 @@ char Information[] =
 	    {
 
 
-
-	    SEQUENCE=0x600;
+//uses receiveBTDMA, no escape sequence implemented with this.
+//	    SEQUENCE=0x600;
 	    break;
 
 	    }
@@ -694,7 +694,7 @@ PRIVATE int waitBTRX(word us)
 ///
 ///ends with integer 0
 /////////////////////////////////////////////////////////////////////////////////////////////////
- void receiveBTbuffer(int start, int length)
+int receiveBTbuffer(int start, int length)
     {
 
     int Byte24, Byte16, Byte8, Byte0, ReceivedWord, i, EscapeByte, end;
@@ -721,113 +721,71 @@ if (end>CaptureMax){
 
 
 }
-
+	waitBTRX(5000000) ;		//wait for 5s for first char.
     for (; i<end; i++)
 	{
 
-//	if (waitBTRX(1000000))
-//	    break; //wait for char, break if 100ms timeout.
-
-    	while(!(1& LPC_UART1->LSR));	//wait for char.
-
+	if (waitBTRX(1000000))  break; //wait for char, break if 100ms timeout.
     	Byte24 = LPC_UART1->RBR;
 	if (Byte24 == '$') //ignore next char.
 	    {
-
-	//    if (waitBTRX(1000000))
-	//	break; //wait for char, break if 100ms timeout.
-	  	while(!(1& LPC_UART1->LSR));	//wait for char.
+	    if (waitBTRX(1000000)) break; //wait for char, break if 100ms timeout.
 	    EscapeByte = LPC_UART1->RBR;
 	    }
 
-//	if (waitBTRX(1000000))
-//	    break; //wait for char, break if 100ms timeout.
-  	while(!(1& LPC_UART1->LSR));	//wait for char.
+	if (waitBTRX(1000000))	    break; //wait for char, break if 100ms timeout.
 	Byte16 = LPC_UART1->RBR;
 	if (Byte16 == '$') //ignore next char.
 	    {
-
-	//    if (waitBTRX(1000000))
-	//	break; //wait for char, break if 100ms timeout.
-	  	while(!(1& LPC_UART1->LSR));	//wait for char.
+	    if (waitBTRX(1000000))	break; //wait for char, break if 100ms timeout.
 	    EscapeByte = LPC_UART1->RBR;
 	    }
 
-//	if (waitBTRX(1000000))
-//	    break; //wait for char, break if 100ms timeout.
-  	while(!(1& LPC_UART1->LSR));	//wait for char.
+	if (waitBTRX(1000000))	    break; //wait for char, break if 100ms timeout.
 	Byte8 = LPC_UART1->RBR;
 	if (Byte8 == '$') //ignore next char.
 	    {
 
-	  //  if (waitBTRX(1000000))
-	//	break; //wait for char, break if 100ms timeout.
-	  	while(!(1& LPC_UART1->LSR));	//wait for char.
+	    if (waitBTRX(1000000))	break; //wait for char, break if 100ms timeout.
 	    EscapeByte = LPC_UART1->RBR;
 	    }
 	Dollar = Byte8;
-//	if (waitBTRX(1000000))
-//	    break; //wait for char, break if 100ms timeout.
-  	while(!(1& LPC_UART1->LSR));	//wait for char.
+	if (waitBTRX(1000000))	    break; //wait for char, break if 100ms timeout.
 	Byte0 = LPC_UART1->RBR;
 	if (Byte0 == '$') //ignore next char.
 	    {
-	//    if (waitBTRX(1000000))
-	//	break; //wait for char, break if 100ms timeout.
-	  	while(!(1& LPC_UART1->LSR));	//wait for char.
+	    if (waitBTRX(1000000))	break; //wait for char, break if 100ms timeout.
 	    EscapeByte = LPC_UART1->RBR;
 	    }
 
 	ReceivedWord = Byte24 << 24 | Byte16 << 16 | Byte8 << 8 | Byte0;
 	Buffer[i] = ReceivedWord;
-	if (ReceivedWord == 0)
-	    break;
+	if (ReceivedWord == 0)	    break;
+#if release==1
+		LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
+		LPC_WDT->WDFEED=0x55;			//watchdog feed
+#endif
+
 	}
-    if(i==0x2000)
+    while((i==0x2000)&&(ReceivedWord!=0))		//allow for 0000 after full buffer case.
     {
- //   waitBTRX(1000000);
-      	while(!(1& LPC_UART1->LSR));	//wait for char.
+	    if (waitBTRX(1000000))	break;
+ //     	while(!(1& LPC_UART1->LSR));	//wait for char.
     	Byte24 = LPC_UART1->RBR;
-    	if (Byte24 == '$') //ignore next char.
-    	    {
-    	   // waitBTRX(1000000);
-    	  	while(!(1& LPC_UART1->LSR));	//wait for char.
-    	    EscapeByte = LPC_UART1->RBR;
-    	    }
-
-    //	waitBTRX(1000000);
-      	while(!(1& LPC_UART1->LSR));	//wait for char.
+ 	    if (waitBTRX(1000000))	break;
+ //     	while(!(1& LPC_UART1->LSR));	//wait for char.
     	Byte16 = LPC_UART1->RBR;
-    	if (Byte16 == '$') //ignore next char.
-    	    {
-    		//waitBTRX(1000000);
-    	  	while(!(1& LPC_UART1->LSR));	//wait for char.
-    	    EscapeByte = LPC_UART1->RBR;
-    	    }
-
-    //waitBTRX(1000000);
-      	while(!(1& LPC_UART1->LSR));	//wait for char.
+ 	    if (waitBTRX(1000000))	break;
+ //     	while(!(1& LPC_UART1->LSR));	//wait for char.
     	Byte8 = LPC_UART1->RBR;
-    	if (Byte8 == '$') //ignore next char.
-    	    {
-
-    	//waitBTRX(1000000);
-      	while(!(1& LPC_UART1->LSR));	//wait for char.
-      	    EscapeByte = LPC_UART1->RBR;
-    	    }
-    	Dollar = Byte8;
-    //	waitBTRX(1000000);
-      	while(!(1& LPC_UART1->LSR));	//wait for char.
+ 	    if (waitBTRX(1000000))	break;
+//      	while(!(1& LPC_UART1->LSR));	//wait for char.
     	Byte0 = LPC_UART1->RBR;
-    	if (Byte0 == '$') //ignore next char.
-    	    {
-    	  	while(!(1& LPC_UART1->LSR));	//wait for char.
-    	    //waitBTRX(1000000);
-
-    	    EscapeByte = LPC_UART1->RBR;
-    	    }
-    	ReceivedWord = Byte24 << 24 | Byte16 << 16 | Byte8 << 8 | Byte0;
+      	ReceivedWord = Byte24 << 24 | Byte16 << 16 | Byte8 << 8 | Byte0;
+    	i++;
     }
+
+
     BUFLEN=i+1;
     m = LPC_TIM2->TC;
     for (; i < CaptureMax; i++) //fill rest of Buffer with 0.
@@ -841,12 +799,12 @@ if (end>CaptureMax){
 		LPC_WDT->WDFEED=0x55;			//watchdog feed
 
 #endif
-
+		return ReceivedWord;
     }
 
 
 
-
+/*
  /////////////////////////////////////////////////////////////////////////////////////////////////
  ///@brief BT comms with BT module RN42/RN41 receive Buffer data
  ///@param void
@@ -857,7 +815,7 @@ if (end>CaptureMax){
   void receiveBTDMA(int start, int length)
      {
 
-     int a, i, x, end;
+     int ReceivedData, i, x, end;
      word b,c,d,e;
 
 
@@ -878,28 +836,30 @@ if (end>CaptureMax){
  }
      for (; i<end; i++)
  	{
-   	while(!(1& LPC_UART1->LSR));	//2.6us wait for char.
-   	a = LPC_UART1->RBR;				//1.9us
-   	while(!(1& LPC_UART1->LSR));	//wait for char.
- 	a = LPC_UART1->RBR|a<<8;
-   	while(!(1& LPC_UART1->LSR));	//wait for char.
- 	a = LPC_UART1->RBR|a<<8;
-   	while(!(1& LPC_UART1->LSR));	//wait for char.
- 	a = LPC_UART1->RBR|a<<8;
- 	Buffer[i] = a;
- 	if (a == 0)
- 	    break;
+     if (waitBTRX(1000000))	break; //wait for char, break if 100ms timeout.
+ //  	while(!(1& LPC_UART1->LSR));	//2.6us wait for char.
+   	ReceivedData = LPC_UART1->RBR;				//1.9us
+    if (waitBTRX(1000000))	break; //wait for char, break if 100ms timeout.
+ 	ReceivedData = LPC_UART1->RBR|ReceivedData<<8;
+    if (waitBTRX(1000000))	break; //wait for char, break if 100ms timeout.
+ 	ReceivedData = LPC_UART1->RBR|ReceivedData<<8;
+    if (waitBTRX(1000000))	break; //wait for char, break if 100ms timeout.
+ 	ReceivedData = LPC_UART1->RBR|ReceivedData<<8;
+ 	Buffer[i] = ReceivedData;
+ 	if (ReceivedData == 0)   break;
  	}
-     if(i==0x2000)
+    while((i==0x2000)&&(ReceivedData!=0))
      {
-       	while(!(1& LPC_UART1->LSR));	//wait for char.
-     	a = LPC_UART1->RBR;
-        while(!(1& LPC_UART1->LSR));	//wait for char.
-     	a = LPC_UART1->RBR|a<<8;
-       	while(!(1& LPC_UART1->LSR));	//wait for char.
-     	a = LPC_UART1->RBR|a<<8;
-       	while(!(1& LPC_UART1->LSR));	//wait for char.
-     	a = LPC_UART1->RBR|a<<8;
+       if (waitBTRX(1000000))	break; //wait for char, break if 100ms timeout.
+     	ReceivedData = LPC_UART1->RBR;
+        if (waitBTRX(1000000))	break; //wait for char, break if 100ms timeout.
+     	ReceivedData = LPC_UART1->RBR|ReceivedData<<8;
+        if (waitBTRX(1000000))	break; //wait for char, break if 100ms timeout.
+     	ReceivedData = LPC_UART1->RBR|ReceivedData<<8;
+        if (waitBTRX(1000000))	break; //wait for char, break if 100ms timeout.
+ //      	while(!(1& LPC_UART1->LSR));	//wait for char.
+     	ReceivedData = LPC_UART1->RBR|ReceivedData<<8;
+     	i++;
       }
      BUFLEN=i+1;
      for (; i < CaptureMax; i++) //fill rest of Buffer with 0.
@@ -914,7 +874,7 @@ if (end>CaptureMax){
  #endif
 
      }
-
+*/
 
 
 
@@ -1019,6 +979,10 @@ void SENDBTNT(int start,int length)
 		;//data available and buffer available
 	    LPC_UART1->THR = 0xFF;//if char is $, send an extra 0xFF after the $.
 	    }
+#if release==1
+		LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
+		LPC_WDT->WDFEED=0x55;			//watchdog feed
+#endif
 	}
 
 #if release==1
@@ -1373,6 +1337,12 @@ PUBLIC void setupBT(void)
     {
     	'S','W',',','0','1','0','0','\r','\n'			//number in hex 256*0.625ms=160ms
     };
+
+
+    byte BTSpecial[]=
+    {
+    		"SQ,0\r\n"			//quick reconnect does not work, low latency loses characters.
+    };
 #if baud==92
     byte BaudK[] =			//baud rate 230k
        {
@@ -1397,9 +1367,9 @@ PUBLIC void setupBT(void)
 #endif
 
 
-    LED1GREEN();
-    for (i = 0; i < 1000; i++, us(1000))
-	; //1s delay
+    LED1OFF();
+    LED2OFF();
+    us(1000000);
 
     rxstart = rxend;
 
@@ -1422,6 +1392,9 @@ PUBLIC void setupBT(void)
 	    }
 	}
 
+
+    us(1000000);
+    LED2OFF();
     rxstart = rxend;
     sendBTNC(NoTimeOut, sizeof(NoTimeOut));
     for (i = 0; i < 3000; i++)
@@ -1454,12 +1427,13 @@ PUBLIC void setupBT(void)
 	    if ((rx[rxstart] == 'A') && (rx[(rxstart + 1) % rxlen] == 'O')
 		    && (rx[(rxstart + 2) % rxlen] == 'K'))
 		{
-		LED1GREEN();
+		LED1YELLOW();
 		i = 20000;
 		}
 	    }
 	}
     rxstart = rxend;
+
    sendBTNC(BaudK, sizeof(BaudK));
     for (i = 0; i < 3000; i++)
 	{
@@ -1477,6 +1451,25 @@ PUBLIC void setupBT(void)
 		}
 	    }
 	}
+
+    rxstart = rxend;
+    sendBTNC(BTSpecial, sizeof(BTSpecial));
+     for (i = 0; i < 3000; i++)
+ 	{
+ 	us(1000);
+ 	rxtxBT();
+ 	if ((rxstart + 5) % rxlen <= rxend)
+ 	    {
+ 	    if (rx[rxstart] != 'A')
+ 		rxstart = (rxstart + 1) % rxlen;
+ 	    if ((rx[rxstart] == 'A') && (rx[(rxstart + 1) % rxlen] == 'O')
+ 		    && (rx[(rxstart + 2) % rxlen] == 'K'))
+ 		{
+ 		LED1YELLOW();
+ 		i = 20000;
+ 		}
+ 	    }
+ 	}
     rxstart = rxend;
 
 
@@ -1493,12 +1486,13 @@ PUBLIC void setupBT(void)
 		    && (rx[(rxstart + 2) % rxlen] == 'D'))
 		{
 	    	rxstart=rxend;
-		LED1YELLOW();
+		LED1GREEN();
 		i = 20000;
 		}
 	    }
 	}
     rxstart=rxend;
+
     }
 
 

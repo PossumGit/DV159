@@ -686,8 +686,13 @@ PUBLIC int powerDown(void)
 ///@brief Battery state indicator, LED is yellow for low battery, or green for battery good..
 ///@param void
 ///@return void
-
 //
+//SATE:
+//H=High battery
+//L=low battery
+//I=RESET button activated
+//J=Watchdog timer activated.
+//K=Brown out detect activated.
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC void BatteryState()
 {
@@ -697,7 +702,7 @@ if(a==1)//good battery
 {
 	LED1GREEN();//battery good active
 	batterygood=1;
-	if (STATE!='P')
+	if (STATE=='L')
 	{
 	STATE='H';
 	}
@@ -706,9 +711,9 @@ else
 {
 	 LED1YELLOW();//battery low active.
 	 batterygood=0;
-		if (STATE!='P')
+		if (STATE=='H')			//H = High: good battery
 		{
-		STATE='L';
+		STATE='L';				//L=low: weak battery.
 		}
 }
 }

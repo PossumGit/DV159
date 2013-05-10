@@ -106,6 +106,9 @@ if (PCBiss==3||PCBiss==4)
 		txBT();		//send any available data from change of input to BT.
 		if (IRAddress >= CaptureMax) break;
 	//	if(LPC_TIM0->CR0 > 0x7e000000)break;
+
+		if((IRAddress!=CaptureFirst)&&(LPC_TIM0->TC > WaitEndIR + LPC_TIM0->CR0))break;
+		if ((IRAddress == CaptureFirst) && (LPC_TIM0->TC > WaitForIR))break;
 	}
 	BUFLEN=IRAddress+1;
 	endCaptureIR();

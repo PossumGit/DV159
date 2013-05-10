@@ -408,7 +408,7 @@ PUBLIC void	us(unsigned int time_us)
 	// Select internal RC for watchdog
 	//select timeout
 		LPC_WDT->WDTC = 10000000;	//set timeout 5s watchdog timer
-		LPC_WDT->WDCLKSEL=0;	//IRC source for watchdog. Set bit 31 to fix this selection.
+		LPC_WDT->WDCLKSEL=0|1<<31;	//IRC source for watchdog. Set bit 31 to fix this selection.
 		LPC_WDT->WDFEED=0xAA;
 		LPC_WDT->WDFEED=0x55;
 		NVIC->ISER[0]|=0x1<<0;	//WDT interrupt.

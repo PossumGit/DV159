@@ -85,13 +85,18 @@ void	BTbaudCPU100()
 	///baud rate = PCLK/(16*(256*DLM+DLL)*(1+DIV/MUL))
 	/// For 921KBaud.
 	LPC_SC->PCLKSEL0 &= ~(3<<8);
-
-//default baud==11
+#if baud==96										//9600
 	LPC_SC->PCLKSEL0 |=  3<< 8; 					//BAUD 3=115, 0=230, 2=460, 1=921. 1=/1, 0=/4, 2=/2, 3=/8
 	LPC_UART1->DLL =4;								//DLL must be >2. UART CLOCK. 7///DLL=1,2 does not work.
 	LPC_UART1->DLM =0;								//UART CLOCK. 0
 	LPC_UART1->FDR =9<<0|13<<4;					//Fractional divide. 0.93333
-#if baud==23
+
+#elif baud==11
+	LPC_SC->PCLKSEL0 |=  3<< 8; 					//BAUD 3=115, 0=230, 2=460, 1=921. 1=/1, 0=/4, 2=/2, 3=/8
+	LPC_UART1->DLL =4;								//DLL must be >2. UART CLOCK. 7///DLL=1,2 does not work.
+	LPC_UART1->DLM =0;								//UART CLOCK. 0
+	LPC_UART1->FDR =9<<0|13<<4;					//Fractional divide. 0.93333
+#elif baud==23
 	LPC_SC->PCLKSEL0 &= ~(3<<8);
 	LPC_SC->PCLKSEL0 |=  0<< 8; 					//BAUD 3=115, 0=230, 2=460, 1=921. 1=/1, 0=/4, 2=/2, 3=/8
 	LPC_UART1->DLL =4;								//DLL must be >2. UART CLOCK. 7///DLL=1,2 does not work.
@@ -143,11 +148,14 @@ void	BTbaudCPU12()
 	///baud rate = PCLK/(16*(256*DLM+DLL)*(1+DIV/MUL))
 	///
 
-
-//baud==11
+#if baud==96
 	LPC_SC->PCLKSEL0 &= ~(3<<8);
 	LPC_SC->PCLKSEL0 |=  2<< 8; 					//12MHz/2=6MHz	//2=115, 1=230, 0 for 57.6, 3=28.8
-#if baud==23
+
+#elif baud==11
+	LPC_SC->PCLKSEL0 &= ~(3<<8);
+	LPC_SC->PCLKSEL0 |=  2<< 8; 					//12MHz/2=6MHz	//2=115, 1=230, 0 for 57.6, 3=28.8
+#elif baud==23
 	LPC_SC->PCLKSEL0 &= ~(3<<8);
 	LPC_SC->PCLKSEL0 |=  1<< 8; 					//12MHz/2=6MHz	//2=115, 1=230, 0 for 57.6, 3=28.8
 #elif baud==46
@@ -183,14 +191,19 @@ void	BTbaudCPU44()
 	///baud rate = PCLK/(16*(256*DLM+DLL)*(1+DIV/MUL))
 	///
 
-
-// baud==11
+#if baud==96
 	LPC_SC->PCLKSEL0 &= ~(3<<8);
 	LPC_SC->PCLKSEL0 |=  3<< 8; 					//PCLK=CCLK/1=44.22857MHZ
 	LPC_UART1->DLL =3;								//DLL must be >2. UART CLOCK.//3 for 115, 3 for 230, 1 for 460
 	LPC_UART1->DLM =0;								//UART CLOCK.
 	LPC_UART1->FDR =0<<0|1<<4;					//Fractional divide disabled
-#if baud==23
+#elif baud==11
+	LPC_SC->PCLKSEL0 &= ~(3<<8);
+	LPC_SC->PCLKSEL0 |=  3<< 8; 					//PCLK=CCLK/1=44.22857MHZ
+	LPC_UART1->DLL =3;								//DLL must be >2. UART CLOCK.//3 for 115, 3 for 230, 1 for 460
+	LPC_UART1->DLM =0;								//UART CLOCK.
+	LPC_UART1->FDR =0<<0|1<<4;					//Fractional divide disabled
+#elif baud==23
 	LPC_SC->PCLKSEL0 &= ~(3<<8);
 	LPC_SC->PCLKSEL0 |=  0<< 8; 					//PCLK=CCLK/1=44.22857MHZ
 	LPC_UART1->DLL =3;								//DLL must be >2. UART CLOCK.//3 for 115, 3 for 230, 1 for 460
