@@ -1341,7 +1341,7 @@ PUBLIC void setupBT(void)
 
     byte BTSpecial[]=
     {
-    		"SQ,0\r\n"			//quick reconnect does not work, low latency loses characters.
+    		"SJ,0800\r\n"			//Page scan continuous.
     };
 #if baud==92
     byte BaudK[] =			//baud rate 230k
