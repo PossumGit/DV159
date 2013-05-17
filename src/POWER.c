@@ -649,17 +649,35 @@ PUBLIC int powerDown(void)
 #if release==1
 		SCB->SCR = 0x4;			//sleepdeep bit
 		LPC_SC->PCON = 0x01;	//combined with sleepdeep bit gives power down mode. IRC is disabled, so WDT disabled.
-#endif
-#if release==0
-	    //Power down mode.
-		SCB->SCR = 0x0;
-		LPC_SC->PCON = 0x00;
-#endif
+
 		enableInputInterrupt();
 		 LED2OFF();
 	__WFI(); //go to power down.
 
 
+
+#endif
+#if release==0
+	    //Power down mode.
+		SCB->SCR = 0x0;
+		LPC_SC->PCON = 0x00;
+
+		enableInputInterrupt();
+		 LED2OFF();
+	//__WFI(); //go to power down.
+		 while(1)
+		 {
+			 if (SW1|SW2|SW3|SWF1|SWF2|SWF3|SWBT|SWNEAT) break;
+		 }
+		 SW1=0;
+		 SW2=0;
+		 SW3=0;
+		 SWF1=0;
+		 SWF2=0;
+		 SWF3=0;
+		 SWBT=0;
+		 SWNEAT=0;
+#endif
 
 	 LPC_SC->PCONP     = Peripherals ;       // Enable Power for Peripherals      */
 		LPC_GPIOINT->IO0IntEnR&=~(0x1<<16);			//disable Bluetooth rising interrupt
