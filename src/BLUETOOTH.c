@@ -294,8 +294,8 @@ char Information[] =
 
 	case 0x400:
 	{
-		if (BluetoothData=='Q'||BluetoothData=='q')
-		{
+//		if (BluetoothData=='Q'||BluetoothData=='q')
+//		{
 	//		disableInputInterrupt();
 
 //try 4 chunks with gaps
@@ -306,7 +306,7 @@ char Information[] =
 //300ms gap = all data.
 //400ms gap = all data, gives some margin.
 //500ms gap gives bigger margin, 1.5s added time.
-
+/*
     	SENDBTNT(0,0x800); //ends with 4 off 00 bytes=integer 0
     	us(500000);
     	SENDBTNT(0x800,0x800); //ends with 4 off 00 bytes=integer 0
@@ -315,8 +315,11 @@ char Information[] =
     	us(500000);
     	SENDBTNT(0x1800,0x800); //ends with 4 off 00 bytes=integer 0
      	SENDTERM();
+
+    */
+     	SEQUENCE=0;
     // 	enableInputInterrupt();
-		}
+//		}
 
 
 	case 0x500:
@@ -546,7 +549,57 @@ char Information[] =
 	case 'q': //read buffer
 	case 'Q':
 	    {
-	    	SEQUENCE=0x400;
+	    	//try 4 chunks with gaps
+	    	//no gap =15K bytes
+	    	//100ms gap= 18K bytes
+	    	//200ms gap = 28K bytes
+	    	//250ms gap = 29Kbytes
+	    	//300ms gap = all data.
+	    	//400ms gap = all data, gives some margin.
+	    	//500ms gap gives bigger margin, 1.5s added time.
+
+	    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
+	//    	us(100000);
+	    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
+	//    	us(100000);
+	    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
+	//    	us(100000);
+	    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
+	 //   	us(100000);
+	    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
+	//    	us(100000);
+	    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
+	//    	us(100000);
+	    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
+	//    	us(100000);
+	    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
+	    	us(1000000);
+	    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
+	//    	us(100000);
+	    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
+	//    	us(100000);
+	    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
+	//    	us(100000);
+	    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
+	 //   	us(100000);
+	    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
+	//    	us(100000);
+	    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
+	//    	us(100000);
+	    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
+	//    	us(100000);
+	    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
+	    	us(1000000);
+
+//	    	SENDBTNT(0x500,0x500); //ends with 4 off 00 bytes=integer 0
+//	    	us(1000000);
+//	    	SENDBTNT(0x800,0x200); //ends with 4 off 00 bytes=integer 0
+//	    	us(500000);
+//	    	SENDBTNT(0xc00,0x400); //ends with 4 off 00 bytes=integer 0
+//	    	us(1000000);
+//	    	SENDBTNT(0x1800,0x800); //ends with 4 off 00 bytes=integer 0
+
+	     	SENDTERM();
 	 	    	break;
 
 

@@ -21,9 +21,9 @@
 
 #if release==0
 
-#define BTtimeout 3000000
+#define BTtimeout 6000000
 #elif release==1
-#define BTtimeout 500000
+#define BTtimeout 600000
 #endif
 
 //Includes
@@ -108,6 +108,7 @@ EXTERNAL byte	inputChange(void);
 EXTERNAL void SystemOFF(void);
 EXTERNAL void BTbaudCPU100();
 EXTERNAL void BTbaudCPU12();
+EXTERNAL void PCLKSEL (void);
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -133,8 +134,9 @@ PUBLIC void CPU100MHz (void)
     while ((LPC_SC->SCS & (1<<6)) == 0);// Wait for Oscillator to be ready
 
   LPC_SC->CCLKCFG   = CCLKCFG_Val;      //3 Setup Clock Divider
-  LPC_SC->PCLKSEL0  = PCLKSEL0_Val;     //0 Peripheral Clock Selection
-  LPC_SC->PCLKSEL1  = PCLKSEL1_Val;		//0
+  PCLKSEL();
+//  LPC_SC->PCLKSEL0  = PCLKSEL0_Val;     //0 Peripheral Clock Selection
+//  LPC_SC->PCLKSEL1  = PCLKSEL1_Val;		//0
   LPC_SC->CLKSRCSEL = CLKSRCSEL_Val;    //1 Select Clock Source for PLL0
   LPC_SC->PLL0CFG   = PLL0CFG_Val;      //0x50063 configure PLL0
   LPC_SC->PLL0FEED  = 0xAA;
@@ -187,8 +189,9 @@ PUBLIC void CPU44MHz (void)
     while ((LPC_SC->SCS & (1<<6)) == 0);// Wait for Oscillator to be ready
 
   LPC_SC->CCLKCFG   = 7-1;      //6 Setup Clock Divider by 7
-  LPC_SC->PCLKSEL0  = PCLKSEL0_Val;     //0 Peripheral Clock Selection
-  LPC_SC->PCLKSEL1  = PCLKSEL1_Val;		//0
+  	  PCLKSEL();
+//  LPC_SC->PCLKSEL0  = PCLKSEL0_Val;     //0 Peripheral Clock Selection
+//  LPC_SC->PCLKSEL1  = PCLKSEL1_Val;		//0
   LPC_SC->CLKSRCSEL = CLKSRCSEL_Val;    //1 Select Clock Source for PLL0
   LPC_SC->PLL0CFG   = 128<<0|9<<16;      //*129| /10=12MHz*129/10=309.6MHz.
   LPC_SC->PLL0FEED  = 0xAA;
@@ -638,7 +641,7 @@ PUBLIC int powerDown(void)
 
 
 	//Power Down Mode wake up from EINT/GPIO Works but not on debug.
-	CPU4MHz();						//reduce power.
+	CPU4MHz();						//reduce power, turn off PLL0.
 
 	CPUSPEED=0;		//0 means asleep, 12=12MHz, 100=100MHz.
 //	NEATWR(2,0xA0);			//reset receiver

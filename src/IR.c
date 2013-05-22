@@ -61,6 +61,7 @@ EXTERNAL void receiveBTbuffer(int,int);
 //EXTERNAL word	inputTime(void);
 // PUBLIC functions
 
+PUBLIC void PCLKSEL (void);
 PUBLIC int captureIR(void);
 PUBLIC void playIR(void);
 PUBLIC void streamIR(int);
@@ -82,6 +83,8 @@ PUBLIC int captureIR(void) {
 
 	IRAddress = CaptureFirst;
 	LED1GREEN();
+
+//	PCLKSEL();
 	CPU100MHz();		//also disables ext interrupts.
 #if release==1
 	LPC_WDT->WDTC = 40000000;	//set timeout 40s watchdog timer
@@ -322,6 +325,8 @@ int a;
 //	LED2GREEN();
 	if (Buffer[2] != 0) {
 		LED1GREEN();
+
+//		PCLKSEL();
 		CPU100MHz();	//CPU100MHz disables interrupts except TIMER 0 and TIMER 1
 #if release==1
 		LPC_WDT->WDTC = 40000000;	//set timeout 40s watchdog timer
@@ -665,7 +670,7 @@ PRIVATE void compress(void) {
 
 		case 0b1000: //HEADER
 		{
-			Period = (IRData >> 4) & 0xFFF; //SET Period maximum 4095 (40.95us) 30KHz-48KHz,455KHz,typical 38KHz(26.32us).
+			Period = (IRData >> 4) & 0xFFF; //SET Period maximum 4095 (40.95us, 24.42KHz) 30KHz-48KHz,455KHz,typical 38KHz(26.32us).
 			PulseWidth = (IRData >> 16) & 0x7FF;//SET Pulse Width from 50(0.5us) to 2047(20.47us)
 			SymbolBank = IRAddress; //new header has new symbol bank.
 			IRAddress = IRAddress + 1 + (IRData & 0xF); //next address, skip any symbol bank.
@@ -737,6 +742,30 @@ void TIMER0_IRQHandler(void) {
 	LPC_TIM0->IR = (1 << 4); //reset TIMER0.CR0 interrupt (enable next interrupt.)
 }
 
+
+void PCLKSEL (void)
+{
+	//capture
+	LPC_SC->PCLKSEL0 =0;
+	LPC_SC->PCLKSEL0 =((1 << 2)|(1<<4)|3<< 8);	//TIMER0, TIMER1, 115.2KBAUD
+	LPC_SC->PCLKSEL1 =0;
+	LPC_SC->PCLKSEL1 |= 1 << 10;	// SSP0
+
+
+//	LPC_SC->PCLKSEL0 &= ~((3 << 2)|(3<<4)); //CLEAR PREDIVIDE bits.
+//	LPC_SC->PCLKSEL0 |= ((1 << 2)|(1<<4)); //TIMER0 PREDIVIDE =1 (system clock)|TIMER1 PREDIVIDE =1 (system clock)
+	//replay audio
+//	LPC_SC->PCLKSEL0 &= ~((3 << 2)|(3<<4)); //CLEAR PREDIVIDE bits.
+//	LPC_SC->PCLKSEL0 |= ((1 << 2)|(1<<4)); //TIMER0 PREDIVIDE =1 (system clock)|TIMER1 PREDIVIDE =1 (system clock)
+	//audio I2S
+//	LPC_SC->PCLKSEL1 |= 0<<22;
+	//I2C	(battery monitor
+//	LPC_SC->PCLKSEL1 |= 0<<6;					//PCLK_I2C(bit 6,7)=CCLK/4=100MHz/4. Not reliable if /1.
+	//SSP
+//	LPC_SC->PCLKSEL1 |= 1 << 10; //100MHz/2= 50MHz. SSP0 clock (CCLK/4 by RESET)
+	//UART
+//	LPC_SC->PCLKSEL0 |=  3<< 8; 					//BAUD 3=115, 0=230, 2=460, 1=921. 1=/1, 0=/4, 2=/2, 3=/8
+}
 /////////////////////////////////////////////////////////////////////////////////////////////////
 ///@brief Initialise for IR capture.
 ///@param void
