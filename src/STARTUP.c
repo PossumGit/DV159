@@ -297,11 +297,16 @@ ResetISR(void) {
 
 	LPC_GPIO_IROUT FIOCLR = IROUT; 		//clear IR output (IR off).
 	LPC_GPIO_IROUT FIODIR |= IROUT; 	//IR defined as an output.
+
+
+	LPC_GPIO_BTRESET FIOSET = BTRESET;		//reset=high=run.
 	LPC_GPIO_BTRESET FIODIR |= BTRESET;	//
 
 	 if(0x1&LPC_SC->RSID)
-		{STATE='P';								//Power up.
-	LPC_GPIO_BTRESET FIOCLR = BTRESET;
+		{STATE='P';	//Power up.
+#if release==1
+	LPC_GPIO_BTRESET FIOCLR = BTRESET;		//on release, clear reset for reset pulse.
+#endif
 		}
 	else if(0x2&LPC_SC->RSID) STATE='I';		//RESET	BUTTON or external voltage monitor reset.
 	else if(0x4&LPC_SC->RSID) STATE='J';		//WATCHDOG reset

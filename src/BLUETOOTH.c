@@ -558,38 +558,42 @@ char Information[] =
 	    	//400ms gap = all data, gives some margin.
 	    	//500ms gap gives bigger margin, 1.5s added time.
 
-	    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
+	    	int x;
+
+	    	SENDBTNT(0,0x2000); //ends with 4 off 00 bytes=integer 0
+
+
 	//    	us(100000);
-	    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
+	//    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
 	//    	us(100000);
-	    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
+	//    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
 	//    	us(100000);
-	    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
+	//    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
 	 //   	us(100000);
-	    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
+	//    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
 	//    	us(100000);
-	    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
+	//    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
 	//    	us(100000);
-	    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
+	//    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
 	//    	us(100000);
-	    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
-	    	us(1000000);
-	    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
+	//    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
+	//    	us(1000000);
+	//    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
 	//    	us(100000);
-	    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
+	 //   	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
 	//    	us(100000);
-	    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
+	 //   	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
 	//    	us(100000);
-	    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
+	 //   	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
 	 //   	us(100000);
-	    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
+	 //   	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
 	//    	us(100000);
-	    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
+	 //   	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
 	//    	us(100000);
-	    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
+	//    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
 	//    	us(100000);
-	    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
-	    	us(1000000);
+	//    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
+	//    	us(1000000);
 
 //	    	SENDBTNT(0x500,0x500); //ends with 4 off 00 bytes=integer 0
 //	    	us(1000000);
@@ -973,7 +977,7 @@ void SENDBTNT(int start,int length)
     int end;
 
 #if release==1
-		LPC_WDT->WDTC = 20000000;	//set timeout 40s watchdog timer
+		LPC_WDT->WDTC = 80000000;	//set timeout 40s watchdog timer
 		LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
 		LPC_WDT->WDFEED=0x55;			//watchdog feed
 #endif
