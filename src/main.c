@@ -426,7 +426,7 @@ PRIVATE void powerupHEX(void) {
 			us(2000000);
 
 					{
-		 IRsynthesis('P',3,0x2);		//Plessey  2 repeats, code 3 for HC603c
+		 IRsynthesis('P',4,0x2);		//Plessey  2 repeats, code 3 for HC603c
 			playIR();
 
 						}
@@ -483,7 +483,7 @@ PRIVATE void powerupHEX(void) {
 		LED2OFF();
 		for(;;);
 		break;
-	/*case 0x0A:
+	case 0x0A:
 
 		CPU4MHz();
 		us(100000);
@@ -505,8 +505,9 @@ PRIVATE void powerupHEX(void) {
 		 if(0x0A!=HEX())break;
 		}
 
-		break;*/
-	case 0x0A:				//Enable USB programming.
+		break;
+
+/*			case 0x0A:				//Enable USB programming.
 
 
 		CPU12MHz();
@@ -542,7 +543,7 @@ PRIVATE void powerupHEX(void) {
 			Buffer[i++]		=0x00010000+16*k;
 			Buffer[i++]		=0x00010000+17*k;
 
-*/
+
 
 			Buffer[i++]		=0x0;
 
@@ -555,7 +556,7 @@ PRIVATE void powerupHEX(void) {
 
 
 		break;
-
+*/
 	case 0x0C: 				//DEBUG recover clock
 		LPC_GPIO1-> FIODIR |= IRON; 		//output
 		LPC_GPIO1-> FIOSET |=IRON	;

@@ -24,7 +24,9 @@
 #define baud 11	//92/46/23/11/  96 not implemented yet, copy of 115.2
 
 
-#define Version 0x20455F32	//	"2_A " little endian.
+#define Version 0x20465F32	//	"2_A " little endian.
+
+//#define Version 0x20435858	//	"0_0 " little endian.
 extern int	PCBiss;		//calculated PCB issue (main.c)
 //0 means debug, 1 means release.
 //note issue 2 is now obsolete and no boards are now in use.
