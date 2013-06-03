@@ -133,6 +133,8 @@ char Information[] =
     {
     		"STOP"
     };
+
+
 //if (PCBiss==4)
  //   {
 //	strcpy(I,"QWAYO firmware xxx, PCB x. Copyright Possum 2012-13. \0\0\0\0");//strcpy copies to first \0 only.
@@ -163,6 +165,7 @@ char Information[] =
 	{
 	BluetoothData = rx[rxstart];
 	BTACC=1;
+	LPC_TIM2->TC = 0;
 	rxstart=(rxstart+1)%rxlen;	//mod does  work.
 //	rxstart=(rxstart++)%rxlen;	//mod does not work.
 

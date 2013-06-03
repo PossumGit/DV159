@@ -422,7 +422,7 @@ PRIVATE void powerupHEX(void) {
 		while (1)
 		{
 
-
+//			cpu4MHz();
 			us(2000000);
 
 					{
