@@ -236,10 +236,7 @@ char Information[] =
 
 	case 0x200:
 	{
-	//	NEATWR(0x1F,0x00);
-	//	NEATWR(0x1F,a);			//alarm time into 0x1D and 0x1F on NEAT module.
-	//	NEATWR(0x1f,00);
-	//	NEATWR(0x1D,a);			//alarm time into 0x1D and 0x1F.
+
 		ALARMtime=BluetoothData;
 		SEQUENCE=0x0;
 		sendBT(ACK, sizeof(ACK));
@@ -1230,7 +1227,7 @@ PUBLIC void BTWAKE(void)
 	byte WAKE[] = { 'W' };
 
 	if (SWBT) {
-	SWBT=0;
+//	SWBT=0;
 	sendBT(WAKE, sizeof(WAKE));
 
 }

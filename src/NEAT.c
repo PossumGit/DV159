@@ -109,7 +109,7 @@ PUBLIC int readNEAT(void)
 
 //	if ((SWNEAT==1)||((LPC_GPIO_NEATINT FIOPIN) &(NEATINT))==0)
 				{
-				SWNEAT=0;
+	//			SWNEAT=0;
 
 				NEAT[2]=NEATRD(0x61);
 				NEAT[1]=NEATRD(0x60);

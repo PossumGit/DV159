@@ -376,8 +376,7 @@ void EINT3_IRQHandler(void)				//GPIO interrupt.
 {
 //interrupts on input change state and bluetooth character.
 	byte a=1;
-	byte charge;
-	int s,t,u,v,w;
+	int s,t,u,v;
 	//int b,c,d,e,f,g,h,i,j,k;
 
 
@@ -444,6 +443,8 @@ if (PCBiss==3||PCBiss==4)
 		BTACC=0;		//any input press clears BTACC
 		if (debounce==0)
 		{
+			LPC_GPIOINT->IO0IntEnR&=~(0x1<<16);			//disable Bluetooth rising interrupt
+			LPC_GPIOINT->IO0IntStatR&(0x1<<16);			//clear any pending BT interrupt.
 			CPU12MHz();
 			repeatInput(); //check if change of input, send via BT to android if change.
 			LPC_TIM2->TC = 0;
@@ -458,7 +459,7 @@ if (PCBiss==3||PCBiss==4)
 
 		}
 
-	if (SWBT)
+	else if (SWBT)
 	{
 		BTACC=1;					//any bluetooth sets BTACC.
 		if (CPUSPEED==0)		//has been asleep
@@ -466,9 +467,11 @@ if (PCBiss==3||PCBiss==4)
 
 			CPU12MHz();
 			us(1000);					//wait until character has been received.
-			BTWAKE();				//if BT wakeup, respond with W.
-		}
+			byte WAKE[] = { 'W' };
+			sendBT(WAKE, sizeof(WAKE));
 			LPC_TIM2->TC = 0;
+		}
+
 	}
 		if (SWNEAT)
 	{
@@ -643,18 +646,25 @@ PUBLIC int powerDown(void)
 	//Power Down Mode wake up from EINT/GPIO Works but not on debug.
 	CPU4MHz();						//reduce power, turn off PLL0.
 
-	CPUSPEED=0;		//0 means asleep, 12=12MHz, 100=100MHz.
+
 //	NEATWR(2,0xA0);			//reset receiver
-	LPC_GPIOINT->IO0IntEnR|=0x1<<16;			//Bluetooth rising interrupt
+//	LPC_GPIOINT->IO0IntEnR|=0x1<<16;			//Enable Bluetooth rising interrupt
 	LPC_SC->PCONP=1<<15;		//only GPIO needed during power down.
 
+	LPC_GPIOINT->IO0IntClr=(0x1<<16);			//clear any BT interrupts
+	NVIC->ICPR[0]=0x1<<21;							//clear pending GPIO interrupt
+	enableInputInterrupt();
+
+	LPC_GPIOINT->IO0IntEnR|=0x1<<16;			//Enable Bluetooth rising interrupt
+
+	 LED2OFF();
+	CPUSPEED=0;		//0 means asleep, 12=12MHz, 100=100MHz.
 	 //Power down mode.
 #if release==1
 		SCB->SCR = 0x4;			//sleepdeep bit
 		LPC_SC->PCON = 0x01;	//combined with sleepdeep bit gives power down mode. IRC is disabled, so WDT disabled.
 
-		enableInputInterrupt();
-		 LED2OFF();
+
 	__WFI(); //go to power down.
 
 
@@ -664,9 +674,6 @@ PUBLIC int powerDown(void)
 	    //Power down mode.
 		SCB->SCR = 0x0;
 		LPC_SC->PCON = 0x00;
-
-		enableInputInterrupt();
-		 LED2OFF();
 	//__WFI(); //go to power down.
 		 while(1)
 		 {
@@ -688,6 +695,14 @@ PUBLIC int powerDown(void)
 #if release==1
 	LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
 	LPC_WDT->WDFEED=0x55;			//watchdog feed
+	 SW1=0;
+	 SW2=0;
+	 SW3=0;
+	 SWF1=0;
+	 SWF2=0;
+	 SWF3=0;
+	 SWBT=0;
+	 SWNEAT=0;
 #endif
 
 //	ACSTATE();

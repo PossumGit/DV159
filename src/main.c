@@ -368,8 +368,8 @@ PRIVATE void powerupHEX(void) {
 
 		}
 		break;
-	case 05:				//TEST 12MHz LED flash
-		 LPC_SC->PCONP     = Peripherals ;       // Enable Power for Peripherals      */
+/*	case 05:				//TEST 12MHz LED flash
+		 LPC_SC->PCONP     = Peripherals ;       // Enable Power for Peripherals
 			CPU12MHz();
 			LED2OFF();
 		while(1)
@@ -415,6 +415,7 @@ PRIVATE void powerupHEX(void) {
 
 			}
 		break;
+*/
 	case 07:				//test IR synthesis Transmit code Plessey 3 every 5 seconds.
 		CPU12MHz();
 		us(100000);
@@ -422,11 +423,11 @@ PRIVATE void powerupHEX(void) {
 		while (1)
 		{
 
-//			cpu4MHz();
-			us(2000000);
+//			CPU4MHz();
+			us(705096);
 
 					{
-		 IRsynthesis('P',4,0x2);		//Plessey  2 repeats, code 3 for HC603c
+		 IRsynthesis('P',4,0x2);		//Plessey  4 repeats, code 3 for HC603c
 			playIR();
 
 						}
@@ -436,7 +437,7 @@ PRIVATE void powerupHEX(void) {
 		}
 		break;
 
-
+/*
 	case 0x08:				//TEST turn off after 2 seconds.
 		LED2OFF();
 		CPU12MHz();
@@ -483,6 +484,7 @@ PRIVATE void powerupHEX(void) {
 		LED2OFF();
 		for(;;);
 		break;
+		*/
 	case 0x0A:
 
 		CPU4MHz();
@@ -801,7 +803,7 @@ PRIVATE void powerupHEX(void) {
 				}
 
 			break;
-
+/*
 	case	0x20:
 
 		Charge=0x7900;
@@ -809,7 +811,7 @@ PRIVATE void powerupHEX(void) {
 		while(1);
 
 		break;
-
+*/
 
 
 
