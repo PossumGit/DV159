@@ -842,7 +842,7 @@ PRIVATE void endPlayIR(void) {
 	//us(1000);
 	word a;
 	a=LPC_TIM1->TC;
-	if((IRTimeMatch+PulseWidth-a)>100000000)us(1000000);
+	if((IRTimeMatch+PulseWidth-a)>100000000)us(10000);
 	else
 	{
 		while(IRTimeMatch+PulseWidth>LPC_TIM1->TC);	//wait for any post space added.
