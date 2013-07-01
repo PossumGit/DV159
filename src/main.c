@@ -274,7 +274,7 @@ PRIVATE void powerupHEX(void) {
 		for (i=0;i<10;i++)
 		{
 			LPC_TIM2->TC=0;
-			time=5000000;			//
+			time=3000000;			//
 			h=i+(j<<4)+(k<<8)+(l<<12);
 
 
@@ -300,30 +300,36 @@ PRIVATE void powerupHEX(void) {
 
 
 			NEATRESET();
-			enableInputInterrupt();
+	//		enableInputInterrupt();
+			LED1OFF();
 			while(1)
 			{
-			LED1OFF();
-			CPU4MHz();						//reduce power.
 
-		#if release==1
-				SCB->SCR = 0x4;			//sleepdeep bit
-				LPC_SC->PCON = 0x01;	//combined with sleepdeep bit gives power down mode. IRC is disabled, so WDT disabled.
-		#endif
 
-		#if release==1
-			__WFI(); //go to power down.
-		#endif
 
-			if(SWNEAT)		//if wakeup with NEAT
+//		#if release==1
+//				SCB->SCR = 0x4;			//sleepdeep bit
+//				LPC_SC->PCON = 0x01;	//combined with sleepdeep bit gives power down mode. IRC is disabled, so WDT disabled.
+//		#endif
+
+//		#if release==1
+//			__WFI(); //go to power down.
+//		#endif
+
+
+
+			if(!(NEATINT & LPC_GPIO_NEATINT  FIOPIN))		//NEAT INT is low, read neat.  GPIO in.
 			{
+				LED1YELLOW();
+				CPU12MHz();
 
-			LED1YELLOW();
-			SWNEAT=0;
+
+
+	//		SWNEAT=0;
 	//		CPU12MHz();
 			NEATWR(2,0xA0);			//reset read
-
-			us(500000);
+			CPU4MHz();						//reduce power.
+			us(700000);
 			LED1OFF();
 			}
 
@@ -765,37 +771,44 @@ PRIVATE void powerupHEX(void) {
 	case 0x11:
 		LPC_GPIO_BTRESET FIOCLR	= BTRESET;	//Bluetooth reset.	RESET BT
 
+		//	CPU12MHz();
 			LED1GREEN();
-			us(1000000);
+		//	us(1000000);
 			LED2OFF();
 
 
 
 				NEATRESET();
-				enableInputInterrupt();
+		//		enableInputInterrupt();
+				LED1OFF();
 				while(1)
 				{
-				LED1OFF();
-				CPU4MHz();						//reduce power.
 
-			#if release==1
-					SCB->SCR = 0x4;			//sleepdeep bit
-					LPC_SC->PCON = 0x01;	//combined with sleepdeep bit gives power down mode. IRC is disabled, so WDT disabled.
-			#endif
 
-			#if release==1
-				__WFI(); //go to power down.
-			#endif
 
-				if(SWNEAT)		//if wakeup with NEAT
+	//		#if release==1
+	//				SCB->SCR = 0x4;			//sleepdeep bit
+	//				LPC_SC->PCON = 0x01;	//combined with sleepdeep bit gives power down mode. IRC is disabled, so WDT disabled.
+	//		#endif
+
+	//		#if release==1
+	//			__WFI(); //go to power down.
+	//		#endif
+
+
+
+				if(!(NEATINT & LPC_GPIO_NEATINT  FIOPIN))		//NEAT INT is low, read neat.  GPIO in.
 				{
+					LED1YELLOW();
+					CPU12MHz();
 
-				LED1YELLOW();
-				SWNEAT=0;
+
+
+		//		SWNEAT=0;
 		//		CPU12MHz();
 				NEATWR(2,0xA0);			//reset read
-
-				us(500000);
+				CPU4MHz();						//reduce power.
+				us(700000);
 				LED1OFF();
 				}
 
@@ -803,6 +816,7 @@ PRIVATE void powerupHEX(void) {
 				}
 
 			break;
+
 /*
 	case	0x20:
 

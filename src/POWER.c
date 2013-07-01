@@ -479,7 +479,7 @@ if (PCBiss==3||PCBiss==4)
 			readNEAT();
 			LPC_TIM2->TC = 0;
 	}
-		if(!(NEATINT && LPC_GPIO_NEATINT  FIOPIN))		//NEAT INT is low, read neat.  GPIO in.
+		if(!(NEATINT & LPC_GPIO_NEATINT  FIOPIN))		//NEAT INT is low, read neat.  GPIO in.
 		{
 			CPU12MHz();
 			NEATRESET();

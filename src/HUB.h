@@ -23,7 +23,7 @@
 #define baud 11	//92/46/23/11/  96 not implemented yet, copy of 115.2
 
 
-#define Version 0x204B5F32	//	"2_A " little endian.
+#define Version 0x204C5F32	//	"2_A " little endian.
 
 //#define Version 0x20435858	//	"0_0 " little endian.
 
