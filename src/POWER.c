@@ -60,6 +60,8 @@ static int t=0;
 
 //External variables
 
+EXTERNAL int HELDtime;
+EXTERNAL int RELEASEtime;
 EXTERNAL int txstart;
 EXTERNAL int txend;
 EXTERNAL int rxstart;
@@ -82,6 +84,7 @@ PUBLIC void enableInputInterrupt(void);
 PUBLIC int powerDown(void);
 PUBLIC void BatteryState();
 //External functions
+EXTERNAL int inputCheck(void);
 EXTERNAL byte I2CSlaveBuffer[];
 EXTERNAL void timer2CPU4(void);
 EXTERNAL void readNEAT(void);
@@ -438,16 +441,19 @@ if (PCBiss==3||PCBiss==4)
 	}
 // NOTE flags are set up on every interrupt, so always indicate last interrupt cause.
 //	No need to separately reset flags.
-	else if (SW1|SW2|SW3|SWF1|SWF2|SWF3)
+	else if (SW1|SW2|SW3)
 		{
 		BTACC=0;		//any input press clears BTACC
+		LPC_TIM3->TC = 0;
 		if (debounce==0)
 		{
 			LPC_GPIOINT->IO0IntEnR&=~(0x1<<16);			//disable Bluetooth rising interrupt
 			LPC_GPIOINT->IO0IntStatR&(0x1<<16);			//clear any pending BT interrupt.
 			CPU12MHz();
-			repeatInput(); //check if change of input, send via BT to android if change.
 			LPC_TIM2->TC = 0;
+			LPC_TIM3->TC = 0;
+			if((HELDtime==0))	repeatInput(); //check if change of input, send via BT to android if change.
+			//if HELDtime==0 then no held delay, else only see rising edge if time > heldtime.
 			PENDALARM=0x30^(inputChange()&0x30);	//NZ if EXT and/or INT pressed.//else 0.
 			debounce=1;
 
@@ -458,6 +464,28 @@ if (PCBiss==3||PCBiss==4)
 		}
 
 		}
+
+	else if(SWF1|SWF2|SWF3)
+	{
+		BTACC=0;		//any input press clears BTACC
+			if (debounce==0)
+			{
+
+				LPC_GPIOINT->IO0IntEnR&=~(0x1<<16);			//disable Bluetooth rising interrupt
+				LPC_GPIOINT->IO0IntStatR&(0x1<<16);			//clear any pending BT interrupt.
+				CPU12MHz();
+				if(HELDtime==0)	repeatInput(); //check if change of input, send via BT to android if change.
+				LPC_TIM2->TC = 0;
+				LPC_TIM3->TC = 0;
+				PENDALARM=0x30^(inputChange()&0x30);	//NZ if EXT and/or INT pressed.//else 0.
+				debounce=1;
+
+			}
+			else
+			{
+				debounce=debounce;
+			}
+	}
 
 	else if (SWBT)
 	{
@@ -475,9 +503,13 @@ if (PCBiss==3||PCBiss==4)
 	}
 		if (SWNEAT)
 	{
+
+#if NEATRX==1
+
 			CPU12MHz();
 			readNEAT();
 			LPC_TIM2->TC = 0;
+#endif
 	}
 		if(!(NEATINT & LPC_GPIO_NEATINT  FIOPIN))		//NEAT INT is low, read neat.  GPIO in.
 		{
@@ -575,13 +607,22 @@ PUBLIC int powerDown(void)
 	s=LPC_TIM2->TC;
 
 ////////////////////////////////
-	///debounce
-	if((debounce==1)&&(20000 < LPC_TIM2->TC))
+	///debounce or if Tim3 >xxx HELDtime =0-255
+	if((HELDtime==0)&&(debounce==1)&&(20000 < LPC_TIM2->TC))
 	{
 		debounce=0;
 		repeatInput(); //check if change of input, send via BT to android if change.
 		PENDALARM=0x30^(inputChange()&0x30);	//NZ if EXT and/or INT pressed.//else 0.
 	}
+	else if (HELDtime>0)
+	{
+
+		inputCheck();
+		debounce=0;
+//		repeatInput(); //check if change of input, send via BT to android if change.
+		PENDALARM=0x30^(inputChange()&0x30);	//NZ if EXT and/or INT pressed.//else 0.
+		}
+
 
 //////////////////
 	///watchdog

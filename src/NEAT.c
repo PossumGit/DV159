@@ -238,7 +238,7 @@ void NEATALARM()
 
 
 	NEATWR(0x08,00);		//number of short preamble packages sent
-	NEATWR(0x09,8);		//number of long preamble packages sent.
+	NEATWR(0x09,NEATBUTTONREPEATS);		//number of long preamble packages sent.
 	NEATWR(0x42,0x01);		//select 10,11 as address
 	NEATWR(0x03,0x80);		//transmit code.
 
@@ -348,7 +348,7 @@ void NEATTX(byte battery, byte alarm, word ID)
 
 		NEATWR(0x08,00);		//number of short preamble packages sent
 
-		NEATWR(0x09,3);		//number of long preamble packages sent.	NORMAL
+		NEATWR(0x09,NEATREPEATS);		//number of long preamble packages sent.	NORMAL
 
 //		NEATWR(0x09,8);		//number of long preamble packages sent. LONG
 		NEATWR(0x45,alarm);		//alarm type

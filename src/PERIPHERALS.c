@@ -13,11 +13,17 @@
 PUBLIC char STATE='P';
 PUBLIC word LastInputTime=1;
 //PUBLIC volatile word LastInputTime=0;
-PRIVATE  volatile byte InputState=0;
+PUBLIC volatile byte InputState=0;
+PUBLIC  volatile byte LastInputState=0;
+PUBLIC volatile byte lastInputSent=0;
+
+
 //Private variables
 
 //External variables
 EXTERNAL int	PCBiss;		//=3 for PCHB issue 3, =4 for PCB issue 4.
+EXTERNAL int HELDtime;
+EXTERNAL int RELEASEtime;
 //Private functions
 PRIVATE void WDT_IRQHandler(void);
 
@@ -29,7 +35,7 @@ EXTERNAL void sendBT(byte in[] , unsigned int);
 
 PUBLIC int repeatInput(void);
 PUBLIC byte	inputChange(void);
-
+PUBLIC int	inputCheck(void);
 PUBLIC void	LED1GREEN(void);
 PUBLIC void	LED1YELLOW(void);
 PUBLIC void	LED1OFF(void);
@@ -231,28 +237,62 @@ if (PCBiss==3||PCBiss==4)
 	LPC_GPIO2->FIODIR&=~(1<<11);			//internal
 	LPC_GPIO0->FIODIR&=~(1<<21);			//external tip
 	LPC_GPIO2->FIODIR&=~(1<<12);			//external mid
-	a=(LPC_GPIO2->FIOPIN &(1<<11))>>6;	//bit 5	//bit 0=>>11;		//INTERNAL
-	b=(~LPC_GPIO0->FIOPIN &(1<<21))>>17; 	//bit 4	//bit 1=>>0;		//EXTERNAL
-	c=(~LPC_GPIO2->FIOPIN &(1<<12))>>12;	//bit 0	//bit 2=>>11;		//EXTERNAL MID/connected
-}
-else if (PCBiss==2)
-{
-	LPC_GPIO2->FIODIR&=~(1<<11);
-	LPC_GPIO0->FIODIR&=~(1<<1);
-	LPC_GPIO2->FIODIR&=~(1<<13);
-	a=(LPC_GPIO2->FIOPIN &(1<<11))>>6;	//bit 5	//bit 0=>>11;		//INTERNAL
-	b=(~LPC_GPIO0->FIOPIN &(1<<1))<<3; 	//bit 4	//bit 1=>>0;		//EXTERNAL
-	c=(~LPC_GPIO2->FIOPIN &(1<<13))>>13;	//bit 0	//bit 2=>>11;		//EXTERNAL MID/connected
+	a=(LPC_GPIO2->FIOPIN &(1<<11))>>6;	//bit 6	//bit 0=>>11;		//INTERNAL
+	b=(~LPC_GPIO0->FIOPIN &(1<<21))>>17; 	//bit 5	//bit 1=>>0;		//EXTERNAL
+	c=(~LPC_GPIO2->FIOPIN &(1<<12))>>12;	//bit 4	//bit 2=>>11;		//EXTERNAL MID/connected
 }
 
-	d=a|b|c|0xe;						//0xe sets bits 1,2,3 for TECLA spec.
+
+d=a|b|c|0xe;						//0xe sets bits 1,2,3 for TECLA spec.
 	if (d!=InputState){
+		LastInputState=InputState;
 		InputState=d;
 		LastInputTime=LPC_TIM2->TC;			//store time of last change of input
+
 		return 0x80|d;						//bit 7 set indicates change.
 	}
 	else return d;
 }
+
+
+///////////////////////////////////////////////////////////////////
+//
+//
+//
+PUBLIC int	inputCheck(void)
+{
+
+	byte	a,b,c,d;
+	 byte in[] = { 'I', ' ' };
+
+
+
+
+	if (InputState<lastInputSent){//switch has been pressed.
+
+		if (HELDtime<LPC_TIM3->TC){		//send state
+			in[1] = InputState|0x0F;
+			in[0] = STATE;
+			lastInputSent=InputState;
+			sendBT(in, sizeof(in));
+
+		}
+		return 1;
+	}
+	else if(InputState>lastInputSent)//switch has been released.
+	{
+
+		if (RELEASEtime<LPC_TIM3->TC)		//send state
+			in[1] = InputState|0x0F;
+			in[0] = STATE;
+			lastInputSent=InputState;
+			sendBT(in, sizeof(in));
+
+		return 1;
+	}
+	else return 0;			// no change.
+}
+
 
 
 
@@ -363,9 +403,9 @@ PUBLIC void	us(unsigned int time_us)
 
 //change to use TIMER2, always clocks at 1MHz
 
-	LPC_TIM3->TC=0;
-	time_us=time_us+LPC_TIM3->TC;
-	while (time_us>LPC_TIM3->TC);
+
+	time_us=time_us+LPC_TIM2->TC;
+	while (time_us>LPC_TIM2->TC);
 
 }
 

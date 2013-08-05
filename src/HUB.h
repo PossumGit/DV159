@@ -18,14 +18,20 @@
 //
 //
 #define PCBissue 4		//pcb issue, options 3, 4
-#define release	1
+#define release	1		//1=released, 0 = debug (disable watchdogs mainly)
+#define NEATRX 0		//1=enable NEAT RX, 0=disable NEAT RX
+#define NEATREPEATS 8		//NEAT repeats, 3 or 8.
+#define NEATBUTTONREPEATS 8	//NEAT repeats when button is pressed with no ACK.
 
 #define baud 11	//92/46/23/11/  96 not implemented yet, copy of 115.2
 
+#if NEATRX==1
+#define Version 0x204D5F32	//	"2_L " little endian.
+#elif NEATRX==0
+#define Version 0x204D7E32	//	"2~L " little endian.
+#endif
 
-#define Version 0x204C5F32	//	"2_A " little endian.
 
-//#define Version 0x20435858	//	"0_0 " little endian.
 
 
 extern int	PCBiss;		//calculated PCB issue (main.c)

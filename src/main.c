@@ -19,7 +19,7 @@
 //Public variables
 //PUBLIC__CRP const unsigned int CRP_WORD = CRP_NO_CRP;///< code protection word
 PUBLIC int	PCBiss;		//=3 for PCHB issue 3, =4 for PCB issue 4.
-PUBLIC int ALARMtime=30;//=3s
+PUBLIC int ALARMtime=100;//30=3s
 
 //Private variables local to this file
 
@@ -27,6 +27,8 @@ PRIVATE unsigned *p;	//0 if loaded at 0, 0x10000 if loaded over USB.
 
 
 //External variables
+EXTERNAL volatile byte InputState;
+EXTERNAL  volatile byte LastInputState;
 EXTERNAL volatile int Buffer[]; ///< Whole of RAM2 is Buffer, reused for NEAT, Bluetooth, audio and IR replay and capture
 EXTERNAL int FlashAddress; ///<This address needs to be set before flash read and flash write.
 EXTERNAL volatile word SW1;
@@ -925,6 +927,9 @@ PRIVATE void powerupHEX(void) {
 
 	//	BTACC=0;
 //		LED2OFF();
+		inputChange();
+		inputChange();
+		LastInputState=InputState;
 		NEATSIM();
 		LOOP();			//never exits this loop.
 		break;

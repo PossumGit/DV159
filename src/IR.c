@@ -321,7 +321,10 @@ int a;
 PUBLIC void playIR(void) {
 
 int a;
-
+for (a=0;a<8;a++)
+{
+COUNT[a]=0;
+}
 //	LED2GREEN();
 	if (Buffer[2] != 0) {
 		LED1GREEN();
@@ -346,12 +349,16 @@ int a;
 			}
 	//		if(0x24000000<LPC_TIM1->TC)break;//break if time>$000
 			if (1 & LPC_UART1->LSR) //if character comes in from bluetooth, read char and abort if its not an A.
-			if('A'!=LPC_UART1->RBR)	break;
+			if('A'!=LPC_UART1->RBR)
+				{
+				break;
+				}
 			repeatInput();	//change of input?
 			txBT();		//send any available data from change of input to BT.
 		}
 		LED1OFF();
 
+		repeatInput();	//change of input?
 
 		endPlayIR();
 
@@ -484,6 +491,8 @@ PRIVATE void compress(void) {
 			}
 			break;
 		}
+
+
 		case 0b1011://REPEAT
 		{
 			a = (IRData >> 25) & 0x7;
@@ -840,12 +849,13 @@ PRIVATE void startPlayIR(void) {
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PRIVATE void endPlayIR(void) {
 	//us(1000);
-	word a;
-	a=LPC_TIM1->TC;
-	if((IRTimeMatch+PulseWidth-a)>100000000)us(10000);
+	word NEXTIRMATCH;
+
+	NEXTIRMATCH=IRTimeMatch+PulseWidth;
+	if((NEXTIRMATCH-LPC_TIM1->TC)>20000000)us(10000);
 	else
 	{
-		while(IRTimeMatch+PulseWidth>LPC_TIM1->TC);	//wait for any post space added.
+		while(NEXTIRMATCH>LPC_TIM1->TC);	//wait for any post space added.
 	}
 
 	LPC_PINCON->PINSEL3 &= ~(3 << 24); //set P1.28 as GPIO, so force to 0 as output set to 0.

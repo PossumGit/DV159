@@ -34,6 +34,8 @@ PUBLIC volatile unsigned int txend = 0;		// BT TX.
 PUBLIC int BTACC=0;
 PUBLIC	int BUFLEN=0;
 PUBLIC  int SEQUENCE=0;			//used in ProcessBT for NEAT and IR sequence.
+PUBLIC int HELDtime=0;
+PUBLIC int RELEASEtime=0;
 //External variables
 EXTERNAL volatile word Buffer[]; ///< Whole of RAM2 is Buffer, reused for audio and IR replay and capture
 EXTERNAL volatile byte I2CSlaveBuffer[];///<transfer DS2745 battery state, modified in interrupt.
@@ -238,10 +240,17 @@ char Information[] =
 	{
 
 		ALARMtime=BluetoothData;
-		SEQUENCE=0x0;
+		SEQUENCE=0x201;
+		break;
+	}
+	case 0x201:
+	{
+		HELDtime=20000*BluetoothData;
+		SEQUENCE=0;
 		sendBT(ACK, sizeof(ACK));
 		break;
 	}
+
 	case 0x300:
 	{
 		start=BluetoothData;
@@ -727,12 +736,12 @@ char Information[] =
 PRIVATE int waitBTRX(word us)
     {
     int p, r, s;
-    LPC_TIM3->TC=0;
-    p = LPC_TIM3->TC; //current value of timer 2 in us.
+ //   LPC_TIM3->TC=0;
+    p = LPC_TIM2->TC; //current value of timer 2 in us.
 
     while (1)
 	{
-	r = LPC_TIM3->TC;
+	r = LPC_TIM2->TC;
 	if (r - p > maxtime)
 	    maxtime = r - p;
 
