@@ -80,6 +80,25 @@ PUBLIC int streamcaptureIR(void);
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC int captureIR(void) {
 
+	int a;
+	for (a=0;a<8;a++)
+	{
+	COUNT[a]=0;
+	}
+		IRAddress = 0; ///< Count IR pulses during capture/replay
+		PulseWidth = 100; ///< 100 system clocks=1uS.
+		IRData = 1; ///< Used to communicate end from interrupt routines.
+		IRTimeMatch = 1;///< Last time set into match register.
+		Period = 2632; ///<38KHz default.
+		Mark = 0x10000; ///<Mark burst in IR compression processing. Initial is bigger than max mark.
+		Space = 0; ///<Space gap between bursts in IR compression.
+		SymbolBank = 0; ///<location of first symbol (skip) in SYMBOL BANK
+		SymbolWord = 0;	///< a word out of the symbol bank.
+		DataStep = 0; ///<used in compression timer1 ISR
+		Pulse = 1; ///<1=pulse, 0=no pulse.
+		Delay = 0;
+
+
 
 	IRAddress = CaptureFirst;
 	LED1GREEN();
@@ -142,7 +161,7 @@ if (PCBiss==3||PCBiss==4)
 
 
 
-
+/*
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -222,7 +241,7 @@ if (PCBiss==3||PCBiss==4)
 
 
 
-
+*/
 
 
 
@@ -325,6 +344,19 @@ for (a=0;a<8;a++)
 {
 COUNT[a]=0;
 }
+	IRAddress = 0; ///< Count IR pulses during capture/replay
+	PulseWidth = 100; ///< 100 system clocks=1uS.
+	IRData = 1; ///< Used to communicate end from interrupt routines.
+	IRTimeMatch = 1;///< Last time set into match register.
+	Period = 2632; ///<38KHz default.
+	Mark = 0x10000; ///<Mark burst in IR compression processing. Initial is bigger than max mark.
+	Space = 0; ///<Space gap between bursts in IR compression.
+	SymbolBank = 0; ///<location of first symbol (skip) in SYMBOL BANK
+	SymbolWord = 0;	///< a word out of the symbol bank.
+	DataStep = 0; ///<used in compression timer1 ISR
+	Pulse = 1; ///<1=pulse, 0=no pulse.
+	Delay = 0;
+
 //	LED2GREEN();
 	if (Buffer[2] != 0) {
 		LED1GREEN();

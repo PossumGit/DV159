@@ -13,9 +13,9 @@
 PUBLIC char STATE='P';
 PUBLIC word LastInputTime=1;
 //PUBLIC volatile word LastInputTime=0;
-PUBLIC volatile byte InputState=0;
-PUBLIC  volatile byte LastInputState=0;
-PUBLIC volatile byte lastInputSent=0;
+PUBLIC volatile byte InputState=0x3E;
+PUBLIC  volatile byte LastInputState=0x3E;
+PUBLIC volatile byte lastInputSent=0x3E;
 
 
 //Private variables
@@ -46,6 +46,7 @@ PUBLIC byte HEX(void);
 PUBLIC void	us(unsigned int);
 PUBLIC void timer2CPU4(void);
 PUBLIC void timer2CPU12(void);
+PUBLIC void timer2CPU44(void);
 PUBLIC void timer2CPU100(void);
 PUBLIC void EnableWDT10s(void);
 PUBLIC void EnableWDT2s(void);
@@ -262,11 +263,8 @@ d=a|b|c|0xe;						//0xe sets bits 1,2,3 for TECLA spec.
 PUBLIC int	inputCheck(void)
 {
 
-	byte	a,b,c,d;
+//	byte	a,b,c,d;
 	 byte in[] = { 'I', ' ' };
-
-
-
 
 	if (InputState<lastInputSent){//switch has been pressed.
 

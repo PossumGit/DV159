@@ -33,7 +33,7 @@ PRIVATE volatile byte I2CSlaveTempBuffer[32];
 PRIVATE volatile word I2CMasterState = I2CSTATE_IDLE;
 PRIVATE volatile word I2CSlaveState = I2CSTATE_IDLE;
 
-PRIVATE volatile byte I2CMasterBuffer[32];
+PRIVATE  byte I2CMasterBuffer[32];
 
 
 PRIVATE volatile word I2CReadLength;
@@ -65,7 +65,7 @@ PRIVATE void I2CGO(void);
 
 
 //External functions
-
+EXTERNAL void	us(unsigned int);
 //public functions
 PUBLIC void I2CINIT(void);
 PUBLIC void I2CREAD(void);
@@ -101,10 +101,10 @@ PUBLIC void I2CINIT(void)
 	LPC_GPIO2->FIODIR&=~1<<19;						//SDA1
 	LPC_GPIO2->FIOSET=1<<20;
 	LPC_GPIO2->FIOCLR=1<<19;						//SDA
-	Delay(10);										//10us+1.25us C overhead. at 4MHz
+	us(10);										//10us+1.25us C overhead. at 4MHz
 	LPC_GPIO2->FIOSET=1<<19;						//SDA	==STOP BIT.
 	LPC_PINCON->PINSEL1 |=(3<<6 |3<<8);			//I2C1 P0.19(SDA1), P0.20(SCL1)ENABLE I2C pin function.
-	Delay(10);									//10us+1.25us C overhead at 4MHz.
+	us(10);									//10us+1.25us C overhead at 4MHz.
 }
 
 

@@ -71,6 +71,8 @@ EXTERNAL int BTACC;
 EXTERNAL char STATE;
 EXTERNAL int	PCBiss;		//=3 for PCHB issue 3, =4 for PCB issue 4.
 EXTERNAL  int SEQUENCE;			//used in ProcessBT for NEAT and IR sequence.
+EXTERNAL byte I2CSlaveBuffer[];
+
 
 //Private functions
 PRIVATE void LEDFLASH(void);
@@ -85,10 +87,13 @@ PUBLIC int powerDown(void);
 PUBLIC void BatteryState();
 //External functions
 EXTERNAL int inputCheck(void);
-EXTERNAL byte I2CSlaveBuffer[];
+EXTERNAL void sendBT(byte a[] , unsigned int );
+EXTERNAL void	us(unsigned int);
 EXTERNAL void timer2CPU4(void);
 EXTERNAL void readNEAT(void);
+EXTERNAL byte HEX(void);
 EXTERNAL void NEATTX(byte, byte, word);
+EXTERNAL void NEATRESET(void);
 EXTERNAL int repeatInput(void);
 EXTERNAL void	LED1GREEN(void);
 EXTERNAL void	LED1YELLOW(void);
@@ -98,9 +103,11 @@ EXTERNAL void	LED2YELLOW(void);
 EXTERNAL void	LED2OFF(void);
 EXTERNAL void timer2CPU4(void);
 EXTERNAL void timer2CPU12(void);
+EXTERNAL void timer2CPU44(void);
 EXTERNAL void timer2CPU100(void);
 EXTERNAL void SSPNEATCPU4(void);
 EXTERNAL void SSPNEATCPU12(void);
+EXTERNAL void SSPNEATCPU44(void);
 EXTERNAL void SSPNEATCPU100(void);
 EXTERNAL void  DisableWDT(void);
 EXTERNAL void  EnableWDT10s(void);
@@ -110,6 +117,7 @@ EXTERNAL int I2CBATTERY(void);
 EXTERNAL byte	inputChange(void);
 EXTERNAL void SystemOFF(void);
 EXTERNAL void BTbaudCPU100();
+EXTERNAL void	BTbaudCPU44(void);
 EXTERNAL void BTbaudCPU12();
 EXTERNAL void PCLKSEL (void);
 
@@ -448,7 +456,6 @@ if (PCBiss==3||PCBiss==4)
 		if (debounce==0)
 		{
 			LPC_GPIOINT->IO0IntEnR&=~(0x1<<16);			//disable Bluetooth rising interrupt
-			LPC_GPIOINT->IO0IntStatR&(0x1<<16);			//clear any pending BT interrupt.
 			CPU12MHz();
 			LPC_TIM2->TC = 0;
 			LPC_TIM3->TC = 0;
@@ -472,7 +479,6 @@ if (PCBiss==3||PCBiss==4)
 			{
 
 				LPC_GPIOINT->IO0IntEnR&=~(0x1<<16);			//disable Bluetooth rising interrupt
-				LPC_GPIOINT->IO0IntStatR&(0x1<<16);			//clear any pending BT interrupt.
 				CPU12MHz();
 				if(HELDtime==0)	repeatInput(); //check if change of input, send via BT to android if change.
 				LPC_TIM2->TC = 0;
@@ -599,15 +605,14 @@ PUBLIC int powerDown(void)
 {
 
 	int r=0;		//return value
-	byte a;
-	int b,s;
-	int c,d,e,f,g,h,i,j,k,x;
+//	byte a;
+	int b,s,htime;
+//	int c,d,e,f,g,h,i,j,k,x;
 
 	//FEED watchdog.
 	s=LPC_TIM2->TC;
-
-////////////////////////////////
-	///debounce or if Tim3 >xxx HELDtime =0-255
+	htime=LPC_TIM3->TC;
+////////////////
 	if((HELDtime==0)&&(debounce==1)&&(20000 < LPC_TIM2->TC))
 	{
 		debounce=0;
@@ -636,7 +641,7 @@ PUBLIC int powerDown(void)
 	b=LPC_UART1->LSR;
 
 /////////////////////////
-	///correct occasional timer glitch
+	///correct occasional timer glitch, unknown cause
 	if  (  s -t > 10000 ) {
 		LPC_TIM2->TC= t;
 	}
@@ -664,6 +669,8 @@ PUBLIC int powerDown(void)
 	if(0x40==((LPC_UART1->LSR)&(0x41)))	//bit 1=0 RX FIFO empty, bit 6=1 TX FIFO empty.
 	if(rxstart==rxend)					//nothing waiting in bluetooth rx buffer
 	if(txstart==txend)					//nothing waiting in bluetooth tx buffer
+	if(HELDtime<htime)
+	if(RELEASEtime<htime)
 	if (((BTtimeout < LPC_TIM2->TC)&&(SEQUENCE!=0x400)&&BTACC)||(3000000 < LPC_TIM2->TC))
 	{
 //		s=LPC_TIM2->TC;

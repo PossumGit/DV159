@@ -38,12 +38,14 @@ PUBLIC int HELDtime=0;
 PUBLIC int RELEASEtime=0;
 //External variables
 EXTERNAL volatile word Buffer[]; ///< Whole of RAM2 is Buffer, reused for audio and IR replay and capture
-EXTERNAL volatile byte I2CSlaveBuffer[];///<transfer DS2745 battery state, modified in interrupt.
+EXTERNAL  byte I2CSlaveBuffer[];///<transfer DS2745 battery state, modified in interrupt.
 EXTERNAL volatile word SWBT;				///<Bluetooth interrupt flag, modified in interrupt
 //EXTERNAL volatile byte PENDALARM;			///<Emergency alarm flag, cancelled by Bluetooth input, modified in interrupt
 EXTERNAL int ALARMtime;
 EXTERNAL char STATE;
 EXTERNAL int	PCBiss;		//=3 for PCHB issue 3, =4 for PCB issue 4.
+EXTERNAL volatile byte InputState;
+EXTERNAL volatile byte lastInputSent;
 
 //local functions
 PRIVATE void sendBTbuffer(int,int);
@@ -74,16 +76,19 @@ EXTERNAL void streamIR(int);
 EXTERNAL void NEATTX(byte battery, byte alarm, word ID);
 EXTERNAL void IRsynthesis(byte IRtype, byte IRrep, int IRcode);
 EXTERNAL void LED1GREEN(void);
+EXTERNAL void LED2GREEN(void);
 EXTERNAL void LED1YELLOW(void);
+EXTERNAL void LED2YELLOW(void);
 EXTERNAL void LED1OFF(void);
+EXTERNAL void LED2OFF(void);
 EXTERNAL void I2CREAD(void);
 EXTERNAL int captureIR(void);
 EXTERNAL void playIR(void);
 EXTERNAL byte HEX(void);
 EXTERNAL void us(unsigned int time_us);
 EXTERNAL void CPU12MHz(void);
-EXTERNAL disableInputInterrupt(void);
-EXTERNAL enableInputInterrupt(void);
+EXTERNAL void disableInputInterrupt(void);
+EXTERNAL void enableInputInterrupt(void);
 
 EXTERNAL void BatteryState();
 
@@ -117,8 +122,8 @@ static  byte battery=0xFF;		//NEAT sequence used in ProcessBT.
 
 static byte IRtype,IRrep;		//IR sequence used in ProcessBT.
 static int IRcode;				//IR sequence used in ProcessBT.
-static char ReportBUFLEN[]="1234A";
-char Information[] =
+static byte ReportBUFLEN[]="1234A";
+byte Information[] =
 	{
 			"QWAYO firmware xxx, PCB x. Copyright Possum 2012-13. \0\0\0\0"
 	};
@@ -131,29 +136,20 @@ char Information[] =
 	{
 	'n'
 	};
-    byte STOP[]=
-    {
-    		"STOP"
-    };
+
 
 
 //if (PCBiss==4)
  //   {
-//	strcpy(I,"QWAYO firmware xxx, PCB x. Copyright Possum 2012-13. \0\0\0\0");//strcpy copies to first \0 only.
+
+
+
 	Information[15]=Version&0xFF;
 	Information[16]=(Version>>8)&0xFF;
 	Information[17]=(Version>>16)&0xFF;
-	Information[24]=0x30+PCBiss&0xFF;		//fails if PCBiss>9.
+	Information[24]=0x30+(PCBiss&0xFF);		//fails if PCBiss>9.
 
- //   }
- //   else if (PCBiss==3)
- //   {
-//    strcpy(I,"QWAYO firmware xxx, PCB x. Copyright Possum 2012-13. \0\0\0\0");
-//	I[15]=Version&0xFF;
-//	I[16]=(Version>>8)&0xFF;
-//	I[17]=(Version>>16)&0xFF;
-//	I[24]=0x30+PCBiss$0xFF;
-// 	}
+
 
 
 
@@ -238,18 +234,66 @@ char Information[] =
 
 	case 0x200:
 	{
-
+//byte 0
 		ALARMtime=BluetoothData;
 		SEQUENCE=0x201;
 		break;
 	}
 	case 0x201:
 	{
+//byte 1
 		HELDtime=20000*BluetoothData;
-		SEQUENCE=0;
+		SEQUENCE=0x202;
+		lastInputSent=InputState;
+
+		break;
+	}
+	case 0x202:
+	{
+//byte 2
+
+		SEQUENCE=0x203;
+		break;
+	}
+	case 0x203:
+	{
+//byte 3
+
+		SEQUENCE=0x204;
+		break;
+	}
+	case 0x204:
+	{
+//byte 4
+
+		SEQUENCE=0x205;
+		break;
+	}
+	case 0x205:
+	{
+//byte 5
+
+		SEQUENCE=0x206;
+		break;
+	}
+	case 0x206:
+	{
+//byte 6
+
+		SEQUENCE=0x207;
+		break;
+	}
+	case 0x207:
+	{
+//byte 7
+
+		SEQUENCE=0x0;		//end of sequence.
 		sendBT(ACK, sizeof(ACK));
 		break;
 	}
+
+
+
 
 	case 0x300:
 	{
@@ -304,32 +348,9 @@ char Information[] =
 	case 0x400:
 	{
 //		if (BluetoothData=='Q'||BluetoothData=='q')
-//		{
-	//		disableInputInterrupt();
-
-//try 4 chunks with gaps
-//no gap =15K bytes
-//100ms gap= 18K bytes
-//200ms gap = 28K bytes
-//250ms gap = 29Kbytes
-//300ms gap = all data.
-//400ms gap = all data, gives some margin.
-//500ms gap gives bigger margin, 1.5s added time.
-/*
-    	SENDBTNT(0,0x800); //ends with 4 off 00 bytes=integer 0
-    	us(500000);
-    	SENDBTNT(0x800,0x800); //ends with 4 off 00 bytes=integer 0
-    	us(500000);
-    	SENDBTNT(0x1000,0x800); //ends with 4 off 00 bytes=integer 0
-    	us(500000);
-    	SENDBTNT(0x1800,0x800); //ends with 4 off 00 bytes=integer 0
-     	SENDTERM();
-
-    */
      	SEQUENCE=0;
-    // 	enableInputInterrupt();
-//		}
 
+	}
 
 	case 0x500:
 
@@ -420,21 +441,6 @@ char Information[] =
 		}
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 	case 0:
 	{
 	switch (BluetoothData)
@@ -503,7 +509,7 @@ char Information[] =
 		    	ReportBUFLEN[1]=BUFLEN>>16;
 		    	ReportBUFLEN[2]=BUFLEN>>8;
 		    	ReportBUFLEN[3]=BUFLEN;
-			sendBT(ReportBUFLEN, sizeof(ReportBUFLEN-1));
+		    	sendBT(ReportBUFLEN, sizeof(ReportBUFLEN-1));
 
 		    break;
 		    }
@@ -558,62 +564,10 @@ char Information[] =
 	case 'q': //read buffer
 	case 'Q':
 	    {
-	    	//try 4 chunks with gaps
-	    	//no gap =15K bytes
-	    	//100ms gap= 18K bytes
-	    	//200ms gap = 28K bytes
-	    	//250ms gap = 29Kbytes
-	    	//300ms gap = all data.
-	    	//400ms gap = all data, gives some margin.
-	    	//500ms gap gives bigger margin, 1.5s added time.
-
-	    	int x;
 
 	    	SENDBTNT(0,0x2000); //ends with 4 off 00 bytes=integer 0
-
-
-	//    	us(100000);
-	//    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
-	//    	us(100000);
-	//    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
-	//    	us(100000);
-	//    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
-	 //   	us(100000);
-	//    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
-	//    	us(100000);
-	//    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
-	//    	us(100000);
-	//    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
-	//    	us(100000);
-	//    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
-	//    	us(1000000);
-	//    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
-	//    	us(100000);
-	 //   	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
-	//    	us(100000);
-	 //   	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
-	//    	us(100000);
-	 //   	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
-	 //   	us(100000);
-	 //   	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
-	//    	us(100000);
-	 //   	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
-	//    	us(100000);
-	//    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
-	//    	us(100000);
-	//    	SENDBTNT(0,0x100); //ends with 4 off 00 bytes=integer 0
-	//    	us(1000000);
-
-//	    	SENDBTNT(0x500,0x500); //ends with 4 off 00 bytes=integer 0
-//	    	us(1000000);
-//	    	SENDBTNT(0x800,0x200); //ends with 4 off 00 bytes=integer 0
-//	    	us(500000);
-//	    	SENDBTNT(0xc00,0x400); //ends with 4 off 00 bytes=integer 0
-//	    	us(1000000);
-//	    	SENDBTNT(0x1800,0x800); //ends with 4 off 00 bytes=integer 0
-
 	     	SENDTERM();
-	 	    	break;
+ 	    	break;
 
 
 
@@ -725,7 +679,7 @@ char Information[] =
 //    LED1OFF();
     return 0;
     }
-    }
+
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -1139,7 +1093,7 @@ PUBLIC void sendBT(byte istat[], unsigned int ilength)
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PUBLIC void sendBTNC(byte istat[], unsigned int ilength)
     {
-    int i,a;
+    int i;
 
 	//only send if BT is connected.
 	//note that it takes around 20s for disconnected to be detected.
@@ -1186,8 +1140,11 @@ PUBLIC word rxtxBT(void)
 
 	if (rxend == rxstart)
 	    {
-//	    rxstart = (rxstart + 1) % rxlen;			//overflow, lose old data
-		rxstart=rxstart=1;
+	    rxstart = (rxstart + 1);
+	    rxstart=rxstart % rxlen;			//overflow, lose old data
+//		rxstart=rxstart=1;
+
+
 		if(rxstart>=rxlen)rxstart=0;
 
 	    rxoverflow = 1;								//record that overflow occurred.

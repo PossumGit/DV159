@@ -26,6 +26,7 @@ PUBLIC void writeSSP0Byte(byte);
 PUBLIC void SSPNEATCPU4(void);
 PUBLIC void SSPNEATCPU12(void);
 PUBLIC void SSPNEATCPU100(void);
+PUBLIC void SSPNEATCPU44(void);
 
 ///local functions(code)
 

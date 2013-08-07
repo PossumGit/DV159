@@ -26,9 +26,9 @@
 #define baud 11	//92/46/23/11/  96 not implemented yet, copy of 115.2
 
 #if NEATRX==1
-#define Version 0x204D5F32	//	"2_L " little endian.
+#define Version 0x20505F32	//	"2_L " little endian.
 #elif NEATRX==0
-#define Version 0x204D7E32	//	"2~L " little endian.
+#define Version 0x20507E32	//	"2~L " little endian.
 #endif
 
 
