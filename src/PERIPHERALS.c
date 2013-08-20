@@ -32,7 +32,7 @@ EXTERNAL void sendBT(byte in[] , unsigned int);
 //EXTERNAL int I2CBATTERY(void);
 
 //public functions
-
+PUBLIC byte	inputTest(void);
 PUBLIC int repeatInput(void);
 PUBLIC byte	inputChange(void);
 PUBLIC int	inputCheck(void);
@@ -254,6 +254,41 @@ d=a|b|c|0xe;						//0xe sets bits 1,2,3 for TECLA spec.
 	}
 	else return d;
 }
+
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief read input state, set bit 7 if input change.
+///@param void
+///@return byte:TECLA codes. bit 5 is internal, bit 4 is external, bit 0 is MID, bit 7 is change.
+/////////////////////////////////////////////////////////////////////////////////////////////////
+PUBLIC byte	inputTest(void)
+{
+
+	byte	a,b,c,d;
+
+if (PCBiss==3||PCBiss==4)
+{
+	LPC_GPIO2->FIODIR&=~(1<<11);			//internal
+	LPC_GPIO0->FIODIR&=~(1<<21);			//external tip
+	LPC_GPIO2->FIODIR&=~(1<<12);			//external mid
+	a=(LPC_GPIO2->FIOPIN &(1<<11))>>6;	//bit 6	//bit 0=>>11;		//INTERNAL
+	b=(~LPC_GPIO0->FIOPIN &(1<<21))>>17; 	//bit 5	//bit 1=>>0;		//EXTERNAL
+	c=(~LPC_GPIO2->FIOPIN &(1<<12))>>12;	//bit 4	//bit 2=>>11;		//EXTERNAL MID/connected
+}
+
+
+d=a|b|c|0xe;						//0xe sets bits 1,2,3 for TECLA spec.
+
+	 return d;
+}
+
+
+
+
+
+
 
 
 ///////////////////////////////////////////////////////////////////

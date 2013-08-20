@@ -54,7 +54,7 @@ EXTERNAL void CPU100MHz (void);
 EXTERNAL void CPU12MHz(void);
 EXTERNAL int repeatInput(void);
 EXTERNAL void txBT(void);
-EXTERNAL byte	inputChange(void);
+EXTERNAL byte	inputTest(void);
 
 EXTERNAL int	PCBiss;		//=3 for PCHB issue 3, =4 for PCB issue 4.
 EXTERNAL void receiveBTbuffer(int,int);
@@ -556,7 +556,7 @@ PRIVATE void compress(void) {
 
 		case 0b1100://INPUT
 			{
-				a = 0x30 & inputChange();
+				a = 0x30 & inputTest();
 //				t = inputTime();
 				switch (0x7 & (IRData >> 25)) {
 				case 0: //DELAY, ABORT if input released
