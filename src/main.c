@@ -431,11 +431,11 @@ PRIVATE void powerupHEX(void) {
 		while (1)
 		{
 
-//			CPU4MHz();
-			us(705096);
+			CPU12MHz();
+			us(4705096);
 
 					{
-		 IRsynthesis('P',4,0x2);		//Plessey  4 repeats, code 3 for HC603c
+		 IRsynthesis('P',4,0x5);		//Plessey  4 repeats, code 3 for HC603c
 			playIR();
 
 						}
@@ -470,29 +470,24 @@ PRIVATE void powerupHEX(void) {
 			}
 
 		break;
-
+*/
 
 	case 0x09:
-		CPU12MHz();
-		EnableWDT2s();
+		CPU4MHz();
+			us(100000);
+			LED2OFF();
+			while(1)
+			{
 
+			 IRsynthesis('H',10,0x0404);		//HC1820  4 repeats, code  for HC1820 socket 1
+			 playIR();
+				us(10000000);
 
-		if(LPC_RTC->GPREG4)
-		{
-			LPC_RTC->GPREG4=0;
-			LED1GREEN();
-		}
-		else
-		{
-			LPC_RTC->GPREG4=1;
-			LED1YELLOW();
-		}
+			 if(0x0A!=HEX())break;
+			}
 
-		us(100000);
-		LED2OFF();
-		for(;;);
-		break;
-		*/
+			break;
+
 	case 0x0A:
 
 		CPU4MHz();

@@ -34,6 +34,7 @@ PRIVATE volatile word Delay = 0;///<delay in compress routine.
 PRIVATE volatile int COUNT[] = { 0, 0, 0, 0, 0, 0, 0, 0 };///< used for loops in compress.
 PRIVATE volatile word plast;
 PRIVATE volatile word rlast;
+PRIVATE int EndIR;
 
 //external variables
 EXTERNAL volatile int Buffer[]; ///< Whole of RAM2 is Buffer, reused for NEAT, Bluetooth, audio and IR replay and capture
@@ -55,6 +56,7 @@ EXTERNAL void CPU12MHz(void);
 EXTERNAL int repeatInput(void);
 EXTERNAL void txBT(void);
 EXTERNAL byte	inputTest(void);
+EXTERNAL void disableInputInterrupt(void);
 
 EXTERNAL int	PCBiss;		//=3 for PCHB issue 3, =4 for PCB issue 4.
 EXTERNAL void receiveBTbuffer(int,int);
@@ -391,7 +393,7 @@ COUNT[a]=0;
 		LED1OFF();
 
 		repeatInput();	//change of input?
-
+		txBT();		//send any available data from change of input to BT.
 		endPlayIR();
 
 #if release==1
@@ -711,8 +713,14 @@ PRIVATE void compress(void) {
 
 		case 0b1000: //HEADER
 		{
-			Period = (IRData >> 4) & 0xFFF; //SET Period maximum 4095 (40.95us, 24.42KHz) 30KHz-48KHz,455KHz,typical 38KHz(26.32us).
+
+
+
+
 			PulseWidth = (IRData >> 16) & 0x7FF;//SET Pulse Width from 50(0.5us) to 2047(20.47us)
+
+			Period = (IRData >> 4) & 0xFFF; //SET Period maximum 4095 (40.95us, 24.42KHz) 30KHz-48KHz,455KHz,typical 38KHz(26.32us).
+			if(PulseWidth*2>Period)PulseWidth=Period/2;
 			SymbolBank = IRAddress; //new header has new symbol bank.
 			IRAddress = IRAddress + 1 + (IRData & 0xF); //next address, skip any symbol bank.
 			if (IRAddress >= CaptureMax)
@@ -836,6 +844,10 @@ PRIVATE void startCaptureIR(void) {
 ///@return void
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PRIVATE void startPlayIR(void) {
+
+
+
+
 	disableInputInterrupt();
 	IRAddress = 0;
 	IRTimeMatch = 0;
@@ -913,6 +925,7 @@ PRIVATE void correctIR(void) {
 
 	a = Buffer[CaptureFirst] - CaptureStart;
 	Buffer[CaptureFirst] = CaptureStart;
+
 	for (i = CaptureFirst + 1; (i < IRAddress); i++) {
 		Buffer[i] = Buffer[i] - a; //reduce start delay to CaptureStart/10^7.
 		b = Buffer[i]; //length of capture in clock cycles.

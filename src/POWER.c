@@ -114,7 +114,7 @@ EXTERNAL void  EnableWDT10s(void);
 //EXTERNAL void BatteryState(void);
 EXTERNAL void NEATALARM(void);
 EXTERNAL int I2CBATTERY(void);
-EXTERNAL byte	inputChange(void);
+EXTERNAL byte	inputTest(void);
 EXTERNAL void SystemOFF(void);
 EXTERNAL void BTbaudCPU100();
 EXTERNAL void	BTbaudCPU44(void);
@@ -461,7 +461,7 @@ if (PCBiss==3||PCBiss==4)
 			LPC_TIM3->TC = 0;
 			if((HELDtime==0))	repeatInput(); //check if change of input, send via BT to android if change.
 			//if HELDtime==0 then no held delay, else only see rising edge if time > heldtime.
-			PENDALARM=0x30^(inputChange()&0x30);	//NZ if EXT and/or INT pressed.//else 0.
+			PENDALARM=0x30^(inputTest()&0x30);	//NZ if EXT and/or INT pressed.//else 0.
 			debounce=1;
 
 		}
@@ -483,7 +483,7 @@ if (PCBiss==3||PCBiss==4)
 				if(HELDtime==0)	repeatInput(); //check if change of input, send via BT to android if change.
 				LPC_TIM2->TC = 0;
 				LPC_TIM3->TC = 0;
-				PENDALARM=0x30^(inputChange()&0x30);	//NZ if EXT and/or INT pressed.//else 0.
+				PENDALARM=0x30^(inputTest()&0x30);	//NZ if EXT and/or INT pressed.//else 0.
 				debounce=1;
 
 			}
@@ -617,7 +617,7 @@ PUBLIC int powerDown(void)
 	{
 		debounce=0;
 		repeatInput(); //check if change of input, send via BT to android if change.
-		PENDALARM=0x30^(inputChange()&0x30);	//NZ if EXT and/or INT pressed.//else 0.
+		PENDALARM=0x30^(inputTest()&0x30);	//NZ if EXT and/or INT pressed.//else 0.
 	}
 	else if (HELDtime>0)
 	{

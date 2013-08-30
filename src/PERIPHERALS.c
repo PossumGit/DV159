@@ -17,6 +17,7 @@ PUBLIC volatile byte InputState=0x3E;
 PUBLIC  volatile byte LastInputState=0x3E;
 PUBLIC volatile byte lastInputSent=0x3E;
 
+volatile byte LASTinput =0;
 
 //Private variables
 
@@ -26,6 +27,7 @@ EXTERNAL int HELDtime;
 EXTERNAL int RELEASEtime;
 //Private functions
 PRIVATE void WDT_IRQHandler(void);
+
 
 //External functions
 EXTERNAL void sendBT(byte in[] , unsigned int);
@@ -307,7 +309,11 @@ PUBLIC int	inputCheck(void)
 			in[1] = InputState|0x0F;
 			in[0] = STATE;
 			lastInputSent=InputState;
+			if(LASTinput!=in[1])
+			{
+			LASTinput=in[1];
 			sendBT(in, sizeof(in));
+			}
 
 		}
 		return 1;
@@ -319,14 +325,43 @@ PUBLIC int	inputCheck(void)
 			in[1] = InputState|0x0F;
 			in[0] = STATE;
 			lastInputSent=InputState;
+			if(LASTinput!=in[1])
+				{
+			LASTinput=in[1];
 			sendBT(in, sizeof(in));
-
+				}
 		return 1;
 	}
 	else return 0;			// no change.
 }
 
 
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief When input changes send new state to BT.
+///@param void
+///@return 0 if inactive, else 1
+/////////////////////////////////////////////////////////////////////////////////////////////////
+ PUBLIC int repeatInput(void) {
+	 byte in[] = { 'I', ' ' };
+	in[1] = inputChange();
+	if (in[1] & 0x80) //bit 7 high indicates change
+	{
+
+		in[0] = STATE;//'H' | (in[1] & 0x01);
+		in[1] = ((in[1] & 0x3f)) | 0x0F; //clear bit 7, set bit 1.
+
+		//		in[1]=((in[1]&0x2)<<4)|((in[1]&0x1)<<4);	//TECLA, bit 5 is ext, bit 4 is int, bit 3 is plugged in.
+		if(LASTinput!=in[1])
+			{
+		LASTinput=in[1];
+		sendBT(in, sizeof(in));
+			}
+		return 1;
+	}
+	return 0;
+}
 
 
 
@@ -445,28 +480,6 @@ PUBLIC void	us(unsigned int time_us)
 
 
 
-
-
-/////////////////////////////////////////////////////////////////////////////////////////////////
-///@brief When input changes send new state to BT.
-///@param void
-///@return 0 if inactive, else 1
-/////////////////////////////////////////////////////////////////////////////////////////////////
- PUBLIC int repeatInput(void) {
-	 byte in[] = { 'I', ' ' };
-	in[1] = inputChange();
-	if (in[1] & 0x80) //bit 7 high indicates change
-	{
-
-		in[0] = STATE;//'H' | (in[1] & 0x01);
-		in[1] = ((in[1] & 0x3f)) | 0x0F; //clear bit 7, set bit 1.
-
-		//		in[1]=((in[1]&0x2)<<4)|((in[1]&0x1)<<4);	//TECLA, bit 5 is ext, bit 4 is int, bit 3 is plugged in.
-		sendBT(in, sizeof(in));
-		return 1;
-	}
-	return 0;
-}
 
 
 

@@ -441,7 +441,9 @@ byte Information[] =
 		}
 
 
+
 	case 0:
+	default:
 	{
 	switch (BluetoothData)
 	    {
@@ -542,7 +544,7 @@ byte Information[] =
 	case 'l':
 	case 'L':
 	{
-		IRsynthesis('P',4,0x2);		//Plessey  4 repeats, code 3
+		IRsynthesis('P',4,0x5);		//Plessey  4 repeats, code 3
 		playIR();
 
 		CPU12MHz();
@@ -622,7 +624,7 @@ byte Information[] =
 		;//wait for tx data ready
 
 	    LPC_UART1->THR = 'A'; //immediate ACK to indicate ready.
-	    if (waitBTRX(5000000))
+	    if (waitBTRX(60000000))
 		{
 		sendBT(NACK, sizeof(NACK)); //NACK if wait longer than 3s for BT data
 		break; //wait for char, break if 3s timeout.
@@ -630,7 +632,10 @@ byte Information[] =
 	    //	while (0 == (1 & LPC_UART1->LSR));				//wait for RX data ready.
 	    else
 		{
-		if (receiveBTbuffer(0, 0x2000))sendBT(NACK, sizeof(NACK));
+		if (receiveBTbuffer(0, 0x2000)){
+			sendBT(NACK, sizeof(NACK));
+			SEQUENCE=0x00;
+		}
 		else
 
 		sendBT(ACK, sizeof(ACK));
@@ -669,6 +674,8 @@ byte Information[] =
 
 		break;
 	    }
+
+
 	    }
 
 	}
@@ -690,7 +697,7 @@ byte Information[] =
 PRIVATE int waitBTRX(word us)
     {
     int p, r, s;
- //   LPC_TIM3->TC=0;
+
     p = LPC_TIM2->TC; //current value of timer 2 in us.
 
     while (1)
@@ -701,6 +708,9 @@ PRIVATE int waitBTRX(word us)
 
 	if (r - p > us) //1s timeout. measured timeout max was 149937 timer counts (=us).
 	    return 1;
+
+
+
 	s = LPC_UART1->LSR;
 	if (1 & s)
 	    return 0; //	byte is ready.
@@ -741,40 +751,40 @@ if (end>CaptureMax){
 
 
 }
-	waitBTRX(5000000) ;		//wait for 5s for first char.
+	waitBTRX(60000000) ;		//wait for 5s for first char.
     for (; i<end; i++)
 	{
 
-	if (waitBTRX(2000000))  break; //wait for char, break if 100ms timeout.
+	if (waitBTRX(60000000))  break; //wait for char, break if 100ms timeout.
     	Byte24 = LPC_UART1->RBR;
 	if (Byte24 == '$') //ignore next char.
 	    {
-	    if (waitBTRX(2000000)) break; //wait for char, break if 100ms timeout.
+	    if (waitBTRX(60000000)) break; //wait for char, break if 100ms timeout.
 	    EscapeByte = LPC_UART1->RBR;
 	    }
 
-	if (waitBTRX(2000000))	    break; //wait for char, break if 100ms timeout.
+	if (waitBTRX(60000000))	    break; //wait for char, break if 100ms timeout.
 	Byte16 = LPC_UART1->RBR;
 	if (Byte16 == '$') //ignore next char.
 	    {
-	    if (waitBTRX(2000000))	break; //wait for char, break if 100ms timeout.
+	    if (waitBTRX(60000000))	break; //wait for char, break if 100ms timeout.
 	    EscapeByte = LPC_UART1->RBR;
 	    }
 
-	if (waitBTRX(2000000))	    break; //wait for char, break if 100ms timeout.
+	if (waitBTRX(60000000))	    break; //wait for char, break if 100ms timeout.
 	Byte8 = LPC_UART1->RBR;
 	if (Byte8 == '$') //ignore next char.
 	    {
 
-	    if (waitBTRX(2000000))	break; //wait for char, break if 100ms timeout.
+	    if (waitBTRX(60000000))	break; //wait for char, break if 100ms timeout.
 	    EscapeByte = LPC_UART1->RBR;
 	    }
 	Dollar = Byte8;
-	if (waitBTRX(2000000))	    break; //wait for char, break if 100ms timeout.
+	if (waitBTRX(60000000))	    break; //wait for char, break if 100ms timeout.
 	Byte0 = LPC_UART1->RBR;
 	if (Byte0 == '$') //ignore next char.
 	    {
-	    if (waitBTRX(2000000))	break; //wait for char, break if 100ms timeout.
+	    if (waitBTRX(60000000))	break; //wait for char, break if 100ms timeout.
 	    EscapeByte = LPC_UART1->RBR;
 	    }
 
@@ -789,16 +799,16 @@ if (end>CaptureMax){
 	}
     while((i==0x2000)&&(ReceivedWord!=0))		//allow for 0000 after full buffer case.
     {
-	    if (waitBTRX(2000000))	break;
+	    if (waitBTRX(60000000))	break;
  //     	while(!(1& LPC_UART1->LSR));	//wait for char.
     	Byte24 = LPC_UART1->RBR;
- 	    if (waitBTRX(2000000))	break;
+ 	    if (waitBTRX(60000000))	break;
  //     	while(!(1& LPC_UART1->LSR));	//wait for char.
     	Byte16 = LPC_UART1->RBR;
- 	    if (waitBTRX(2000000))	break;
+ 	    if (waitBTRX(60000000))	break;
  //     	while(!(1& LPC_UART1->LSR));	//wait for char.
     	Byte8 = LPC_UART1->RBR;
- 	    if (waitBTRX(2000000))	break;
+ 	    if (waitBTRX(60000000))	break;
 //      	while(!(1& LPC_UART1->LSR));	//wait for char.
     	Byte0 = LPC_UART1->RBR;
       	ReceivedWord = Byte24 << 24 | Byte16 << 16 | Byte8 << 8 | Byte0;
