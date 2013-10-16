@@ -34,7 +34,7 @@ PUBLIC volatile unsigned int txend = 0;		// BT TX.
 PUBLIC int BTACC=0;
 PUBLIC	int BUFLEN=0;
 PUBLIC  int SEQUENCE=0;			//used in ProcessBT for NEAT and IR sequence.
-PUBLIC int HELDtime=0;
+PUBLIC int HELDtime=640000;
 PUBLIC int RELEASEtime=0;
 //External variables
 EXTERNAL volatile word Buffer[]; ///< Whole of RAM2 is Buffer, reused for audio and IR replay and capture
@@ -603,10 +603,10 @@ byte Information[] =
 	    break;
 	    }
 
-	case 't': //synthesise IR
+	case 't': //Set alarm time
 	case 'T':
 	    {
-	    	SEQUENCE=0x200;		//set alarm time.
+	    	SEQUENCE=0x200;		//set alarm time. and HELD time 8 bytes sent.
 	    	STATE='H';
 	    	BatteryState();
 
@@ -1376,6 +1376,12 @@ PUBLIC void setupBT(void)
     {
     		"SJ,0800\r\n"			//Page scan continuous.
     };
+
+    byte BTlatancy[]=
+    {
+    		"SQ,16\r\n"			//optimise latancy.
+    };
+
 #if baud==92
     byte BaudK[] =			//baud rate 230k
        {
@@ -1504,6 +1510,28 @@ PUBLIC void setupBT(void)
  	    }
  	}
     rxstart = rxend;
+/*
+    sendBTNC(BTSlatency, sizeof(latency));//latency does not seem any less latency.
+       for (i = 0; i < 3000; i++)
+   	{
+   	us(1000);
+   	rxtxBT();
+   	if ((rxstart + 5) % rxlen <= rxend)
+   	    {
+   	    if (rx[rxstart] != 'A')
+   		rxstart = (rxstart + 1) % rxlen;
+   	    if ((rx[rxstart] == 'A') && (rx[(rxstart + 1) % rxlen] == 'O')
+   		    && (rx[(rxstart + 2) % rxlen] == 'K'))
+   		{
+   		LED1YELLOW();
+   		i = 20000;
+   		}
+   	    }
+   	}
+      rxstart = rxend;
+
+
+  */
 
 
     sendBTNC(ENDCMD, sizeof(ENDCMD));

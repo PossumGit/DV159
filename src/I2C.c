@@ -55,6 +55,7 @@ EXTERNAL int LITHIUM;
 //Private functions
 //public functions
 PUBLIC int I2CBATTERY(void);
+PUBLIC char QUERYnewbattery(void);
 PUBLIC void I2CChargeWR(int);
 PUBLIC char I2CSTATUS(void);
 PUBLIC void I2CNewBattery(void);
@@ -96,7 +97,7 @@ PUBLIC void I2CINIT(void)
 	LPC_I2C1->I2SCLL=10;						//Duty cycle low.
 //Enable I2C
 	LPC_I2C1->I2CONCLR=AA|SI|STO|STA;					//Clear SI|STA
-	NVIC->ISER[0]=1<<11;							//I2C1 interrupt set.
+//	NVIC->ISER[0]=1<<11;							//I2C1 interrupt set.
 	LPC_GPIO2->FIODIR&=~1<<20;						//SCL1
 	LPC_GPIO2->FIODIR&=~1<<19;						//SDA1
 	LPC_GPIO2->FIOSET=1<<20;
@@ -126,7 +127,7 @@ PUBLIC void I2CINIT(void)
 ///
 ///
 ////////////////////////////////////////////////////////////////////////////////////////////////
-PUBLIC char READPIO(void)
+PUBLIC char QUERYnewbattery(void)
 {
 
 	I2CMasterBuffer[0]=0x90;
@@ -135,7 +136,22 @@ PUBLIC char READPIO(void)
 	I2CReadLength=1;
 	I2CWriteLength=2;
 	I2CGO();
-	return I2CSlaveTempBuffer[0];
+
+	if(I2CSlaveTempBuffer[0]&0x40)		//battery power on, new battery.
+	{
+		//clear status.6
+		//set battery charge state to 0x8000
+		I2CMasterBuffer[0]=0x90;			//reset bit 6 POWER on RESET for battery.
+		I2CMasterBuffer[1]=0x1;
+		I2CMasterBuffer[2]=0x18;
+		I2CReadLength=0;
+		I2CWriteLength=3;
+		I2CGO();
+		I2CChargeWR(0x8000);		//set initial battery state to 0x8000
+	}
+
+
+
 
 }
 
@@ -244,38 +260,46 @@ PUBLIC void I2CREAD(void)
 		}
 
 //rest of this goes wrong some of the time, therefore remove unless sorted.
-	//problem is faulty data read from DC2745.
-/*
+	//problem is faulty data read from DC2745 after datawrite.
+	if (lastcharge<0x7400)lastcharge=0x7400;
+	if (lastcharge>0x9000)lastcharge=0x9000;
+
+
 	charge=((I2CSlaveBuffer[6])<<8)+I2CSlaveBuffer[7];
 
 
-	if (charge>0x7400&&charge<0x9000)
-		{lastcharge=charge;}
-
+	if (charge<0x7400)
+		{charge=lastcharge;
+	//	I2CChargeWR(charge);
+		}
+	else if (charge>0x9000)
+		{charge=lastcharge;
+	//	I2CChargeWR(charge);
+		}
 	else
-			{
-
-		I2CMasterBuffer[0]=0x90;
-		I2CMasterBuffer[1]=0x10;		//
-		I2CMasterBuffer[2]=0x91;
-		I2CReadLength=2;
-		I2CWriteLength=2;
-		I2CGO();
-		I2CSlaveBuffer[6]=I2CSlaveTempBuffer[0];
-		I2CSlaveBuffer[7]=I2CSlaveTempBuffer[1];
-		charge=((I2CSlaveBuffer[6])<<8)+I2CSlaveBuffer[7];
-		if (charge>0x7400&&charge<0x9000)
-			{lastcharge=charge;}
-		else
-			{charge=lastcharge;}
+	{
+		lastcharge=charge;
+	}
 
 
-			}
 
-	if (charge>storedcharge)		//charging.
+
+
+
+	LPC_GPIO2->FIODIR&=~(1<<8);			//ACOK
+
+
+	if (LPC_GPIO2->FIOPIN &(1<<8))		//ACOK=1 means on battery mode.
+		{
+//This is battery mode.
+	if (charge>storedcharge)		//was charging.
 		//discharge use rate in monitor.
 		//charge, add efficiency factor in.
 	{
+
+
+				//On battery and charge>stored charge
+				//so has just come off charge.
 
 
 				if(NIMH) charge=storedcharge+0.70*(charge-storedcharge);		//NIMH
@@ -287,22 +311,22 @@ PUBLIC void I2CREAD(void)
 					ChargeConfidence=5;
 				}
 			//	I2CChargeWR(charge);
-				if(0x7FF0>charge)
-					ChargeConfidence=3;
+				if(0x7FF0>charge)	ChargeConfidence=3;
+
 				storedcharge=charge;
 
-				I2CSlaveBuffer[6]=0xFF&(charge<<8);
-				I2CSlaveBuffer[7]=0xFF&charge;
-	}
-	else 	//charging.
+//				I2CSlaveBuffer[6]=0xFF&(charge<<8);			//write new charge state.
+//				I2CSlaveBuffer[7]=0xFF&charge;
+
+	//			I2CChargeWR(charge);
+
+				}
+
+	else 	//discharging.
 	{
 		storedcharge=charge;
-
-
-
-
 	}
-*/
+		}
 }
 
 
@@ -310,7 +334,7 @@ PUBLIC void I2CREAD(void)
 
 
 
-PUBLIC char I2CBAT(void)
+PUBLIC char I2CBAT(void)//poweruphex codes D and E
 {
 	I2CMasterBuffer[0]=0x90;
 			I2CMasterBuffer[1]=0x0C;
@@ -356,7 +380,7 @@ PUBLIC char I2CBAT(void)
 //
 //else GREEN.
 /////////////////////////////////////////////////////////////////////////////////////////////////
-PUBLIC int I2CBATTERY(void)
+PUBLIC int I2CBATTERY(void) //batterystate and main during power up.
 {
 			//return 1=GREEN=good battery, 0=yellow=low battery.
  int c,v;
@@ -418,7 +442,7 @@ PUBLIC int I2CBATTERY(void)
 //v=984=4.8V
 
 
-	if (v<738) return 0;			//<3.6V low battery
+	if (v<717) return 0;			//<3.5V low battery
 	if (v>800) return 1;			//>3.9V good battery
 //check charge state:
 	I2CMasterBuffer[0]=0x90;
@@ -571,6 +595,243 @@ PUBLIC char I2CSTATUS(void)
 
 
 
+PRIVATE void I2CGO(void)
+
+{
+	int status;
+	 	 LPC_I2C1->I2CONSET=I2EN;					//bit 6=enable I2C
+	 	 I2CMasterState = I2CSTATE_IDLE;
+	 	 RdIndex = 0;
+	 	 WrIndex = 0;
+	 	 LPC_I2C1->I2CONCLR=SI;					//Clear SI
+	 	 LPC_I2C1->I2CONSET=STA;					//STA = START transmit
+
+
+
+	 	while ((I2CMasterState !=I2CSTATE_END)&&(I2CMasterState !=I2CSTATE_SLA_NACK))
+	 	 {
+
+	 		us(100);
+	 		status=LPC_I2C1->I2STAT;
+	 	 switch (status)
+	 	 {
+	 	case 0x08:			//Master transmit		Master Receive
+	 			//
+	 			// A START condition has been transmitted.
+	 			// We now send the slave address and initialise
+	 			// the write buffer
+	 			// (we always start with a write after START+SLA)
+	 			 //
+	 			WrIndex = 0;
+	 			LPC_I2C1->I2DAT = I2CMasterBuffer[WrIndex++];		//hit
+	 			LPC_I2C1->I2CONCLR = (SI | STA);
+	 			I2CMasterState = I2CSTATE_PENDING;
+	 			break;
+
+	 		case 0x10:		//Master transmit		Master Receive
+	 			//
+	 			// A repeated START condition has been transmitted.
+	 			// Now a second, read, transaction follows so we
+	 			// initialize the read buffer.
+	 			 //
+	 			RdIndex = 0;
+	 			// Send SLA with R bit set, */
+	 			LPC_I2C1->I2DAT = I2CMasterBuffer[WrIndex++];			//hit
+	 			LPC_I2C1->I2CONCLR = SI | STA;
+	 		break;
+
+	 		case 0x18:			//Master transmit
+	 			//
+	 			// SLA+W has been transmitted; ACK has been received.
+	 			// We now start writing bytes.
+	 			 //
+	 			LPC_I2C1->I2DAT = I2CMasterBuffer[WrIndex++];			//hit
+	 			LPC_I2C1->I2CONCLR = SI;
+	 			break;
+
+	 		case 0x20:			//Master transmit
+	 			//
+	 			// SLA+W has been transmitted; NOT ACK has been received.
+	 			// Send a stop condition to terminate the transaction
+	 			// and signal I2CEngine the transaction is aborted.
+	 			//
+	 			LPC_I2C1->I2CONSET = STO;
+	 			LPC_I2C1->I2CONCLR = SI;
+	 			I2CMasterState = I2CSTATE_SLA_NACK;		//not hit.
+	 			break;
+
+	 		case 0x28:			//Master transmit
+	 			//
+	 			// Data in I2DAT has been transmitted; ACK has been received.
+	 			// Continue sending more bytes as long as there are bytes to send
+	 			// and after this check if a read transaction should follow.
+	 			//
+	 			if ( WrIndex < I2CWriteLength )							//hit
+	 			{
+	 				// Keep writing as long as bytes avail
+	 				LPC_I2C1->I2DAT = I2CMasterBuffer[WrIndex++];
+	 			}
+
+	 			else
+	 			{
+	 				if ( I2CReadLength != 0 )
+	 				{
+	 					// Send a Repeated START to initialize a read transaction /
+	 					// (handled in state 0x10)
+	 					LPC_I2C1->I2CONSET = STA;	// Set Repeated-start flag
+	 				}
+	 				else
+	 				{
+	 					I2CMasterState = I2CSTATE_END; //was ACK.
+	 					LPC_I2C1->I2CONSET = STO;      // Set Stop flag
+	 				}
+	 			}
+	 			LPC_I2C1->I2CONCLR = SI;
+	 			break;
+
+	 		case 0x30:			//Master transmit
+	 			//
+	 			// Data byte in I2DAT has been transmitted; NOT ACK has been received
+	 			// Send a STOP condition to terminate the transaction and inform the
+	 			// I2CEngine that the transaction failed.
+	 			 //
+	 			LPC_I2C1->I2CONSET =STO;					//not hit
+	 			LPC_I2C1->I2CONCLR = SI;
+	 			I2CMasterState = I2CSTATE_NACK;
+	 			break;
+
+	 		case 0x38:			//Master transmit		Master Receive
+	 			//
+	 			// Arbitration loss in SLA+R/W or Data bytes.
+	 			// This is a fatal condition, the transaction did not complete due
+	 			// to external reasons (e.g. hardware system failure).
+	 			// Inform the I2CEngine of this and cancel the transaction
+	 			// (this is automatically done by the I2C hardware)
+	 			 //
+	 			I2CMasterState = I2CSTATE_ARB_LOSS;			//not hit
+	 			LPC_I2C1->I2CONCLR = SI;
+	 			break;
+
+	 		case 0x40:		//Master Receive
+	 			//
+	 			// SLA+R has been transmitted; ACK has been received.
+	 			// Initialize a read.
+	 			// Since a NOT ACK is sent after reading the last byte,
+	 			// we need to prepare a NOT ACK in case we only read 1 byte.
+	 			 //
+	 			if ( I2CReadLength == 1 )						//hit
+	 			{
+	 				// last (and only) byte: send a NACK after data is received */
+	 				LPC_I2C1->I2CONCLR = AA;
+	 			}
+	 			else
+	 			{
+	 				// more bytes to follow: send an ACK after data is received */
+	 				LPC_I2C1->I2CONSET = AA;
+	 			}
+	 			LPC_I2C1->I2CONCLR = SI;
+	 			break;
+
+	 		case 0x48:		//Master Receive
+	 			//
+	 			// SLA+R has been transmitted; NOT ACK has been received.
+	 			// Send a stop condition to terminate the transaction
+	 			// and signal I2CEngine the transaction is aborted.
+	 			 //
+	 			LPC_I2C1->I2CONSET = STO;				//not hit
+	 			LPC_I2C1->I2CONCLR = SI;
+	 			I2CMasterState = I2CSTATE_SLA_NACK;
+	 			break;
+
+	 		case 0x50:		//Master Receive
+	 			//
+	 			// Data byte has been received; ACK has been returned.
+	 			// Read the byte and check for more bytes to read.
+	 			// Send a NOT ACK after the last byte is received
+	 			 //
+	 			I2CSlaveTempBuffer[RdIndex++] = LPC_I2C1->I2DAT;			//hit
+	 			if ( RdIndex < (I2CReadLength-1) )
+	 			{
+	 				// lmore bytes to follow: send an ACK after data is received */
+	 				LPC_I2C1->I2CONSET = AA;
+	 			}
+	 			else
+	 			{
+	 				// last byte: send a NACK after data is received */
+	 				LPC_I2C1->I2CONCLR = AA;
+
+
+	 			}
+	 			LPC_I2C1->I2CONCLR = SI;
+	 			break;
+
+	 		case 0x58:		//Master Receive
+	 			//
+	 			 // Data byte has been received; NOT ACK has been returned.
+	 			 // This is the last byte to read.
+	 			 //Generate a STOP condition and flag the I2CEngine that the
+	 			 //transaction is finished.
+	 			 //
+	 			I2CSlaveTempBuffer[RdIndex++] = LPC_I2C1->I2DAT;				//hit
+	 			I2CMasterState = I2CSTATE_END;
+	 			LPC_I2C1->I2CONSET = STO;	// Set Stop flag
+	 			LPC_I2C1->I2CONCLR = SI;	// Clear SI flag
+	 			break;
+
+	 		case	0x60:
+	 		case	0x68:
+	 		case	0x70:
+	 		case	0x78:
+	 		case	0x80:
+	 		case	0x88:
+	 		case	0x90:
+	 		case	0x98:
+	 		case	0xA0:
+	 		case	0xA8:
+	 		case	0xB0:
+	 		case	0xB8:
+	 		case	0xC0:
+	 		case	0xC8:
+
+	 			//Slave modes should never see these.
+	 			LPC_I2C1->I2CONCLR = SI;
+	 			LPC_I2C1->I2CONSET = STO;	// Set Stop flag
+	 			return;
+	 			break;
+
+
+
+
+
+	 		case	0x00:			//bus error
+	 			LPC_I2C1->I2CONCLR = SI;
+	 			LPC_I2C1->I2CONSET = STO;	// Set Stop flag
+	 			return;
+	 			break;
+	 		case	0xF8:
+	 			break;
+	 		default:
+	 			LPC_I2C1->I2CONCLR = SI;
+	 			LPC_I2C1->I2CONSET = STO;	// Set Stop flag
+	 			return;
+	 		break;
+
+	 	 }
+
+
+	 	 }
+
+	 	us(1000);
+		LPC_I2C1->I2CONSET = STO;	// Set Stop flag
+
+
+
+
+
+}
+
+
+
 
 
 /////////////////////////////////////////////////////////////////////////////////////////////////
@@ -580,7 +841,7 @@ PUBLIC char I2CSTATUS(void)
 ///
 ///
 /////////////////////////////////////////////////////////////////////////////////////////////////
-PRIVATE void I2CGO(void)
+PRIVATE void I2CGOI(void)
 {
 
 	 LPC_I2C1->I2CONSET=I2EN;					//bit 6=enable I2C

@@ -25,6 +25,14 @@ volatile byte LASTinput =0;
 EXTERNAL int	PCBiss;		//=3 for PCHB issue 3, =4 for PCB issue 4.
 EXTERNAL int HELDtime;
 EXTERNAL int RELEASEtime;
+EXTERNAL volatile word SWF1;		//falling interrupt state.
+EXTERNAL volatile word SWF2;
+EXTERNAL volatile word SWF3;
+EXTERNAL volatile word SW1;		//rising interrupt state
+EXTERNAL volatile word SW2;
+EXTERNAL volatile word SW3;
+
+
 //Private functions
 PRIVATE void WDT_IRQHandler(void);
 
@@ -36,6 +44,7 @@ EXTERNAL void sendBT(byte in[] , unsigned int);
 //public functions
 PUBLIC byte	inputTest(void);
 PUBLIC int repeatInput(void);
+PUBLIC int copyInput(void);
 PUBLIC byte	inputChange(void);
 PUBLIC int	inputCheck(void);
 PUBLIC void	LED1GREEN(void);
@@ -240,13 +249,13 @@ if (PCBiss==3||PCBiss==4)
 	LPC_GPIO2->FIODIR&=~(1<<11);			//internal
 	LPC_GPIO0->FIODIR&=~(1<<21);			//external tip
 	LPC_GPIO2->FIODIR&=~(1<<12);			//external mid
-	a=(LPC_GPIO2->FIOPIN &(1<<11))>>6;	//bit 6	//bit 0=>>11;		//INTERNAL
-	b=(~LPC_GPIO0->FIOPIN &(1<<21))>>17; 	//bit 5	//bit 1=>>0;		//EXTERNAL
-	c=(~LPC_GPIO2->FIOPIN &(1<<12))>>12;	//bit 4	//bit 2=>>11;		//EXTERNAL MID/connected
+	a=(LPC_GPIO2->FIOPIN &(1<<11))>>6;		//bit 6	INTERNAL
+	b=(~LPC_GPIO0->FIOPIN &(1<<21))>>17; 	//bit 5	EXTERNAL
+	c=(~LPC_GPIO2->FIOPIN &(1<<12))>>12;	//bit 4	EXTERNAL MID also means mono jack inserted
 }
 
 
-d=a|b|c|0xe;						//0xe sets bits 1,2,3 for TECLA spec.
+d=a|b|c|0xe;								//0xe sets bits 1,2,3 for TECLA spec.
 	if (d!=InputState){
 		LastInputState=InputState;
 		InputState=d;
@@ -275,9 +284,9 @@ if (PCBiss==3||PCBiss==4)
 	LPC_GPIO2->FIODIR&=~(1<<11);			//internal
 	LPC_GPIO0->FIODIR&=~(1<<21);			//external tip
 	LPC_GPIO2->FIODIR&=~(1<<12);			//external mid
-	a=(LPC_GPIO2->FIOPIN &(1<<11))>>6;	//bit 6	//bit 0=>>11;		//INTERNAL
-	b=(~LPC_GPIO0->FIOPIN &(1<<21))>>17; 	//bit 5	//bit 1=>>0;		//EXTERNAL
-	c=(~LPC_GPIO2->FIOPIN &(1<<12))>>12;	//bit 4	//bit 2=>>11;		//EXTERNAL MID/connected
+	a=(LPC_GPIO2->FIOPIN &(1<<11))>>6;		//bit 5	INTERNAL
+	b=(~LPC_GPIO0->FIOPIN &(1<<21))>>17; 	//bit 4	EXTERNAL
+	c=(~LPC_GPIO2->FIOPIN &(1<<12))>>12;	//bit 0	EXTERNAL MID also means mono jack inserted
 }
 
 
@@ -302,11 +311,15 @@ PUBLIC int	inputCheck(void)
 
 //	byte	a,b,c,d;
 	 byte in[] = { 'I', ' ' };
+	 int a,b;
 
 	if (InputState<lastInputSent){//switch has been pressed.
 
-		if (HELDtime<LPC_TIM3->TC){		//send state
-			in[1] = InputState|0x0F;
+
+		a=LPC_TIM3->TC;
+		b=LPC_TIM2->TC;
+		if (HELDtime<LPC_TIM2->TC){		//send state was TIM3
+			in[1] = InputState|0x0E;
 			in[0] = STATE;
 			lastInputSent=InputState;
 			if(LASTinput!=in[1])
@@ -321,8 +334,8 @@ PUBLIC int	inputCheck(void)
 	else if(InputState>lastInputSent)//switch has been released.
 	{
 
-		if (RELEASEtime<LPC_TIM3->TC)		//send state
-			in[1] = InputState|0x0F;
+		if (RELEASEtime<LPC_TIM2->TC)		//send state was TIM3
+			in[1] = InputState|0x0E;
 			in[0] = STATE;
 			lastInputSent=InputState;
 			if(LASTinput!=in[1])
@@ -334,6 +347,49 @@ PUBLIC int	inputCheck(void)
 	}
 	else return 0;			// no change.
 }
+
+
+
+
+
+/////////////////////////////////////////////////////////////////////////////////////////////////
+///@brief When input changes send new state to BT.
+///@param void
+///@return 0 if inactive, else 1
+/////////////////////////////////////////////////////////////////////////////////////////////////
+ PUBLIC  copyInput(void) {
+	 byte in[] = { 'I', ' ' };
+
+	 byte INT,EXT,MID;
+		LPC_GPIO2->FIODIR&=~(1<<11);			//internal
+		LPC_GPIO0->FIODIR&=~(1<<21);			//external tip
+		LPC_GPIO2->FIODIR&=~(1<<12);			//external mid
+		INT=(LPC_GPIO2->FIOPIN &(1<<11))>>11;		//bit 0	INTERNAL
+		EXT=(~LPC_GPIO0->FIOPIN &(1<<21))>>21; 	//bit 0	EXTERNAL
+		MID=(~LPC_GPIO2->FIOPIN &(1<<12))>>12;	//bit 0	EXTERNAL MID also means mono jack inserted
+
+
+
+
+
+
+		if (in[1] & 0x80) //bit 7 high indicates change
+		{
+
+			in[0] = STATE;//'H' | (in[1] & 0x01);
+			in[1] = ((in[1] & 0x3f)) | 0x0F; //clear bit 7, set bit 1.
+
+			//		in[1]=((in[1]&0x2)<<4)|((in[1]&0x1)<<4);	//TECLA, bit 5 is ext, bit 4 is int, bit 3 is plugged in.
+			if(LASTinput!=in[1])
+				{
+			LASTinput=in[1];
+			sendBT(in, sizeof(in));
+				}
+			return 1;
+		}
+		return 0;
+	}
+
 
 
 

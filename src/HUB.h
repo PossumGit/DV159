@@ -18,7 +18,7 @@
 //
 //
 #define PCBissue 4		//pcb issue, options 3, 4
-#define release	1		//1=released, 0 = debug (disable watchdogs mainly)
+#define release	0		//1=released, 0 = debug (disable watchdogs mainly)
 #define NEATRX 0		//1=enable NEAT RX, 0=disable NEAT RX
 #define NEATREPEATS 8		//NEAT repeats, 3 or 8.
 #define NEATBUTTONREPEATS 8	//NEAT repeats when button is pressed with no ACK.
@@ -27,13 +27,14 @@
 #define baud 11	//92/46/23/11/  96 not implemented yet, copy of 115.2
 
 #if NEATRX==1
-#define Version 0x20542D32	//	"2-S " little endian.
+#define Version 0x20562D32	//	"2-T " little endian.
 #elif NEATRX==0
-#define Version 0x20542D32	//	"2-S " little endian.
+#define Version 0x20562D32	//	"2-T " little endian.
 #endif
 
 
-
+#define IRreturn	10000		//40us	exit interrupt if wait>40us lower than 25KHz.
+#define IRinterrupt	5000		//20us	interrupt if <20us before pulse.
 
 extern int	PCBiss;		//calculated PCB issue (main.c)
 //0 means debug, 1 means release.
@@ -130,6 +131,10 @@ typedef unsigned int word;		//32 bit on LPC17**
 
 #define BTSPICS			1<<31			//P1.31
 #define LPC_GPIO_BTSPICS LPC_GPIO1->
+
+#define ACOK			1<<8			//P2.8
+#define LPC_GPIO_ACOK LPC_GPIO2->
+
 
 
 #elif PCBissue==2						//issue 2 PCB

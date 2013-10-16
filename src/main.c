@@ -23,8 +23,8 @@ PUBLIC int ALARMtime=100;//30=3s
 
 //Private variables local to this file
 
-PRIVATE unsigned *p;	//0 if loaded at 0, 0x10000 if loaded over USB.
-
+//PRIVATE unsigned *p;	//0 if loaded at 0, 0x10000 if loaded over USB.
+volatile uintptr_t p;
 
 //External variables
 EXTERNAL volatile byte InputState;
@@ -46,7 +46,7 @@ EXTERNAL int BTACC;
 EXTERNAL volatile byte I2CSlaveBuffer[];
 EXTERNAL int NIMH;
 EXTERNAL int LITHIUM;
-
+extern char QUERYnewbattery(void);
 
 //Local functions
 PRIVATE void powerupHEX(void);
@@ -128,8 +128,8 @@ PUBLIC int main(void) {
 
 	{
 
-		char a;
-		int charge;
+
+
 		LED2GREEN();
 		timer2CPU4();		//4MHz clock, generate 1MHz system clock for sleep and delays from 4MHz CPU clock.
 		LPC_TIM2->TCR = 0 | 1 << 1; //disable timer2, reset timer2
@@ -140,7 +140,7 @@ PUBLIC int main(void) {
 		BTbaudCPU12();
 
 		I2CINIT();			//at 4MHz.
-
+		QUERYnewbattery();
 		I2CREAD();
 
 		p=SCB->VTOR;		//vector=0 if loaded at 0, 0x10000 if loaded at 0x10000, ie over USB driver.
@@ -194,7 +194,7 @@ if (PCBiss==3||PCBiss==4)
 ///it wakes up from input, BT or NEAT interrupts.
 /////////////////////////////////////////////////////////////////////////////////////////////////
 PRIVATE void LOOP(void) {
-	int 	a;
+
 	CPU12MHz();
 	LPC_TIM2->TC = 0;
 	LED2OFF();
@@ -226,10 +226,8 @@ PRIVATE void powerupHEX(void) {
 	unsigned int time;
 	int h,i,j,k,l;
 
-		byte	a,b,c,d;
-		int Charge;
-			int ChargeCalc;
-			int LastCharge;
+		byte	a,b,d;
+
 	while(1)
 	{
 
@@ -424,53 +422,181 @@ PRIVATE void powerupHEX(void) {
 			}
 		break;
 */
+
+
+	case 06:
+		I2CREAD();
+		I2CChargeWR(0x8000);
+		us(6000000);
+
+		for (j=0;j<0x100;j+=10)
+		{
+
+		for (i=0;i<0x8;i++)
+		{Buffer [j+i]=I2CSlaveBuffer[i];
+		}
+		Buffer [j+i++]=0xEE;
+		Buffer [j+i++]=0xEE;
+		I2CREAD();
+	//	us(100000);
+
+		}
+		break;
+
 	case 07:				//test IR synthesis Transmit code Plessey 3 every 5 seconds.
 		CPU12MHz();
 		us(100000);
 		LED2OFF();
 		while (1)
 		{
+			LPC_TIM2->TC=0;
 
-			CPU12MHz();
-			us(4705096);
-
-					{
 		 IRsynthesis('P',4,0x5);		//Plessey  4 repeats, code 3 for HC603c
 			playIR();
 
-						}
+			us(4705096);
+
 
 
 
 		}
 		break;
 
-/*
-	case 0x08:				//TEST turn off after 2 seconds.
-		LED2OFF();
-		CPU12MHz();
-		I2CINIT();
-		 I2CSHUTDOWN();
-		 IRsynthesis('P',2,0x2);
-			playIR();
-			LED1OFF();
-			LED2OFF();
+	case 0x08:				//testing IR
 
-		LPC_GPIO_OFF FIOSET =OFF; //OFF button set high to turn off.
-			NEATOFF();
-			LPC_GPIO_BTRESET FIOCLR	= BTRESET;	//Bluetooth reset.	RESET BT
-		CPU4MHz();
 
-		while(1)
+CPU12MHz();
+
+//	Buffer[i=0,i++]	=0x8524a481;
+//	Buffer[i++]		=0x9016c010;
+//	Buffer[i++]		=0x900ed010;
+//		Buffer[i++]		=0x902ed010;
+//		Buffer[i++]		=0xa3120111;
+//		Buffer[i++]		=0xb0040004;
+//	Buffer[i++]		=0x902ed000;
+
+//	Buffer[i=0,i++] = 0x8 << 28 | 1315 << 16 | 0 << 4 | 0x0 << 0;//0x08=header,200/50=pulse width, 100=period, 2=skip 2 to start of data
+
+j=0;
+i=0;
+//	for (k=0;k<1;k++)
+//			{
+//			Buffer[i++]=10000+(100000*j)+2630*k;  //test for Pioneer 1.125MHz
+//		}
+
+//	j++;
+Buffer[i++] = 0x8 << 28 | 2047 << 16 | 0 << 4 | 0x0 << 0;//0x08=header,200/50=pulse width, 100=period, 2=skip 2 to start of data
+
+for (k=0,j++;k<4;k++)
+{
+	Buffer[i++]=10000+(100000*j)+4096*k;  //test for Pioneer 1.125MHz
+}
+Buffer[i++] = 0x8 << 28 | 44 << 16 | 0 << 4 | 0x0 << 0;//0x08=header,200/50=pulse width, 100=period, 2=skip 2 to start of data
+
+	for (k=0,j++;k<16;k++)
+	{
+		Buffer[i++]=10000+(100000*j)+89*k;  //test for Pioneer 1.125MHz
+	}
+
+
+
+Buffer[i++] = 0x8 << 28 | 50 << 16 | 0 << 4 | 0x0 << 0;//0x08=header,200/50=pulse width, 100=period, 2=skip 2 to start of data
+
+for (k=0,j++;k<16;k++)
+	{
+		Buffer[i++]=10000+(100000*j)+100*k;  //test for Pioneer 1MHz
+	}
+Buffer[i++] = 0x8 << 28 | 100 << 16 | 0 << 4 | 0x0 << 0;//0x08=header,200/50=pulse width, 100=period, 2=skip 2 to start of data
+
+for (k=0,j++;k<16;k++)
+	{
+		Buffer[i++]=10000+(100000*j)+200*k;  //test for  500KHz
+	}
+Buffer[i++] = 0x8 << 28 | 200 << 16 | 0 << 4 | 0x0 << 0;//0x08=header,200/50=pulse width, 100=period, 2=skip 2 to start of data
+
+for (k=0,j++;k<16;k++)
+	{
+		Buffer[i++]=10000+(100000*j)+400*k;  //test for 250KHz
+	}
+Buffer[i++] = 0x8 << 28 | 400 << 16 | 0 << 4 | 0x0 << 0;//0x08=header,200/50=pulse width, 100=period, 2=skip 2 to start of data
+
+for (k=0,j++;k<16;k++)
+	{
+		Buffer[i++]=10000+(100000*j)+800*k;  //test for 125KHz
+	}
+Buffer[i++] = 0x8 << 28 | 500 << 16 | 0 << 4 | 0x0 << 0;//0x08=header,200/50=pulse width, 100=period, 2=skip 2 to start of data
+
+for (k=0,j++;k<16;k++)
+		{
+			Buffer[i++]=10000+(100000*j)+1000*k;  //test for 100KHz
+		}
+Buffer[i++] = 0x8 << 28 | 625 << 16 | 0 << 4 | 0x0 << 0;//0x08=header,200/50=pulse width, 100=period, 2=skip 2 to start of data
+
+	for (k=0,j++;k<16;k++)
 			{
-			disableInputInterrupt();
-			SCB->SCR = 0x4;			//sleepdeep bit
-			LPC_SC->PCON = 0x03;	//combined with sleepdeep bit gives power down mode. IRC is disabled, so WDT disabled.
-			__WFI();
+				Buffer[i++]=10000+(100000*j)+1250*k;  //test for 80KHz
 			}
 
-		break;
+	Buffer[i++] = 0x8 << 28 | 833 << 16 | 0 << 4 | 0x0 << 0;//0x08=header,200/50=pulse width, 100=period, 2=skip 2 to start of data
+
+		for (k=0,j++;k<16;k++)
+				{
+					Buffer[i++]=10000+(100000*j)+1666*k;  //test for 60KHz
+				}
+Buffer[i++] = 0x8 << 28 | 1000 << 16 | 0 << 4 | 0x0 << 0;//0x08=header,200/50=pulse width, 100=period, 2=skip 2 to start of data
+
+
+for (k=0,j++;k<16;k++)
+	{
+		Buffer[i++]=10000+(100000*j)+2000*k;  //test for 50KHz
+	}
+Buffer[i++] = 0x8 << 28 | 1315 << 16 | 0 << 4 | 0x0 << 0;//0x08=header,200/50=pulse width, 100=period, 2=skip 2 to start of data
+
+for (k=0,j++;k<16;k++)
+	{
+		Buffer[i++]=10000+(100000*j)+2632*k;  //test for 38KHz
+	}
+
+
+
+
+/*
+
+//play code 6 MSU
+
+int IRcode=5;
+int IRrep=2;
+
+	//PLESSEY code
+	Buffer[i++] = 0x8 << 28 | 0x524 << 16 | 0xa48 << 4 | 0x1 << 0;//0x08=header,200/0x524=pulse width, 0xa48=period, 2=skip 2 to start of data
+	Buffer[i++] = 0x9016c010;//0x9=symbol, 0x16c=space, 0x10=Mark (16 pulses at period intervals) DATA 0
+	Buffer[i++] = 0x900ed010;//0x9=symbol, 0xed =space, 0x10=Mark (16 pulses at period intervals) DATA 1 (Executes from here, no initial pulse)
+	Buffer[i++] = 0x902e8010;//0x9=symbol, 0x2e8=space, 0x10=Mark (16 pulses at period intervals) INITIAL Space + PULSE =SYNC with previous symbol.
+	Buffer[i++] = (((IRcode & 0x10) >> 4) + 1) | //MSB bit 4
+			((((IRcode & 0x8) >> 3) + 1) << 4) | // bit 3
+			((((IRcode & 0x4) >> 2) + 1) << 8) | // bit 2
+			((((IRcode & 0x2) >> 1) + 1) << 16) | // bit 1
+			((((IRcode & 0x1) >> 0) + 1) << 20) | //LSB bit 0
+			(0x3 << 24) | //SYNC PULSE
+			(0xa << 28); //0x0a=DATA structure for word.
+	Buffer[i++] = 0xb << 28 | IRrep << 17 | 174 << 0; //repeat rep times from address 4
+	Buffer[i++] = 0x00; //end of data.
+
 */
+
+Buffer[i++]		=0x0;
+
+while(1)
+{
+ playIR();
+ us(1000000);
+}
+ //		 playIR();
+
+
+break;
+
+
 
 	case 0x09:
 		CPU4MHz();
@@ -512,56 +638,6 @@ PRIVATE void powerupHEX(void) {
 
 		break;
 
-/*			case 0x0A:				//Enable USB programming.
-
-
-		CPU12MHz();
-
-		Buffer[i=0,i++]	=0x8524a481;
-		Buffer[i++]		=0x9016c010;
-		Buffer[i++]		=0x900ed010;
-		Buffer[i++]		=0x902ed010;
-		Buffer[i++]		=0xa3120111;
-		Buffer[i++]		=0xb0040004;
-		Buffer[i++]		=0x902ed000;
-		Buffer[i++]		=0x0;
-
-
-/*		k=160;
-		Buffer[i=0,i++]	=0x80301000;
-			Buffer[i++]		=0x00010000;
-			Buffer[i++]		=0x00010000+k;
-			Buffer[i++]		=0x00010000+2*k;
-			Buffer[i++]		=0x00010000+3*k;
-			Buffer[i++]		=0x00010000+4*k;
-			Buffer[i++]		=0x00010000+5*k;
-			Buffer[i++]		=0x00010000+6*k;
-			Buffer[i++]		=0x00010000+7*k;
-			Buffer[i++]		=0x00010000+8*k;
-			Buffer[i++]		=0x00010000+9*k;
-			Buffer[i++]		=0x00010000+10*k;
-			Buffer[i++]		=0x00010000+11*k;
-			Buffer[i++]		=0x00010000+12*k;
-			Buffer[i++]		=0x00010000+13*k;
-			Buffer[i++]		=0x00010000+14*k;
-			Buffer[i++]		=0x00010000+15*k;
-			Buffer[i++]		=0x00010000+16*k;
-			Buffer[i++]		=0x00010000+17*k;
-
-
-
-			Buffer[i++]		=0x0;
-
-
-
-
-
-		 playIR();
-//		 playIR();
-
-
-		break;
-*/
 	case 0x0C: 				//DEBUG recover clock
 		LPC_GPIO1-> FIODIR |= IRON; 		//output
 		LPC_GPIO1-> FIOSET |=IRON	;

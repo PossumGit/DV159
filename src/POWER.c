@@ -52,6 +52,7 @@ PUBLIC int charge;
 PUBLIC int ChargeConfidence=3;
 PUBLIC int NIMH=1;
 PUBLIC int LITHIUM=0;
+EXTERNAL byte LastInputState;
 
 	int	CLED=0;
 //Private variables
@@ -95,6 +96,7 @@ EXTERNAL byte HEX(void);
 EXTERNAL void NEATTX(byte, byte, word);
 EXTERNAL void NEATRESET(void);
 EXTERNAL int repeatInput(void);
+EXTERNAL int copyInput(void);
 EXTERNAL void	LED1GREEN(void);
 EXTERNAL void	LED1YELLOW(void);
 EXTERNAL void	LED1OFF(void);
@@ -459,7 +461,8 @@ if (PCBiss==3||PCBiss==4)
 			CPU12MHz();
 			LPC_TIM2->TC = 0;
 			LPC_TIM3->TC = 0;
-			if((HELDtime==0))	repeatInput(); //check if change of input, send via BT to android if change.
+	//		if((HELDtime==0))	repeatInput(); //check if change of input, send via BT to android if change.
+	//		else copyInput();
 			//if HELDtime==0 then no held delay, else only see rising edge if time > heldtime.
 			PENDALARM=0x30^(inputTest()&0x30);	//NZ if EXT and/or INT pressed.//else 0.
 			debounce=1;
@@ -480,7 +483,8 @@ if (PCBiss==3||PCBiss==4)
 
 				LPC_GPIOINT->IO0IntEnR&=~(0x1<<16);			//disable Bluetooth rising interrupt
 				CPU12MHz();
-				if(HELDtime==0)	repeatInput(); //check if change of input, send via BT to android if change.
+	//			if(HELDtime==0)	repeatInput(); //check if change of input, send via BT to android if change.
+	//			else copyInput();
 				LPC_TIM2->TC = 0;
 				LPC_TIM3->TC = 0;
 				PENDALARM=0x30^(inputTest()&0x30);	//NZ if EXT and/or INT pressed.//else 0.
@@ -605,13 +609,12 @@ PUBLIC int powerDown(void)
 {
 
 	int r=0;		//return value
-//	byte a;
+	byte Input;
 	int b,s,htime;
 //	int c,d,e,f,g,h,i,j,k,x;
 
-	//FEED watchdog.
-	s=LPC_TIM2->TC;
-	htime=LPC_TIM3->TC;
+
+
 ////////////////
 	if((HELDtime==0)&&(debounce==1)&&(20000 < LPC_TIM2->TC))
 	{
@@ -619,14 +622,46 @@ PUBLIC int powerDown(void)
 		repeatInput(); //check if change of input, send via BT to android if change.
 		PENDALARM=0x30^(inputTest()&0x30);	//NZ if EXT and/or INT pressed.//else 0.
 	}
-	else if (HELDtime>0)
+
+
+	else if ((HELDtime>0)&&(20000 < LPC_TIM2->TC))
 	{
 
 		inputCheck();
-		debounce=0;
-//		repeatInput(); //check if change of input, send via BT to android if change.
-		PENDALARM=0x30^(inputChange()&0x30);	//NZ if EXT and/or INT pressed.//else 0.
+		Input=inputChange();
+		PENDALARM=0x30^(Input&0x30);	//NZ if EXT and/or INT pressed.//else 0.
+//		debounce=0;
+
+
+
+
+		if(Input&0x80)		//change of input
+		{
+
+			if ((Input^LastInputState)&0x01)			//MID
+			{
+				if(Input&0x01)
+					sendBT("F", 1);
+						else
+					sendBT("G", 1) ;
+			}
+			if ((Input^LastInputState)&0x10)			//EXT
+			{
+				if(Input&0x10)
+					sendBT("E", 1);
+				else
+					sendBT("D", 1) ;
+			}
+			if ((Input^LastInputState)&0x20)			//INT
+			{
+				if(Input&0x20)
+					sendBT("C", 1);
+				else
+					sendBT("B", 1) ;
+			}
 		}
+
+	}
 
 
 //////////////////
@@ -665,7 +700,7 @@ PUBLIC int powerDown(void)
 
 	{
 //		LED1GREEN();
-		if (30000000 < LPC_TIM2->TC)	SystemOFF();		//if >30s then power off.
+//		if (30000000 < LPC_TIM2->TC)	SystemOFF();		//if >30s then power off.
 	if(0x40==((LPC_UART1->LSR)&(0x41)))	//bit 1=0 RX FIFO empty, bit 6=1 TX FIFO empty.
 	if(rxstart==rxend)					//nothing waiting in bluetooth rx buffer
 	if(txstart==txend)					//nothing waiting in bluetooth tx buffer

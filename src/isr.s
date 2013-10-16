@@ -6,12 +6,15 @@
  	.global asm_holtek
  	.global D
  	.global Delay
+ 	.global carrier
+ 	.global raw
  	.thumb
  	.thumb_func
 
 
 D:
-	push	{lr}
+	push	{R1-R12,lr}					//save all registers
+//	push	{lr}
  	ldr 	r5,=0x2009C038				//@GPIO 1 FIOSET
  	ldr		r6,=0x2009C03C				//@GPIO 1 FIOCLR
 	ldr		r4,=1<<28					//IROUT
@@ -22,7 +25,8 @@ D:
 	bl		Delay
 	str		r4,[r5]				//set IR bit IR ON.
 	str		r4,[r6]			//clr IR bit IR OFF.
-		pop		{lr}
+//		pop		{lr}
+	pop	{R1-R12,lr}					//save all registers
 	bx		lr
 
 ///////////////////////////
@@ -41,7 +45,8 @@ Delay1:
 
 
 asm_holtek:
-	push	{lr}
+//	push	{lr}
+	push	{R1-R12,lr}					//save all registers
 	ldr		r10,=0x2009C018				//FIO0SET
  	ldr		r11,=0x2009C01C				//FIO0CLR
  	ldr 	r12,=1<<11					//OFF pin set for OFF.
@@ -103,7 +108,8 @@ holtek2:
 
 
 	b	holtek2						//wait for input to be pressed.
-	pop		{lr}
+	pop	{R1-R12,lr}					//save all registers
+//	pop		{lr}
  	bx		lr
 
 
@@ -391,7 +397,8 @@ Hsynca:
 
 
  asm_vivo:
- 	push	{lr}
+	push	{R1-R12,lr}					//save all registers
+// 	push	{lr}
 //r0=0,1,2,3
  	ldr	r10,=0x2009C018				//FIO0SET
  	ldr	r11,=0x2009C01C				//FIO0CLR
@@ -514,7 +521,8 @@ vivo2:
 	bne	vivo1
 	str	r12,[r10]					//disable power
 	b	vivo2		//wait for input to be pressed.
-	pop	{lr}
+	pop	{R1-R12,lr}					//save all registers
+//	pop	{lr}
  	bx	lr
 
 
@@ -662,4 +670,110 @@ twelve455KHz:
 	str	r4,[r5]						//set IR bit
 	str	r4,[r6]						//clr IR bit
  	bx	lr
+
+
+
+raw:
+
+
+
+//r0=IRAddress
+//r1=count, max number of pulses = Capturemax-IADress
+//r2=return if match time exceeds r2
+//return IRAddress of next pulse.
+
+		push	{R1-R12,lr}					//R0 is return, R13=SP, R14=LR, R15=PC save all registers
+	//TIM0->EMR 0x4000 403C		//R8
+	// TIM0->TCR 0x4000 4004	//R9
+	// TIM1->TC 0x4000 8008		//R10
+		.align 4
+
+		add	R0,R0,R0				//R0*2
+		add	R0,R0,R0				//R0*2	convert to word pointer
+		ldr	R5,=0x11			//r5, TIM0->EMR		external pulse until match
+		ldr	R8,=0x4000403C		//TIM0->EMR
+		ldr	R6,=0x1				//r6,TIM0->TCR		reset and restart TIM0
+
+		ldr R9,=0x40004004		//TIM0->TCR
+		ldr R10,=0x40008008		//TIM1->TC  IR counter.
+		ldr R11,=Buffer			//Buffer
+//		add R12,R12,R0
+		add R12,R11,R0			//R12=Buffer+IRAddress
+
+		ldr	R4,[R12],#4			//load IRdata=Buffer[IRAddress++]
+		cbz	R4,rawexit			//exit if data=0
+
+
+RawMatch:
+		ldr	r3,[r10]		//read timer count.
+		cmp	r4,r3			//compare timer count match count
+		bcs	RawMatch		//wait until TC>=IRMATCH branch if R4>R3
+//GeneratePulse
+		str	r5,[r8]			//r5,[TIM0->EMR] Set up output pulse
+		str r6,[r9]			//r6,[TIM0->TCR] Set up output pulse.
+//count pulses
+		subs	r1,r1,#1			// count pulses
+		beq		rawexit	//repeat	//exit if used up count of pulses
+//set up next pulse
+		ldr		R4,[R12],#4				//load IRdata=Buffer[IRAddress++]
+		cbz		R4,rawexit				//exit if IRData==0
+//if R4-R3< R2 loop, else exit.
+		sub		R3,R4,R3			//R11=IRData-Timer.
+		cmp		R2,R3				//40us
+		bcs		RawMatch			//branch if R3>=R2 time to next pulse < IRreturn
+
+//exit if IRData is not raw or is 0 or count done or IRTimeMatch>IRreturn.
+rawexit:
+	sub	R12,R12,#4					//R12 is used as pointer, correct to IRAddress
+	sub	R0,R12,R11					//remove initial R0
+//	sub	R0,R12,R0
+	lsr	R0,R0,#2					//correct from byte pointer to word pointer (/4)
+	pop	{R1-R12,lr}					//save all registers
+	bx lr							//return
+
+
+
+
+carrier:
+
+//r0=0,1,2,3 etc =count
+//r1=100, 200 etc=period
+//r2 is IRTIMEMATCH
+	push	{R1-R12,lr}					//save all registers
+//	ldr		r2,=0x2009C014				//FIO0PIN
+//	ldr	r8,	[r2]	//FIO0PIN
+///	and	r8,r8,#(1<<21)		//ext normally low
+//	cmp	r8,#0
+//	bne	carrier1
+
+	//		while(IRTimeMatch>LPC_TIM1->TC);    //wait for next time match
+	//						LPC_TIM0->EMR = 1 | 1 << 4; //Set P1.28, clear P1.28 MR0 on match generate IR PULSE
+	//						LPC_TIM0->TCR = 1 | 0 << 1; //reset timer0 and start timer0// bit 1 has to be cleared for counting.
+	//						IRTimeMatch +=Period;
+	.align 4
+	//TIM0->EMR 0x4000 403C		//R8
+	// TIM0->TCR 0x4000 4004	//R9
+	// TIM1->TC 0x4000 8008		//R10
+		ldr	R5,=0x11
+		ldr	R8,=0x4000403C
+		ldr	R6,=0x1
+		ldr R9,=0x40004004
+		ldr R10,=0x40008008
+		cmp	R0,#0
+		beq	NoPulse
+
+WaitMatch:
+		ldr	r3,[r10]		//read timer count.
+		cmp	r2,r3			//compare timer count match count
+		bpl	WaitMatch		//wait until TC>=IRMATCH
+		str	r5,[r8]			//r5,[TIM0->EMR] Set up output pulse
+		str r6,[r9]			//r6,[TIM0->TCR] Set up output pulse.
+		add	r2,r2,r1		//set up next timer match
+		subs	r0,r0,#1			//count pulses
+		bne		WaitMatch	//repeat
+NoPulse:
+	pop	{R1-R12,lr}					//save all registers
+
+		bx	lr
+
 
