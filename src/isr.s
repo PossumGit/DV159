@@ -4,6 +4,7 @@
  	.align	8
  	.global	asm_vivo
  	.global asm_holtek
+ 	.global	asm_freq
  	.global D
  	.global Delay
  	.global carrier
@@ -43,6 +44,26 @@ Delay1:
 	bne	Delay1
 	bx lr
 
+asm_freq:
+
+	ldr		r10,=0x2009C018				//FIO0SET
+ 	ldr		r11,=0x2009C01C				//FIO0CLR
+ 	ldr 	r12,=1<<11					//OFF pin set for OFF.
+ 	ldr		r13,=0x40000008					//WDT FEED.
+
+ 	ldr 	r5,=0x2009C038				//@GPIO 1 FIOSET
+ 	ldr		r6,=0x2009C03C				//@GPIO 1 FIOCLR
+ 	ldr		r2,=0x2009C014				//FIO0PIN
+ 	ldr		r3,=0x2009C054				//FIO2PIN
+	ldr		r4,=1<<28					//IROUT
+asmrep:
+	str		r4,[r5]				//set IR bit IR ON.
+	str		r4,[r6]				//clr IR bit IR OFF.
+	str		r4,[r6]				//clr IR bit IR OFF.
+	str		r4,[r6]				//clr IR bit IR OFF.
+	str		r4,[r6]				//clr IR bit IR OFF.
+	str		r4,[r6]				//clr IR bit IR OFF.
+	b	asmrep
 
 asm_holtek:
 //	push	{lr}
@@ -95,6 +116,9 @@ holtek1:
 
 
 holtek2:
+ 	ldr		r2,=0x2009C014				//FIO0PIN
+ 	ldr		r3,=0x2009C054				//FIO2PIN
+
 	ldr	r8,	[r2]	//FIO0PIN
 	ldr	r9,	[r3]	//FIO2PIN
 	and	r8,r8,#(1<<21)		//ext normally low
@@ -133,12 +157,50 @@ H16a:
 	str		r4,[r5]				//set IR bit IR ON.
 	str		r4,[r5]				//set IR bit IR ON.
 	str		r4,[r5]				//set IR bit IR ON.
+
 	str		r4,[r5]				//set IR bit IR ON.
 	str		r4,[r5]				//set IR bit IR ON.
 	str		r4,[r5]				//set IR bit IR ON.
 	str		r4,[r5]				//set IR bit IR ON.
 	str		r4,[r5]				//set IR bit IR ON.
+	str		r4,[r5]			//clr IR bit IR OFF.
+	str		r4,[r5]			//clr IR bit IR OFF.
+	str		r4,[r5]			//clr IR bit IR OFF.
+	str		r4,[r5]			//clr IR bit IR OFF.
+	str		r4,[r5]			//clr IR bit IR OFF.
 
+	str		r4,[r5]			//clr IR bit IR OFF.
+	str		r4,[r5]			//clr IR bit IR OFF.
+	str		r4,[r5]			//clr IR bit IR OFF.
+	str		r4,[r5]			//clr IR bit IR OFF.
+	str		r4,[r5]			//clr IR bit IR OFF.
+	str		r4,[r5]			//clr IR bit IR OFF.
+	str		r4,[r5]			//clr IR bit IR OFF.
+	str		r4,[r5]			//clr IR bit IR OFF.
+	str		r4,[r5]			//clr IR bit IR OFF.
+	str		r4,[r5]			//clr IR bit IR OFF.
+
+	str		r4,[r5]			//clr IR bit IR OFF.
+	str		r4,[r5]			//clr IR bit IR OFF.
+	str		r4,[r5]			//clr IR bit IR OFF.
+	str		r4,[r5]			//clr IR bit IR OFF.
+	str		r4,[r5]			//clr IR bit IR OFF.
+	str		r4,[r5]			//clr IR bit IR OFF.
+	str		r4,[r5]			//clr IR bit IR OFF.
+	str		r4,[r5]			//clr IR bit IR OFF.
+	str		r4,[r5]			//clr IR bit IR OFF.
+	str		r4,[r5]			//clr IR bit IR OFF.
+
+	str		r4,[r5]			//clr IR bit IR OFF.
+	str		r4,[r5]			//clr IR bit IR OFF.
+	str		r4,[r5]			//clr IR bit IR OFF.
+	str		r4,[r5]			//clr IR bit IR OFF.
+	str		r4,[r5]			//clr IR bit IR OFF.
+	str		r4,[r5]			//clr IR bit IR OFF.
+	str		r4,[r5]			//clr IR bit IR OFF.
+	str		r4,[r5]			//clr IR bit IR OFF.
+	str		r4,[r5]			//clr IR bit IR OFF.
+	str		r4,[r5]			//clr IR bit IR OFF.
 
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
@@ -150,23 +212,6 @@ H16a:
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-
-
 
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
@@ -178,6 +223,7 @@ H16a:
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
+
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
@@ -188,6 +234,7 @@ H16a:
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
+
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
@@ -198,6 +245,7 @@ H16a:
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
+
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
@@ -208,26 +256,7 @@ H16a:
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
+
 	str		r4,[r6]			//clr IR bit IR OFF.
 
 	subs	r8,r8,#1		//1	//branch prediction should work, so no pipline flush delays. But it doesn't work??
@@ -249,12 +278,50 @@ H32a:
 	str		r4,[r5]				//set IR bit IR ON.
 	str		r4,[r5]				//set IR bit IR ON.
 	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
-	str		r4,[r5]				//set IR bit IR ON.
 
+	str		r4,[r5]				//set IR bit IR ON.
+	str		r4,[r5]				//set IR bit IR ON.
+	str		r4,[r5]				//set IR bit IR ON.
+	str		r4,[r5]				//set IR bit IR ON.
+	str		r4,[r5]				//set IR bit IR ON.
+	str		r4,[r5]			//set IR bit IR ON.
+	str		r4,[r5]			//set IR bit IR ON.
+	str		r4,[r5]			//set IR bit IR ON.
+	str		r4,[r5]			//set IR bit IR ON.
+	str		r4,[r5]			//set IR bit IR ON.
+
+	str		r4,[r5]			//set IR bit IR ON.
+	str		r4,[r5]			//set IR bit IR ON.
+	str		r4,[r5]			//set IR bit IR ON.
+	str		r4,[r5]			//set IR bit IR ON.
+	str		r4,[r5]			//set IR bit IR ON.
+	str		r4,[r5]			//set IR bit IR ON.
+	str		r4,[r5]			//set IR bit IR ON.
+	str		r4,[r5]			//set IR bit IR ON.
+	str		r4,[r5]			//set IR bit IR ON.
+	str		r4,[r5]			//set IR bit IR ON.
+
+	str		r4,[r5]			//set IR bit IR ON.
+	str		r4,[r5]			//set IR bit IR ON.
+	str		r4,[r5]			//set IR bit IR ON.
+	str		r4,[r5]			//set IR bit IR ON.
+	str		r4,[r5]			//set IR bit IR ON.
+	str		r4,[r5]			//set IR bit IR ON.
+	str		r4,[r5]			//set IR bit IR ON.
+	str		r4,[r5]			//set IR bit IR ON.
+	str		r4,[r5]			//set IR bit IR ON.
+	str		r4,[r5]			//set IR bit IR ON.
+
+	str		r4,[r5]			//set IR bit IR ON.
+	str		r4,[r5]			//set IR bit IR ON.
+	str		r4,[r5]			//set IR bit IR ON.
+	str		r4,[r5]			//set IR bit IR ON.
+	str		r4,[r5]			//set IR bit IR ON.
+	str		r4,[r5]			//set IR bit IR ON.
+	str		r4,[r5]			//set IR bit IR ON.
+	str		r4,[r5]			//set IR bit IR ON.
+	str		r4,[r5]			//set IR bit IR ON.
+	str		r4,[r5]			//set IR bit IR ON.
 
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
@@ -266,6 +333,7 @@ H32a:
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
+
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
@@ -276,6 +344,7 @@ H32a:
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
+
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
@@ -286,6 +355,7 @@ H32a:
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
+
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
@@ -296,41 +366,7 @@ H32a:
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
-	str		r4,[r6]			//clr IR bit IR OFF.
+
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
 	str		r4,[r6]			//clr IR bit IR OFF.
@@ -349,33 +385,149 @@ H32a:
 	bx		lr
 
 
-H32off:
+H32offx:
 .align 4
 	ldr	r7,=1111
 	.align 4
-H32offa:
+H32offax:
 	subs	r7,r7,1
-	bne	H32offa
+	bne	H32offax
+
+
 	bx lr
 
-H16off:
+H16offx:
 
 	ldr	r7,=552
 	.align 4
-H16offa:
+H16offax:
 	subs	r7,r7,1
-	bne	H16offa
+	bne	H16offax
 	bx lr
 
 
-Hsync:
+Hsyncx:
 
 	ldr	r7,=19596
 	.align 4
-Hsynca:
+Hsyncax:
 	subs	r7,r7,1
-	bne	Hsynca
+	bne	Hsyncax
 	bx lr
+
+H16off:
+//R0=time
+		.align 4
+		ldr	r7,=1645	//last start cycle to next start cycle
+						//count (18+3.5*(#-10)/14))us.
+						//#%13 =number of compares to add.
+						//approx #=10+ 4(us-18)
+						//for 564.75 we get
+		ldr R1,=0x40008000		//TIM1->TCR
+
+		ldr	R2,=0x3				//r6,TIM1->TCR		reset TIM1
+		str r2,[r1,#4]				//TIM1->TCR reset and start Timer
+		ldr	R2,=0x1				//r6,TIM1->TCR		restart TIM1
+		str r2,[r1,#4]				//TIM1->TCR reset and start Timer
+
+
+//test for count finished.
+	.align 4
+HT0:
+		ldr	r2,[r1,#8]				//T2 TIM1->TC read timer count.
+		cmp	r2,r7				//T1 compare timer count match count
+		bcc	HT0					//T(1 or 1+pipeline) wait until TC>=IRMATCH branch if R4>R3
+//		cmp	r2,r7				//each cpmp=0.25us.
+//		cmp	r2,r7
+///		cmp	r2,r7
+//		cmp	r2,r7
+//		cmp	r2,r7
+///		cmp	r2,r7
+//		cmp	r2,r7
+//		cmp	r2,r7
+///		cmp	r2,r7
+//		cmp	r2,r7
+//		cmp	r2,r7
+///		cmp	r2,r7
+//		cmp	r2,r7
+		bx	lr
+
+H32off:
+//R0=time
+		.align 4
+		ldr	r7,=3335	//last start cycle to next start cycle
+						//count (18+3.5*(#-10)/14))us.
+						//#%13 =number of compares to add.
+						//approx #=10+ 4(us-18)
+						//for 564.75 we get
+		ldr R1,=0x40008000		//TIM1->TCR
+
+		ldr	R2,=0x3				//r6,TIM1->TCR		reset TIM1
+		str r2,[r1,#4]				//TIM1->TCR reset and start Timer
+		ldr	R2,=0x1				//r6,TIM1->TCR		restart TIM1
+		str r2,[r1,#4]				//TIM1->TCR reset and start Timer
+
+
+//test for count finished.
+	.align 4
+HT1:
+		ldr	r2,[r1,#8]				//T2 TIM1->TC read timer count.
+		cmp	r2,r7				//T1 compare timer count match count
+		bcc	HT1					//T(1 or 1+pipeline) wait until TC>=IRMATCH branch if R4>R3
+//		cmp	r2,r7				//each cpmp=0.25us.
+//		cmp	r2,r7
+//		cmp	r2,r7
+//		cmp	r2,r7
+//		cmp	r2,r7
+//		cmp	r2,r7
+//		cmp	r2,r7
+//		cmp	r2,r7
+//		cmp	r2,r7
+//		cmp	r2,r7
+//		cmp	r2,r7
+///		cmp	r2,r7
+//		cmp	r2,r7
+		bx	lr
+
+Hsync:
+//R0=time
+		.align 4
+		//6720 gives 1688us
+		//6730 gives 1692us
+		ldr	r7,=59390		//last start cycle to next start cycle
+						//count (18+3.5*(#-10)/14))us.
+						//#%13 =number of compares to add.
+						//approx #=10+ 4(us-18)
+						//for 564.75 we get
+		ldr R1,=0x40008000		//TIM1->TCR
+
+		ldr	R2,=0x3				//r6,TIM1->TCR		reset TIM1
+		str r2,[r1,#4]				//TIM1->TCR reset and start Timer
+		ldr	R2,=0x1				//r6,TIM1->TCR		restart TIM1
+		str r2,[r1,#4]				//TIM1->TCR reset and start Timer
+
+
+//test for count finished.
+	.align 4
+HTS:
+		ldr	r2,[r1,#8]				//T2 TIM1->TC read timer count.
+		cmp	r2,r7				//T1 compare timer count match count
+		bcc	HTS					//T(1 or 1+pipeline) wait until TC>=IRMATCH branch if R4>R3
+//		cmp	r2,r7				//each cpmp=0.25us.
+//		cmp	r2,r7
+//		cmp	r2,r7
+//		cmp	r2,r7
+//		cmp	r2,r7
+//		cmp	r2,r7
+//		cmp	r2,r7
+//		cmp	r2,r7
+//		cmp	r2,r7
+//		cmp	r2,r7
+//		cmp	r2,r7
+///		cmp	r2,r7
+//		cmp	r2,r7
+		bx	lr
+
 
 
 
@@ -397,6 +549,7 @@ Hsynca:
 
 
  asm_vivo:
+ 	.align 4
 	push	{R1-R12,lr}					//save all registers
 // 	push	{lr}
 //r0=0,1,2,3
@@ -406,8 +559,11 @@ Hsynca:
 
  	ldr r5,=0x2009C038				//@GPIO 1 FIOSET
  	ldr	r6,=0x2009C03C				//@GPIO 1 FIOCLR
- 	ldr	r2,=0x2009C014				//FIO0PIN
- 	ldr	r3,=0x2009C054				//FIO2PIN
+ 	ldr	r2,=0x2009C014				//FIO0PIN !(1<<21))>>17; 	//bit 5	EXTERNAL
+ 	ldr	r3,=0x2009C054				//FIO2PIN (1<<11))>>6;		//bit 6	INTERNAL
+ 	//!(1<<12))>>12;	//bit 4	EXTERNAL MID also means mono jack inserted
+
+
 	ldr	r4,=1<<28					//IROUT
 
 
@@ -416,12 +572,12 @@ vivo1:
 
 	cmp	r0,#0
 	bne	try1
- 	bl	twelve455KHz		//1
-	bl	vivoSync		//1
-	bl	twelve455KHz		//1
-	bl	vivoOne			//input A pressed
+ 	bl	twelve455KHz	//
+	bl	vivoSync		//768*1000/455 =1690.11us
+	bl	twelve455KHz	//
+	bl	vivoOne			//input A pressed	//512*1000/455=1127.47us
 	bl	twelve455KHz
-	bl	vivoZero		//input B not pressed.
+	bl	vivoZero		//input B not pressed.	//256*1000/455=564.84us
 	bl	twelve455KHz
 	bl	vivoZero		//channel bit 0
 	bl	twelve455KHz
@@ -435,6 +591,8 @@ vivo1:
 	bl	twelve455KHz
 	bl	vivoSync
 	bl	vivoSync		//double sync.
+
+
 	bl	vivo2
 try1:
 	cmp	r0,#1
@@ -444,6 +602,7 @@ try1:
 	bl	twelve455KHz		//1
 	bl	vivoOne			//input A pressed
 	bl	twelve455KHz
+//	bl	V0
 	bl	vivoZero		//input B not pressed.
 	bl	twelve455KHz
 	bl	vivoOne		//channel bit 0
@@ -510,57 +669,33 @@ try3:
 	//check input if pressed, repeat, else OFF
 
 vivo2:
+ 	ldr	r2,=0x2009C014				//FIO0PIN !(1<<21))>>17; 	//bit 5	EXTERNAL
+ 	ldr	r3,=0x2009C054				//FIO2PIN (1<<11))>>6;		//bit 6	INTERNAL
+ vivo3:
 	ldr	r8,	[r2]	//FIO0PIN
-	ldr	r9,	[r3]	//FIO2PIN
 	and	r8,r8,#(1<<21)		//ext normally low
 
-	and	r9,r9,#(1<<11)		//int normally high
+	ldr	r9,	[r3]	//FIO2PIN
+//GPIO2 (1<<11):   1= INTERNAL
+//GPIO2 !(1<<12):  0=external so use ! makes 1=EXTERNAL
+//GPIO0 !(1<<21):  0==mid so use ! makes 1=MID
+//IGNORE MID for VIVO remote function.
+	and	r9,r9,#(1<<11)		//internal normally high
 	eor	r9,r9,#(1<<11)		//makes int normally low
 	add r9,r9,r8
 	cmp	r9,#0
 	bne	vivo1
 	str	r12,[r10]					//disable power
-	b	vivo2		//wait for input to be pressed.
+	b	vivo3		//wait for input to be pressed.
 	pop	{R1-R12,lr}					//save all registers
 //	pop	{lr}
  	bx	lr
 
 
-vivoZero:		//==0
-//delay of 256 full cycles of 455KHz. (includes call+return)
-	ldr	r7,=446		//was 585			//2
-d256l:
-	sub	r7,r7,#1		//1	//branch prediction should work, so no pipline flush delays. But it doesn't work??
-	cmp	r7,#0			//1
-	bne	d256l			//3, 1 if continue
-	bx	lr				//3
-
-vivoOne:		//==1
-//delay of 512 full cycles of 455KHz. (includes call+return)
-	ldr	r7,=895			//was 1112		//2
-d512l:
-	sub	r7,r7,#1		//1	//branch prediction should work, so no pipline flush delays. But it doesn't work??
-	cmp	r7,#0			//1
-	bne	d512l			//3, 1 if continue
-	bx	lr				//3
-
-
-vivoSync:		//==sync
-//delay of 768 full cycles of 455KHz. (includes call+return)
-	ldr	r7,=1343			//was 1674			//2
-	d768l:
-	sub	r7,r7,#1		//1	//branch prediction should work, so no pipline flush delays. But it doesn't work??
-	cmp	r7,#0			//1
-	bne	d768l			//3, 1 if continue
-	bx	lr				//3
-
-
-
-
-
-
 
 twelve455KHz:
+	.align 4
+
 
  //enters with r0, r1 as paramters, returns with r0 as paramter.
 //should last for 12 full cycles of 455KHz(includes call+return)
@@ -670,6 +805,550 @@ twelve455KHz:
 	str	r4,[r5]						//set IR bit
 	str	r4,[r6]						//clr IR bit
  	bx	lr
+
+vivo1MHz:
+	.align 4
+		str	r4,[r5]						//set IR bit	START pulse
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	1
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	2
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	3
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	4
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	5
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	6
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	7
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	8
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	9
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	10
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+
+		str	r4,[r5]						//set IR bit	1
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	2
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	3
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	4
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	5
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	6
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	7
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	8
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	9
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	20
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+
+		str	r4,[r5]						//set IR bit	1
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	2
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	3
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	4
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	5
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	6
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	7
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	8
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	9
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	30
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+
+		str	r4,[r5]						//set IR bit	1
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	2
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	3
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	4
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	5
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	6
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	7
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	8
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	9
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	40
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+
+		str	r4,[r5]						//set IR bit	1
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	2
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	3
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	4
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	5
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	6
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	7
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	8
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	9
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	50
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+
+		str	r4,[r5]						//set IR bit	1
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	2
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	3
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	4
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	5
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	6
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	7
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	8
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	9
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	60
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+
+		str	r4,[r5]						//set IR bit	1
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	2
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	3
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	4
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	5
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	6
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	7
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	8
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	9
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	70
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+
+		str	r4,[r5]						//set IR bit	1
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	2
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	3
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	4
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	5
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	6
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	7
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	8
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	9
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	80
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+
+		str	r4,[r5]						//set IR bit	1
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	2
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	3
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	4
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	5
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	6
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	7
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	8
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	9
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	90
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+
+		str	r4,[r5]						//set IR bit	1
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	2
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	3
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	4
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	5
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	6
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	7
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	8
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	9
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+		str	r4,[r5]						//set IR bit	100
+	str	r4,[r5]						//set IR bit
+	str	r4,[r6]						//clr IR bit
+	str	r4,[r6]						//clr IR bit
+
+
+
+
+
+	bx	lr
+
+
+
+
+
+vivoZero:
+//R0=time
+		.align 4
+		ldr	r7,=2210	//last start cycle to next start cycle
+						//count (18+3.5*(#-10)/14))us.
+						//#%13 =number of compares to add.
+						//approx #=10+ 4(us-18)
+						//for 564.75 we get
+		ldr R1,=0x40008000		//TIM1->TCR
+
+		ldr	R2,=0x3				//r6,TIM1->TCR		reset TIM1
+		str r2,[r1,#4]				//TIM1->TCR reset and start Timer
+		ldr	R2,=0x1				//r6,TIM1->TCR		restart TIM1
+		str r2,[r1,#4]				//TIM1->TCR reset and start Timer
+
+
+//test for count finished.
+	.align 4
+T0:
+		ldr	r2,[r1,#8]				//T2 TIM1->TC read timer count.
+		cmp	r2,r7				//T1 compare timer count match count
+		bcc	T0					//T(1 or 1+pipeline) wait until TC>=IRMATCH branch if R4>R3
+//		cmp	r2,r7				//each cpmp=0.25us.
+//		cmp	r2,r7
+///		cmp	r2,r7
+//		cmp	r2,r7
+//		cmp	r2,r7
+///		cmp	r2,r7
+//		cmp	r2,r7
+//		cmp	r2,r7
+///		cmp	r2,r7
+//		cmp	r2,r7
+//		cmp	r2,r7
+///		cmp	r2,r7
+//		cmp	r2,r7
+		bx	lr
+
+vivoOne:
+//R0=time
+		.align 4
+		ldr	r7,=4470	//last start cycle to next start cycle
+						//count (18+3.5*(#-10)/14))us.
+						//#%13 =number of compares to add.
+						//approx #=10+ 4(us-18)
+						//for 564.75 we get
+		ldr R1,=0x40008000		//TIM1->TCR
+
+		ldr	R2,=0x3				//r6,TIM1->TCR		reset TIM1
+		str r2,[r1,#4]				//TIM1->TCR reset and start Timer
+		ldr	R2,=0x1				//r6,TIM1->TCR		restart TIM1
+		str r2,[r1,#4]				//TIM1->TCR reset and start Timer
+
+
+//test for count finished.
+	.align 4
+T1:
+		ldr	r2,[r1,#8]				//T2 TIM1->TC read timer count.
+		cmp	r2,r7				//T1 compare timer count match count
+		bcc	T1					//T(1 or 1+pipeline) wait until TC>=IRMATCH branch if R4>R3
+		cmp	r2,r7				//each cpmp=0.25us.
+		cmp	r2,r7
+		cmp	r2,r7
+		cmp	r2,r7
+		cmp	r2,r7
+		cmp	r2,r7
+		cmp	r2,r7
+		cmp	r2,r7
+		cmp	r2,r7
+//		cmp	r2,r7
+//		cmp	r2,r7
+///		cmp	r2,r7
+//		cmp	r2,r7
+		bx	lr
+
+vivoSync:
+//R0=time
+		.align 4
+		//6720 gives 1688us
+		//6730 gives 1692us
+		ldr	r7,=6730	//last start cycle to next start cycle
+						//count (18+3.5*(#-10)/14))us.
+						//#%13 =number of compares to add.
+						//approx #=10+ 4(us-18)
+						//for 564.75 we get
+		ldr R1,=0x40008000		//TIM1->TCR
+
+		ldr	R2,=0x3				//r6,TIM1->TCR		reset TIM1
+		str r2,[r1,#4]				//TIM1->TCR reset and start Timer
+		ldr	R2,=0x1				//r6,TIM1->TCR		restart TIM1
+		str r2,[r1,#4]				//TIM1->TCR reset and start Timer
+
+
+//test for count finished.
+	.align 4
+TS:
+		ldr	r2,[r1,#8]				//T2 TIM1->TC read timer count.
+		cmp	r2,r7				//T1 compare timer count match count
+		bcc	TS					//T(1 or 1+pipeline) wait until TC>=IRMATCH branch if R4>R3
+		cmp	r2,r7				//each cpmp=0.25us.
+		cmp	r2,r7
+		cmp	r2,r7
+		cmp	r2,r7
+//		cmp	r2,r7
+//		cmp	r2,r7
+//		cmp	r2,r7
+//		cmp	r2,r7
+//		cmp	r2,r7
+//		cmp	r2,r7
+//		cmp	r2,r7
+///		cmp	r2,r7
+//		cmp	r2,r7
+		bx	lr
+
+
+
+
+
 
 
 

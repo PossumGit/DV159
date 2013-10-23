@@ -546,7 +546,7 @@ PUBLIC void	us(unsigned int time_us)
  ///////////////////////////////////////////////////////////
  PUBLIC void EnableWDT10s()
  {
-		LPC_WDT->WDMOD =1<<0;		//watchdog enabled, set only, cannot disable. Bit 1 set for reset, else interrupt.
+		LPC_WDT->WDMOD =1<<0|1<<1;		//watchdog enabled, set only, cannot disable. Bit 1 set for reset, else interrupt.
 	// Select internal RC for watchdog
 	//select timeout
 		LPC_WDT->WDTC = 10000000;	//set timeout 5s watchdog timer

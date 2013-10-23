@@ -53,8 +53,9 @@ PRIVATE void powerupHEX(void);
 PRIVATE void LOOP(void);
 
 //External functions
-extern void asm_vivo(void);			//asm vivo burst
+extern void asm_vivo(int);			//asm vivo burst
 extern void asm_holtek(void);
+extern void asm_freq(void);
 EXTERNAL void initUART(void);
 EXTERNAL void setupBT(void);
 EXTERNAL word rxtxBT(void);
@@ -82,7 +83,7 @@ EXTERNAL void NEATRESET(void);
 EXTERNAL byte NEATRD(byte );
 EXTERNAL void NEATWR(byte , byte );
 EXTERNAL void	NEATOFF(void);
-
+EXTERNAL void IRDMAVIVO(void);
 
 EXTERNAL void	LED1GREEN(void);
 EXTERNAL void	LED1YELLOW(void);
@@ -374,6 +375,10 @@ PRIVATE void powerupHEX(void) {
 
 		}
 		break;
+	case 0x05:
+			CPU4MHz();
+			asm_freq();
+			break;
 /*	case 05:				//TEST 12MHz LED flash
 		 LPC_SC->PCONP     = Peripherals ;       // Enable Power for Peripherals
 			CPU12MHz();
@@ -425,6 +430,15 @@ PRIVATE void powerupHEX(void) {
 
 
 	case 06:
+break;
+//experiments:::
+		CPU4MHz();
+
+		while (1)
+		IRDMAVIVO();
+
+
+
 		I2CREAD();
 		I2CChargeWR(0x8000);
 		us(6000000);
@@ -451,12 +465,12 @@ PRIVATE void powerupHEX(void) {
 		{
 			LPC_TIM2->TC=0;
 
-		 IRsynthesis('P',4,0x5);		//Plessey  4 repeats, code 3 for HC603c
+		 IRsynthesis('P',4,0x5);		//Plessey  4 repeats, code 6 for HC603c
 			playIR();
 
 			us(4705096);
 
-
+//us(1000000);
 
 
 		}
@@ -464,127 +478,85 @@ PRIVATE void powerupHEX(void) {
 
 	case 0x08:				//testing IR
 
-
 CPU12MHz();
 
-//	Buffer[i=0,i++]	=0x8524a481;
-//	Buffer[i++]		=0x9016c010;
-//	Buffer[i++]		=0x900ed010;
-//		Buffer[i++]		=0x902ed010;
-//		Buffer[i++]		=0xa3120111;
-//		Buffer[i++]		=0xb0040004;
-//	Buffer[i++]		=0x902ed000;
-
-//	Buffer[i=0,i++] = 0x8 << 28 | 1315 << 16 | 0 << 4 | 0x0 << 0;//0x08=header,200/50=pulse width, 100=period, 2=skip 2 to start of data
 
 j=0;
 i=0;
-//	for (k=0;k<1;k++)
-//			{
-//			Buffer[i++]=10000+(100000*j)+2630*k;  //test for Pioneer 1.125MHz
-//		}
-
-//	j++;
-Buffer[i++] = 0x8 << 28 | 2047 << 16 | 0 << 4 | 0x0 << 0;//0x08=header,200/50=pulse width, 100=period, 2=skip 2 to start of data
+Buffer[i++] = 0x8 << 28 | 2047 << 16 | 0 << 4 | 0x0 << 0;//0x08=header,2047=20.47us=pulse width, 0=period, 0=skip 0
 
 for (k=0,j++;k<4;k++)
 {
-	Buffer[i++]=10000+(100000*j)+4096*k;  //test for Pioneer 1.125MHz
+	Buffer[i++]=10000+(100000*j)+4096*k;  //start set of 4 pulses (24.4KHz).
 }
-Buffer[i++] = 0x8 << 28 | 44 << 16 | 0 << 4 | 0x0 << 0;//0x08=header,200/50=pulse width, 100=period, 2=skip 2 to start of data
+Buffer[i++] = 0x8 << 28 | 44 << 16 | 0 << 4 | 0x0 << 0;//0x08=header, 44=pulse width, 0=period, 0=skip 0
 
 	for (k=0,j++;k<16;k++)
 	{
-		Buffer[i++]=10000+(100000*j)+89*k;  //test for Pioneer 1.125MHz
+		Buffer[i++]=10000+(100000*j)+89*k;  //test for Pioneer 1.125MHz IR codes (fastest known.)
 	}
 
-
-
-Buffer[i++] = 0x8 << 28 | 50 << 16 | 0 << 4 | 0x0 << 0;//0x08=header,200/50=pulse width, 100=period, 2=skip 2 to start of data
+Buffer[i++] = 0x8 << 28 | 50 << 16 | 0 << 4 | 0x0 << 0;//0x08=header, 50=pulse width, 0=period, 0=skip 0
 
 for (k=0,j++;k<16;k++)
 	{
-		Buffer[i++]=10000+(100000*j)+100*k;  //test for Pioneer 1MHz
+		Buffer[i++]=10000+(100000*j)+100*k;  //test for 1MHz
 	}
-Buffer[i++] = 0x8 << 28 | 100 << 16 | 0 << 4 | 0x0 << 0;//0x08=header,200/50=pulse width, 100=period, 2=skip 2 to start of data
+Buffer[i++] = 0x8 << 28 | 100 << 16 | 0 << 4 | 0x0 << 0;//0x08=header, 100=pulse width, 0=period, 0=skip 0
 
 for (k=0,j++;k<16;k++)
 	{
 		Buffer[i++]=10000+(100000*j)+200*k;  //test for  500KHz
 	}
-Buffer[i++] = 0x8 << 28 | 200 << 16 | 0 << 4 | 0x0 << 0;//0x08=header,200/50=pulse width, 100=period, 2=skip 2 to start of data
+Buffer[i++] = 0x8 << 28 | 200 << 16 | 0 << 4 | 0x0 << 0;//0x08=header, 200=pulse width, 0=period, 0=skip 0
 
 for (k=0,j++;k<16;k++)
 	{
 		Buffer[i++]=10000+(100000*j)+400*k;  //test for 250KHz
 	}
-Buffer[i++] = 0x8 << 28 | 400 << 16 | 0 << 4 | 0x0 << 0;//0x08=header,200/50=pulse width, 100=period, 2=skip 2 to start of data
+Buffer[i++] = 0x8 << 28 | 400 << 16 | 0 << 4 | 0x0 << 0;//0x08=header, 400=pulse width, 0=period, 0=skip 0
 
 for (k=0,j++;k<16;k++)
 	{
 		Buffer[i++]=10000+(100000*j)+800*k;  //test for 125KHz
 	}
-Buffer[i++] = 0x8 << 28 | 500 << 16 | 0 << 4 | 0x0 << 0;//0x08=header,200/50=pulse width, 100=period, 2=skip 2 to start of data
+Buffer[i++] = 0x8 << 28 | 500 << 16 | 0 << 4 | 0x0 << 0;//0x08=header, 500=pulse width, 0=period, 0=skip 0
 
 for (k=0,j++;k<16;k++)
 		{
 			Buffer[i++]=10000+(100000*j)+1000*k;  //test for 100KHz
 		}
-Buffer[i++] = 0x8 << 28 | 625 << 16 | 0 << 4 | 0x0 << 0;//0x08=header,200/50=pulse width, 100=period, 2=skip 2 to start of data
+Buffer[i++] = 0x8 << 28 | 625 << 16 | 0 << 4 | 0x0 << 0;//0x08=header, 625=pulse width, 0=period, 0=skip 0
 
 	for (k=0,j++;k<16;k++)
 			{
 				Buffer[i++]=10000+(100000*j)+1250*k;  //test for 80KHz
 			}
 
-	Buffer[i++] = 0x8 << 28 | 833 << 16 | 0 << 4 | 0x0 << 0;//0x08=header,200/50=pulse width, 100=period, 2=skip 2 to start of data
+	Buffer[i++] = 0x8 << 28 | 833 << 16 | 0 << 4 | 0x0 << 0;//0x08=header, 833=pulse width, 0=period, 0=skip 0 data
 
 		for (k=0,j++;k<16;k++)
 				{
 					Buffer[i++]=10000+(100000*j)+1666*k;  //test for 60KHz
 				}
-Buffer[i++] = 0x8 << 28 | 1000 << 16 | 0 << 4 | 0x0 << 0;//0x08=header,200/50=pulse width, 100=period, 2=skip 2 to start of data
+Buffer[i++] = 0x8 << 28 | 1000 << 16 | 0 << 4 | 0x0 << 0;//0x08=header, 1000=pulse width, 0=period, 0=skip 0
 
 
 for (k=0,j++;k<16;k++)
 	{
 		Buffer[i++]=10000+(100000*j)+2000*k;  //test for 50KHz
 	}
-Buffer[i++] = 0x8 << 28 | 1315 << 16 | 0 << 4 | 0x0 << 0;//0x08=header,200/50=pulse width, 100=period, 2=skip 2 to start of data
+Buffer[i++] = 0x8 << 28 | 1315 << 16 | 0 << 4 | 0x0 << 0;//0x08=header, 1315=pulse width, 0=period, 0=skip 0
 
 for (k=0,j++;k<16;k++)
 	{
 		Buffer[i++]=10000+(100000*j)+2632*k;  //test for 38KHz
 	}
 
+Buffer[i++]=0;
 
 
 
-/*
-
-//play code 6 MSU
-
-int IRcode=5;
-int IRrep=2;
-
-	//PLESSEY code
-	Buffer[i++] = 0x8 << 28 | 0x524 << 16 | 0xa48 << 4 | 0x1 << 0;//0x08=header,200/0x524=pulse width, 0xa48=period, 2=skip 2 to start of data
-	Buffer[i++] = 0x9016c010;//0x9=symbol, 0x16c=space, 0x10=Mark (16 pulses at period intervals) DATA 0
-	Buffer[i++] = 0x900ed010;//0x9=symbol, 0xed =space, 0x10=Mark (16 pulses at period intervals) DATA 1 (Executes from here, no initial pulse)
-	Buffer[i++] = 0x902e8010;//0x9=symbol, 0x2e8=space, 0x10=Mark (16 pulses at period intervals) INITIAL Space + PULSE =SYNC with previous symbol.
-	Buffer[i++] = (((IRcode & 0x10) >> 4) + 1) | //MSB bit 4
-			((((IRcode & 0x8) >> 3) + 1) << 4) | // bit 3
-			((((IRcode & 0x4) >> 2) + 1) << 8) | // bit 2
-			((((IRcode & 0x2) >> 1) + 1) << 16) | // bit 1
-			((((IRcode & 0x1) >> 0) + 1) << 20) | //LSB bit 0
-			(0x3 << 24) | //SYNC PULSE
-			(0xa << 28); //0x0a=DATA structure for word.
-	Buffer[i++] = 0xb << 28 | IRrep << 17 | 174 << 0; //repeat rep times from address 4
-	Buffer[i++] = 0x00; //end of data.
-
-*/
-
-Buffer[i++]		=0x0;
 
 while(1)
 {
@@ -597,7 +569,7 @@ while(1)
 break;
 
 
-
+/*
 	case 0x09:
 		CPU4MHz();
 			us(100000);
@@ -613,7 +585,7 @@ break;
 			}
 
 			break;
-
+*/
 	case 0x0A:
 
 		CPU4MHz();
@@ -659,6 +631,15 @@ break;
 	case  0x0D:		//VIVO remote code.
 //from starting code to first IR is 5.8ms
 		CPU4MHz();
+		LPC_SC->PCLKSEL0 |= ((1 << 2)|(1<<4)); //TIMER0 PREDIVIDE =1 (system clock)|TIMER1 PREDIVIDE =1 (system clock)
+
+
+
+		LPC_TIM1->PR = 0; //set IR sample clock
+
+		LPC_TIM1->TCR = 0 | 1 << 1; //enable timer 1 (reset timer1)
+		LPC_TIM1->TCR = 1 | 0 << 1; //enable timer 1 (start timer1)
+
 
 
 		I2CSTATUS();
@@ -691,20 +672,26 @@ break;
 		LPC_WDT->WDFEED=0xAA;			//watchdog feed, no interrupt in this sequence.
 		LPC_WDT->WDFEED=0x55;			//watchdog feed
 		  LPC_SC->FLASHCFG  =0;
-		asm_vivo(); //vivo code, never return.
+
+
+		  if(!(0x4&LPC_SC->RSID))		//if not watchdog
+		  {
+		asm_vivo(0); //vivo code, never return.
+		  }
+
 //should not return.
 //
 //
-		LED1OFF();
+			LED1YELLOW();
 		LPC_GPIO_OFF FIOSET =OFF; //OFF button set high to turn off.
 		NEATOFF();
 		LPC_GPIO_BTRESET FIOCLR	= BTRESET;	//Bluetooth reset.	RESET BT
 		while(1)
 			{
-			disableInputInterrupt();
-			SCB->SCR = 0x4;			//sleepdeep bit
-			LPC_SC->PCON = 0x03;	//combined with sleepdeep bit gives power down mode. IRC is disabled, so WDT disabled.
-			__WFI();
+			LPC_GPIO_OFF FIOSET =OFF; //OFF button set high to turn off.
+	//		SCB->SCR = 0x4;			//sleepdeep bit
+	//		LPC_SC->PCON = 0x03;	//combined with sleepdeep bit gives power down mode. IRC is disabled, so WDT disabled.
+	//		__WFI();
 			}
 
 
@@ -751,19 +738,23 @@ break;
 			LPC_WDT->WDFEED=0x55;			//watchdog feed
 
 			 LPC_SC->FLASHCFG  =0;
+			  if(!(0x4&LPC_SC->RSID))		//if not watchdog
 			asm_holtek();
 
 //
 //
 //
-			LED1OFF();
+			LED1YELLOW();
 			LPC_GPIO_OFF FIOSET =OFF; //OFF button set high to turn off.
+			NEATOFF();
+			LPC_GPIO_BTRESET FIOCLR	= BTRESET;	//Bluetooth reset.	RESET BT
+
 			while(1)
 			{
-			disableInputInterrupt();
-			SCB->SCR = 0x4;			//sleepdeep bit
-			LPC_SC->PCON = 0x03;	//combined with sleepdeep bit gives power down mode. IRC is disabled, so WDT disabled.
-			__WFI();
+				LPC_GPIO_OFF FIOSET =OFF; //OFF button set high to turn off.
+	//				SCB->SCR = 0x4;			//sleepdeep bit
+	//				LPC_SC->PCON = 0x03;	//combined with sleepdeep bit gives power down mode. IRC is disabled, so WDT disabled.
+	//				__WFI();
 			}
 
 		break;
