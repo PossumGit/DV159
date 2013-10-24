@@ -52,6 +52,7 @@ EXTERNAL int charge;
 EXTERNAL int ChargeConfidence;
 EXTERNAL int NIMH;
 EXTERNAL int LITHIUM;
+EXTERNAL char STATE;
 //Private functions
 //public functions
 PUBLIC int I2CBATTERY(void);
@@ -148,6 +149,7 @@ PUBLIC char QUERYnewbattery(void)
 		I2CWriteLength=3;
 		I2CGO();
 		I2CChargeWR(0x8000);		//set initial battery state to 0x8000
+		STATE='R';
 	}
 
 
@@ -221,7 +223,7 @@ PUBLIC void I2CREAD(void)
 	I2CSlaveBuffer[5]=I2CSlaveTempBuffer[1];
 
 	I2CMasterBuffer[0]=0x90;
-	I2CMasterBuffer[1]=0x10;		//
+	I2CMasterBuffer[1]=0x10;		//charge
 	I2CMasterBuffer[2]=0x91;
 	I2CReadLength=2;
 	I2CWriteLength=2;
@@ -238,8 +240,8 @@ PUBLIC void I2CREAD(void)
 
 	I2CSlaveBuffer[8]=I2CSlaveTempBuffer[0];		//status byte.
 
-	I2CSlaveBuffer[9]=(LPC_GPIO2->FIOPIN &(1<<8))>>8;//=1 if AC powered;
-	I2CSlaveBuffer[10]=ChargeConfidence;
+	I2CSlaveBuffer[9]=0x01 ^ ((LPC_GPIO2->FIOPIN &(1<<8))>>8);//=1 if AC powered;
+	I2CSlaveBuffer[10]=0xAA;
 	I2CSlaveBuffer[11]=0xAA;
 	I2CSlaveBuffer[12]=0xAA;
 	I2CSlaveBuffer[13]=0xAA;

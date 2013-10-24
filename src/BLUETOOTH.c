@@ -34,7 +34,7 @@ PUBLIC volatile unsigned int txend = 0;		// BT TX.
 PUBLIC int BTACC=0;
 PUBLIC	int BUFLEN=0;
 PUBLIC  int SEQUENCE=0;			//used in ProcessBT for NEAT and IR sequence.
-PUBLIC int HELDtime=640000;
+PUBLIC int HELDtime=0;//640000;
 PUBLIC int RELEASEtime=0;
 //External variables
 EXTERNAL volatile word Buffer[]; ///< Whole of RAM2 is Buffer, reused for audio and IR replay and capture
@@ -485,9 +485,7 @@ byte Information[] =
 		//11(7): Accumulated charge LSB
 		//1(8); status
 		//xx(9); 1= charging
-		//xx(10);	charge confidence 1= new battery, 5= very confident.
-		//xx(11); corrected charge MSB
-		//xx(12); corrected charge LSB
+		//0x0A-0x0F reserved.
 		//DISCHARGE =(0x800A-correctedcharge)/20
 		//
 
