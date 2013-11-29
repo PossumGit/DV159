@@ -29,10 +29,14 @@
 ///2_V includes NEAT 8 transmits
 ///2-V excludes NEAT RX 8 transmits.
 ///
+
+
+/// after 2_V reduction in flash read wait states to minimum on 12MHz, 44MHZ, 4MHZ.
+/// need to recheck VIVO FREEWAY timings on next release.
 #if NEATRX==1
-#define Version 0x20562D32	//	"2-V " little endian.
+#define Version 0x20572D32	//	"2-V " little endian.
 #elif NEATRX==0
-#define Version 0x20562D32	//	"2-V " little endian.
+#define Version 0x20572D32	//	"2-V " little endian.
 #endif
 
 

@@ -1375,11 +1375,14 @@ PUBLIC void setupBT(void)
     		"SJ,0800\r\n"			//Page scan continuous.
     };
 
-    byte BTlatancy[]=
+    byte BTlatency[]=
     {
     		"SQ,16\r\n"			//optimise latancy.
     };
-
+    byte BTname[]=
+    {
+    		"S-,RN42\r\n"			//rename device
+    };
 #if baud==92
     byte BaudK[] =			//baud rate 230k
        {
@@ -1508,8 +1511,8 @@ PUBLIC void setupBT(void)
  	    }
  	}
     rxstart = rxend;
-/*
-    sendBTNC(BTSlatency, sizeof(latency));//latency does not seem any less latency.
+
+    sendBTNC(BTname, sizeof(BTname));//change name to RN42-"HEXCODE"
        for (i = 0; i < 3000; i++)
    	{
    	us(1000);
@@ -1529,7 +1532,7 @@ PUBLIC void setupBT(void)
       rxstart = rxend;
 
 
-  */
+
 
 
     sendBTNC(ENDCMD, sizeof(ENDCMD));

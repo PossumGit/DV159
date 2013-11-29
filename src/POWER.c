@@ -17,7 +17,9 @@
 #define PCLKSEL1_Val          0x00000000
 #define PCONP_Val             0x042887DE
 #define CLKOUTCFG_Val         0x00000000
-#define FLASHCFG_Val          0x00004000
+#define FLASH100MHz           0x0000403A
+#define FLASH60MHz            0x0000203A
+#define FLASH20MHz            0x0000003A
 
 #if release==0
 
@@ -167,7 +169,9 @@ PUBLIC void CPU100MHz (void)
 
   //LPC_SC->CLKOUTCFG =0 ;    // Clock Output Configuration
 
-  LPC_SC->FLASHCFG  = (LPC_SC->FLASHCFG & ~0x0000F000) | FLASHCFG_Val;
+  LPC_SC->FLASHCFG  = FLASH100MHz;
+
+		  //(LPC_SC->FLASHCFG & ~0x0000F000) | FLASHCFG_Val;
   //CPU100MHz disables GPIO interrupts
 	  }
 
@@ -222,7 +226,7 @@ PUBLIC void CPU44MHz (void)
 
   //LPC_SC->CLKOUTCFG =0 ;    // Clock Output Configuration
 
-  LPC_SC->FLASHCFG  = (LPC_SC->FLASHCFG & ~0x0000F000) | FLASHCFG_Val;
+  LPC_SC->FLASHCFG  = FLASH60MHz;
   //CPU100MHz disables GPIO interrupts
 	  }
 	  enableInputInterrupt();
@@ -284,7 +288,7 @@ PUBLIC void CPU12MHz(void)
 	LPC_SC->PLL1FEED = 0x55;
 	while (LPC_SC->PLL1STAT&(1<<24));
 
-	LPC_SC->FLASHCFG &= 0x0fff;  // This is the default flash read/write setting for IRC
+	LPC_SC->FLASHCFG   = FLASH20MHz;  // This is the default flash read/write setting for IRC
 	LPC_SC->FLASHCFG |= 0x5000;	//0 for up to 20MHz.
 
 	//LPC_SC->CLKSRCSEL = 0x00;
@@ -345,8 +349,7 @@ PUBLIC void CPU4MHz(void)
 	LPC_SC->PLL1FEED = 0x55;
 	while (LPC_SC->PLL1STAT&(1<<24));
 
-	LPC_SC->FLASHCFG &= 0x0fff;  // This is the default flash read/write setting for IRC
-	LPC_SC->FLASHCFG |= 0x5000;  // 0 for up to 20MHz. But 5 is always safe. cycles to access flash memory.
+	LPC_SC->FLASHCFG  = FLASH20MHz;  // This is the default flash read/write setting for IRC
 
 	//LPC_SC->CLKSRCSEL = 0x00;
 //		LPC_SC->CCLKCFG = 0x0;     //  Select the IRC as clk
