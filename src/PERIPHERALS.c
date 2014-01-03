@@ -16,6 +16,7 @@ PUBLIC word LastInputTime=1;
 PUBLIC volatile byte InputState=0x3E;
 PUBLIC  volatile byte LastInputState=0x3E;
 PUBLIC volatile byte lastInputSent=0x3E;
+PUBLIC int	PCBiss;		//=3 for PCHB issue 3, =4 for PCB issue 4.
 
 volatile byte LASTinput =0;
 

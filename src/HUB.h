@@ -17,7 +17,15 @@
 //NVIC_SystemReset() to reset system.
 //
 //
-#define PCBissue 4		//pcb issue, options 3, 4
+
+
+
+
+
+
+
+
+#define PCBissue 4		//pcb issue only 4 at the moment. options 3 and earlier all decommissioned.
 #define release	1		//1=released, 0 = debug (disable watchdogs mainly)
 #define NEATRX 0		//1=enable NEAT RX, 0=disable NEAT RX
 #define NEATREPEATS 8		//NEAT repeats, 3 or 8.
@@ -30,13 +38,16 @@
 ///2-V excludes NEAT RX 8 transmits.
 ///
 
+//2-W changes name of BT to RN42.
+//
+//2-X corrects bug on IR causing wrap around on IR timer.
 
-/// after 2_V reduction in flash read wait states to minimum on 12MHz, 44MHZ, 4MHZ.
-/// need to recheck VIVO FREEWAY timings on next release.
+//////////////////////////////////
+//VERSION NUMBER
 #if NEATRX==1
-#define Version 0x20572D32	//	"2-V " little endian.
+#define Version 0x20585F32	//	"2-X " little endian.
 #elif NEATRX==0
-#define Version 0x20572D32	//	"2-V " little endian.
+#define Version 0x20582D32	//	"2-X " little endian.
 #endif
 
 
@@ -65,8 +76,8 @@ typedef unsigned int word;		//32 bit on LPC17**
 
 
 
-#if PCBissue==3	|| PCBissue==4	//issue 3 PCB
-//GPIO pin definitions Issue 3
+#if PCBissue==3	|| PCBissue==4	//issue 4 or issue 3 PCB ONLY issue 4+ is possible. Earlier boards scrapped.
+//GPIO pin definitions Issue 4
 
 #define OFF   1<<11						// P0.11
 #define LPC_GPIO_OFF 	LPC_GPIO0->
@@ -144,7 +155,7 @@ typedef unsigned int word;		//32 bit on LPC17**
 
 
 
-#elif PCBissue==2						//issue 2 PCB
+#elif PCBissue==2						//issue 2 PCB Issue 1 PCBs were different processor, BC boards, scrapped.
 #define OFF  		1<<21				// P0.21
 #define LPC_GPIO_OFF 	LPC_GPIO0->
 

@@ -18,7 +18,7 @@
 
 //Public variables
 //PUBLIC__CRP const unsigned int CRP_WORD = CRP_NO_CRP;///< code protection word
-PUBLIC int	PCBiss;		//=3 for PCHB issue 3, =4 for PCB issue 4.
+
 PUBLIC int ALARMtime=100;//30=3s
 
 //Private variables local to this file
@@ -47,6 +47,7 @@ EXTERNAL volatile byte I2CSlaveBuffer[];
 EXTERNAL int NIMH;
 EXTERNAL int LITHIUM;
 extern char QUERYnewbattery(void);
+extern int	PCBiss;
 
 //Local functions
 PRIVATE void powerupHEX(void);
@@ -107,7 +108,7 @@ EXTERNAL char I2CSTATUS(void);
 EXTERNAL void NEATSIM(void);
 EXTERNAL int storedcharge;
 EXTERNAL int ChargeConfidence;
-
+EXTERNAL int PCB(void);
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////////

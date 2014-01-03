@@ -38,6 +38,8 @@ PRIVATE volatile Tick=0;
 PRIVATE int EndIR;
 PRIVATE volatile int MarkCount;
 
+PRIVATE volatile int testa, testb, testc, testd;
+
 //external variables
 EXTERNAL volatile int Buffer[]; ///< Whole of RAM2 is Buffer, reused for NEAT, Bluetooth, audio and IR replay and capture
 PUBLIC	int BUFLEN;
@@ -522,7 +524,7 @@ PRIVATE void compress(void) {
 				}
 				IRTimeMatch = IRTimeMatch + IRspace;
 				carrier(MarkCount, Period, IRTimeMatch); //generate Markcount pulses.
-				IRTimeMatch = IRTimeMatch + Period;
+				IRTimeMatch = IRTimeMatch + Period*MarkCount;
 				IRAddress++;// go to next word.
 
 			}
@@ -535,13 +537,8 @@ PRIVATE void compress(void) {
 			//first symbol in buffer is dummy.
 			//space is always first, followed by mark.
 			//code is structured to speed up mark at expense of space. Space is longer so less time critical.
-			//mark can have 0 in it. Then you get 1 pulse.
-	//		if (Mark < (SymbolWord & 0xFFF)) {
-	//			Mark++;
-	//			IRTimeMatch = IRTimeMatch + Period;//save value of IRTimeMatch for next interrupt.
-	//			LPC_TIM1->MR0 = IRTimeMatch; //set up next match, pulse after period.
-	//			return; //exit compress and finish  interrupt.
-	//		}  //get next symbol.
+			//mark can have 0 in it. Then you get 0 pulses.
+
 
 
 
@@ -549,8 +546,13 @@ PRIVATE void compress(void) {
 			 {
 				 if(Tick)
 				 {
+
+
+					 testa=LPC_TIM1->TC;
+
 				carrier(MarkCount, Period, IRTimeMatch);	//generate Markcount pulses.
-				IRTimeMatch = IRTimeMatch+Period;
+				IRTimeMatch = IRTimeMatch+Period*MarkCount;
+				 testd=LPC_TIM1->TC;
 				Tick=0;
 				 }
 				do {
@@ -571,16 +573,19 @@ PRIVATE void compress(void) {
 					MarkCount = SymbolWord & 0xFFF;
 					if (IRspace > Sec3)	IRspace = Sec3; //maximum space=3s.
 					IRTimeMatch = IRTimeMatch + IRspace;
+					testa=LPC_TIM1->TC;
 					if ((IRTimeMatch-LPC_TIM1->TC)> IRreturn)// If time to next pulse>IRreturn, exit interrupt.
 					{
 						Tick=1;
 
 						LPC_TIM1->MR0 = IRTimeMatch-IRinterrupt;	//return IRinterrupt before pulse.
+						testb=LPC_TIM1->TC;
+						testc=LPC_TIM1->MR0;
 						return;
 					}
 					IRTimeMatch = IRTimeMatch + IRspace;
 					carrier(MarkCount, Period, IRTimeMatch);	//generate Markcount pulses.
-					IRTimeMatch = IRTimeMatch+Period;
+					IRTimeMatch = IRTimeMatch+Period*MarkCount;
 				}
 
 

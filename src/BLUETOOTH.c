@@ -125,7 +125,7 @@ static int IRcode;				//IR sequence used in ProcessBT.
 static byte ReportBUFLEN[]="1234A";
 byte Information[] =
 	{
-			"QWAYO firmware xxx, PCB x. Copyright Possum 2012-13. \0\0\0\0"
+			"QWAYO firmware xxx, PCB x. Copyright Possum 2012-14. \0\0\0\0"
 	};
 
     byte ACK[] =
