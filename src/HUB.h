@@ -26,7 +26,7 @@
 
 
 #define PCBissue 4		//pcb issue only 4 at the moment. options 3 and earlier all decommissioned.
-#define release	1		//1=released, 0 = debug (disable watchdogs mainly)
+#define release	 1		//1=released, 0 = debug (disable watchdogs mainly)
 #define NEATRX 0		//1=enable NEAT RX, 0=disable NEAT RX
 #define NEATREPEATS 8		//NEAT repeats, 3 or 8.
 #define NEATBUTTONREPEATS 8	//NEAT repeats when button is pressed with no ACK.
@@ -45,9 +45,9 @@
 //////////////////////////////////
 //VERSION NUMBER
 #if NEATRX==1
-#define Version 0x20585F32	//	"2-X " little endian.
+#define Version 0x20303031	//	100, was "2-X " little endian.
 #elif NEATRX==0
-#define Version 0x20582D32	//	"2-X " little endian.
+#define Version 0x20303031	//	100 was "2-X " little endian.
 #endif
 
 
