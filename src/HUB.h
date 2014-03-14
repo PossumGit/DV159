@@ -45,9 +45,9 @@
 //////////////////////////////////
 //VERSION NUMBER
 #if NEATRX==1
-#define Version 0x20303031	//	100, was "2-X " little endian.
+#define Version 0x20313031	//	101, was "2-X " little endian.
 #elif NEATRX==0
-#define Version 0x20303031	//	100 was "2-X " little endian.
+#define Version 0x20313031	//	101 was "2-X " little endian.
 #endif
 
 

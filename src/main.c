@@ -258,7 +258,7 @@ PRIVATE void powerupHEX(void) {
 		disableInputInterrupt();
 		initUART();
 		initBT();
-		us(500000);
+		us(5000000);
 		LED2OFF();
 		LPC_TIM2->TC=0;
 		time=0;			//
@@ -276,7 +276,7 @@ PRIVATE void powerupHEX(void) {
 		for (i=0;i<10;i++)
 		{
 			LPC_TIM2->TC=0;
-			time=3000000;			//
+			time=10000000;			//
 			h=i+(j<<4)+(k<<8)+(l<<12);
 
 

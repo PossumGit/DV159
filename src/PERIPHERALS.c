@@ -407,7 +407,7 @@ PUBLIC int	inputCheck(void)
 	{
 
 		in[0] = STATE;//'H' | (in[1] & 0x01);
-		in[1] = ((in[1] & 0x3f)) | 0x0F; //clear bit 7, set bit 1.
+		in[1] = ((in[1] & 0x3f));// | 0x0F; //clear bit 7, set bit 1.
 
 		//		in[1]=((in[1]&0x2)<<4)|((in[1]&0x1)<<4);	//TECLA, bit 5 is ext, bit 4 is int, bit 3 is plugged in.
 		if(LASTinput!=in[1])
