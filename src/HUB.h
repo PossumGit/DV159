@@ -27,7 +27,7 @@
 
 #define PCBissue 4		//pcb issue only 4 at the moment. options 3 and earlier all decommissioned.
 #define release	 1		//1=released, 0 = debug (disable watchdogs mainly)
-#define NEATRX 0		//1=enable NEAT RX, 0=disable NEAT RX
+#define NEATRX 1		//1=enable NEAT RX, 0=disable NEAT RX
 #define NEATREPEATS 8		//NEAT repeats, 3 or 8.
 #define NEATBUTTONREPEATS 8	//NEAT repeats when button is pressed with no ACK.
 
@@ -41,11 +41,12 @@
 //2-W changes name of BT to RN42.
 //
 //2-X corrects bug on IR causing wrap around on IR timer.
-
+// 2-X is ver 101
+// 102 includes NEAT rx (AP 1/10/14)
 //////////////////////////////////
 //VERSION NUMBER
 #if NEATRX==1
-#define Version 0x20313031	//	101, was "2-X " little endian.
+#define Version 0x20323031	//	101, was "2-X " little endian. now 102
 #elif NEATRX==0
 #define Version 0x20313031	//	101 was "2-X " little endian.
 #endif
